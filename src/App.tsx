@@ -52,7 +52,11 @@ function App() {
                     src={null}
                     alt="Book cover image"
                     withPlaceholder
-                    placeholder={<Text align="center">Book cover</Text>}
+                    placeholder={
+                      <Text align="center" m="xs">
+                        {entry.name}
+                      </Text>
+                    }
                   />
                 </Card.Section>
                 <Group position="apart" mt="md">
