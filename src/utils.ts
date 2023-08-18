@@ -30,3 +30,7 @@ export const initialize = async () => {
 
   return filterFileEntries(entries);
 };
+
+export const initializeBooks = async (entries: FileEntry[]) => {
+  return entries;
+};

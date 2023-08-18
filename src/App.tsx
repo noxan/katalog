@@ -10,18 +10,20 @@ import {
   Group,
 } from "@mantine/core";
 import { FileEntry } from "@tauri-apps/api/fs";
-import { initialize } from "./utils";
+import { initialize, initializeBooks } from "./utils";
 
-type Status = "initialize" | "loading" | "ready";
+type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 
 function App() {
   const [status, setStatus] = useState<Status>("initialize");
   const [entries, setEntries] = useState<FileEntry[]>([]);
 
   const initializeKatalog = async () => {
-    setStatus("loading");
+    setStatus("loading:entries");
     const entries = await initialize();
     setEntries(entries);
+    setStatus("loading:details");
+    setEntries(await initializeBooks(entries));
     setStatus("ready");
   };
 
@@ -37,7 +39,10 @@ function App() {
         <h1>Welcome to Tauri!</h1>
 
         <Group mb="md">
-          <Button disabled={status === "loading"} onClick={initializeKatalog}>
+          <Button
+            disabled={status.startsWith("loading")}
+            onClick={initializeKatalog}
+          >
             Reload
           </Button>
           <Text>{status}</Text>
