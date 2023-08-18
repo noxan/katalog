@@ -19,7 +19,7 @@
       },
       "fs": {
         "all": true,
-        "scope": ["$HOME/Books"]
+        "scope": ["$HOME/Books", "$HOME/Books/**"]
       }
     },
     "bundle": {
