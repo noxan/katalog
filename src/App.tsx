@@ -48,7 +48,7 @@ function App() {
               <Card shadow="sm" padding="lg" radius="md" withBorder>
                 <Card.Section>
                   <Image
-                    height={120}
+                    height={200}
                     src={null}
                     alt="Book cover image"
                     withPlaceholder
