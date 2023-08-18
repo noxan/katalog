@@ -32,13 +32,15 @@ function App() {
       <Container>
         <h1>Welcome to Tauri!</h1>
 
-        <p>{status}</p>
-        <Button
-          disabled={status === "loading"}
-          onClick={async () => setEntries(await initialize())}
-        >
-          Initalize
-        </Button>
+        <Group mb="md">
+          <Button
+            disabled={status === "loading"}
+            onClick={async () => setEntries(await initialize())}
+          >
+            Reload
+          </Button>
+          <Text>{status}</Text>
+        </Group>
 
         <Grid gutter="lg">
           {entries.map((entry) => (
