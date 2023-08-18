@@ -17,7 +17,7 @@ const initialize = async () => {
     await createDir(path, { dir });
   }
 
-  const entries = await readDir(path, { dir });
+  const entries = await readDir(path, { dir, recursive: true });
   console.log(entries);
   return entries;
 };
@@ -41,7 +41,11 @@ function App() {
           Initalize
         </Button>
 
-        <p>{JSON.stringify(entries)}</p>
+        <ul>
+          {entries.map((entry) => (
+            <li key={entry.name}>{JSON.stringify(entry)}</li>
+          ))}
+        </ul>
 
         <form
           className="row"
