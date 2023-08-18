@@ -40,6 +40,11 @@ function App() {
     }
   }, [status]);
 
+  const displayTitle = (entry: BookEntry) => {
+    const title = entry?.metadata?.["dc:title"] ?? entry.name;
+    return typeof title === "object" ? title["#text"] : title;
+  };
+
   return (
     <Center>
       <Container>
@@ -80,7 +85,7 @@ function App() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {entry?.metadata?.["dc:title"] ?? entry.name}
+                    {displayTitle(entry)}
                   </Text>
                 </Group>
               </Card>
