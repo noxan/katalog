@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Center, Container, Button, Grid } from "@mantine/core";
+import { Center, Container, Button, Grid, Card, Text } from "@mantine/core";
 import { FileEntry } from "@tauri-apps/api/fs";
 import { initialize } from "./utils";
 
@@ -34,7 +34,9 @@ function App() {
         <Grid gutter="lg">
           {entries.map((entry) => (
             <Grid.Col key={entry.name} span={6}>
-              {entry.name}
+              <Card withBorder shadow="sm" radius="md">
+                <Text>{entry.name}</Text>
+              </Card>
             </Grid.Col>
           ))}
         </Grid>
