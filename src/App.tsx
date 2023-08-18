@@ -9,7 +9,7 @@ import {
   Image,
   Group,
 } from "@mantine/core";
-import { BookEntry, initialize, initializeBooks } from "./utils";
+import { BookEntry, initialize, initializeBook } from "./utils";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 
@@ -22,7 +22,15 @@ function App() {
     const entries = await initialize();
     setEntries(entries);
     setStatus("loading:details");
-    setEntries(await initializeBooks(entries));
+    await Promise.all(
+      entries.map(async (entry) => {
+        const book = await initializeBook(entry);
+        setEntries((entries) =>
+          entries.map((e) => (e.path === entry.path ? book : e))
+        );
+        return book;
+      })
+    );
     setStatus("ready");
   };
 
