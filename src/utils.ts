@@ -33,11 +33,11 @@ export const initialize = async () => {
   return filterFileEntries(entries);
 };
 
+const initializeBook = async (entry: FileEntry): Promise<BookEntry> => {
+  return { ...entry, metadata: {} } as BookEntry;
+};
+
 export const initializeBooks = async (
   entries: FileEntry[]
 ): Promise<BookEntry[]> =>
-  Promise.all(
-    entries.map(async (entry) => {
-      return { ...entry, metadata: {} } as BookEntry;
-    })
-  );
+  Promise.all(entries.map(async (entry) => initializeBook(entry)));
