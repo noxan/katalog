@@ -33,7 +33,7 @@ function App() {
 
         <ul>
           {entries.map((entry) => (
-            <li key={entry.name}>{JSON.stringify(entry)}</li>
+            <li key={entry.name}>{entry.name}</li>
           ))}
         </ul>
       </Container>
