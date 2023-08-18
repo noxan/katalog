@@ -20,6 +20,9 @@
       "fs": {
         "all": true,
         "scope": ["$HOME/Books", "$HOME/Books/**"]
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {
