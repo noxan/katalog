@@ -1,10 +1,31 @@
 import { useState } from "react";
 import { Center, Container, Button, Group, Input } from "@mantine/core";
 import { invoke } from "@tauri-apps/api/tauri";
+import {
+  createDir,
+  exists,
+  readDir,
+  BaseDirectory,
+  FileEntry,
+} from "@tauri-apps/api/fs";
+
+const initialize = async () => {
+  const dir = BaseDirectory.Home;
+  const path = "Books";
+
+  if (!(await exists(path, { dir }))) {
+    await createDir(path, { dir });
+  }
+
+  const entries = await readDir(path, { dir });
+  console.log(entries);
+  return entries;
+};
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [name, setName] = useState("");
+  const [entries, setEntries] = useState<FileEntry[]>([]);
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -15,6 +36,12 @@ function App() {
     <Center>
       <Container>
         <h1>Welcome to Tauri!</h1>
+
+        <Button onClick={async () => setEntries(await initialize())}>
+          Initalize
+        </Button>
+
+        <p>{JSON.stringify(entries)}</p>
 
         <form
           className="row"
