@@ -9,6 +9,14 @@ import {
   FileEntry,
 } from "@tauri-apps/api/fs";
 
+const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
+  array.reduce<FileEntry[]>((acc, item) => {
+    if (item.children) {
+      return [...acc, ...flattenFileEntries(item.children)];
+    }
+    return [...acc, item];
+  }, []);
+
 const initialize = async () => {
   const dir = BaseDirectory.Home;
   const path = "Books";
@@ -17,7 +25,9 @@ const initialize = async () => {
     await createDir(path, { dir });
   }
 
-  const entries = await readDir(path, { dir, recursive: true });
+  const nestedEntries = await readDir(path, { dir, recursive: true });
+  const entries = flattenFileEntries(nestedEntries);
+
   console.log(entries);
   return entries;
 };
