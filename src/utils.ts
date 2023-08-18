@@ -6,6 +6,8 @@ import {
   FileEntry,
 } from "@tauri-apps/api/fs";
 
+export type BookEntry = FileEntry & { metadata: object };
+
 const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
   array.reduce<FileEntry[]>((acc, item) => {
     if (item.children) {
@@ -31,6 +33,11 @@ export const initialize = async () => {
   return filterFileEntries(entries);
 };
 
-export const initializeBooks = async (entries: FileEntry[]) => {
-  return entries;
-};
+export const initializeBooks = async (
+  entries: FileEntry[]
+): Promise<BookEntry[]> =>
+  Promise.all(
+    entries.map(async (entry) => {
+      return { ...entry, metadata: {} } as BookEntry;
+    })
+  );

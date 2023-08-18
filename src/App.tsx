@@ -10,13 +10,13 @@ import {
   Group,
 } from "@mantine/core";
 import { FileEntry } from "@tauri-apps/api/fs";
-import { initialize, initializeBooks } from "./utils";
+import { BookEntry, initialize, initializeBooks } from "./utils";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 
 function App() {
   const [status, setStatus] = useState<Status>("initialize");
-  const [entries, setEntries] = useState<FileEntry[]>([]);
+  const [entries, setEntries] = useState<FileEntry[] | BookEntry[]>([]);
 
   const initializeKatalog = async () => {
     setStatus("loading:entries");
