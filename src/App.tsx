@@ -9,14 +9,13 @@ import {
   Image,
   Group,
 } from "@mantine/core";
-import { FileEntry } from "@tauri-apps/api/fs";
 import { BookEntry, initialize, initializeBooks } from "./utils";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 
 function App() {
   const [status, setStatus] = useState<Status>("initialize");
-  const [entries, setEntries] = useState<FileEntry[] | BookEntry[]>([]);
+  const [entries, setEntries] = useState<BookEntry[]>([]);
 
   const initializeKatalog = async () => {
     setStatus("loading:entries");
@@ -55,7 +54,7 @@ function App() {
                 <Card.Section>
                   <Image
                     height={200}
-                    src={null}
+                    src={status === "ready" ? entry?.metadata?.cover : null}
                     alt="Book cover image"
                     withPlaceholder
                     placeholder={

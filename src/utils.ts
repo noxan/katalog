@@ -6,7 +6,11 @@ import {
   FileEntry,
 } from "@tauri-apps/api/fs";
 
-export type BookEntry = FileEntry & { metadata: object };
+type BookMetadata = {
+  cover: string;
+};
+
+export type BookEntry = FileEntry & { metadata?: BookMetadata };
 
 const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
   array.reduce<FileEntry[]>((acc, item) => {
@@ -19,7 +23,7 @@ const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
 const filterFileEntries = (entries: FileEntry[]) =>
   entries.filter((entry) => entry.name?.endsWith(".epub"));
 
-export const initialize = async () => {
+export const initialize = async (): Promise<BookEntry[]> => {
   const dir = BaseDirectory.Home;
   const path = "Books";
 
