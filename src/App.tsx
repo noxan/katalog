@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Center, Container, Button, Input } from "@mantine/core";
+import { Center, Container, Button, Group, Input } from "@mantine/core";
 import { invoke } from "@tauri-apps/api/tauri";
 
 function App() {
@@ -22,13 +22,15 @@ function App() {
           greet();
         }}
       >
-        <Input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
+        <Group>
+          <Input
+            id="greet-input"
+            onChange={(e) => setName(e.currentTarget.value)}
+            placeholder="Enter a name..."
+          />
 
-        <Button type="submit">Greet</Button>
+          <Button type="submit">Greet</Button>
+        </Group>
       </form>
 
       <Center>
