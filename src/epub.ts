@@ -19,10 +19,21 @@ const findOpfFile = (zip: Unzipped) => {
   return xml.container.rootfiles.rootfile["@_full-path"];
 };
 
+const readOpfFile = (zip: Unzipped, opfFilePath: string) => {
+  const text = strFromU8(zip[opfFilePath]);
+  const xml = readXml(text);
+  return xml.package;
+};
+
 export const readEpub = async (entry: FileEntry) => {
   const buffer = await readBinaryFile(entry.path);
   const zip = await unzip(buffer);
 
   const opfFilePath = findOpfFile(zip);
-  console.log(opfFilePath);
+  const opfFile = readOpfFile(zip, opfFilePath);
+  console.log(opfFile);
+
+  console.log(opfFile.metadata["dc:title"]);
+
+  return opfFile;
 };

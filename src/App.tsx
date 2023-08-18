@@ -72,7 +72,7 @@ function App() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {entry.name?.trim()}
+                    {entry?.metadata?.["dc:title"] ?? entry.name}
                   </Text>
                 </Group>
               </Card>
