@@ -35,7 +35,16 @@ function App() {
           {entries.map((entry) => (
             <Grid.Col key={entry.name} span={6}>
               <Card withBorder shadow="sm" radius="md">
-                <Text>{entry.name}</Text>
+                <Text
+                  weight={500}
+                  style={{
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {entry.name?.trim()}
+                </Text>
               </Card>
             </Grid.Col>
           ))}
