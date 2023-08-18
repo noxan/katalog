@@ -35,10 +35,10 @@ export const initialize = async (): Promise<BookEntry[]> => {
 };
 
 const initializeBook = async (entry: FileEntry): Promise<BookEntry> => {
-  return { ...entry, metadata: {} } as BookEntry;
+  return { ...entry, metadata: await readEpub(entry) } as BookEntry;
 };
 
 export const initializeBooks = async (
   entries: FileEntry[]
 ): Promise<BookEntry[]> =>
-  Promise.all(entries.map(async (entry) => initializeBook(entry)));
+  Promise.all(entries.map(async (entry) => await initializeBook(entry)));
