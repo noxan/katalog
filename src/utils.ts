@@ -5,7 +5,7 @@ import {
   BaseDirectory,
   FileEntry,
 } from "@tauri-apps/api/fs";
-import { readEpub } from "./Epub";
+import { readEpub } from "./epub";
 
 export type BookEntry = FileEntry & { metadata?: any; coverImage?: string };
 
