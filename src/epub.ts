@@ -59,7 +59,7 @@ export const readEpub = async (entry: FileEntry) => {
     const coverImageHref = coverImageItem["@_href"];
     const coverImagePath =
       directory === "" ? coverImageHref : await join(directory, coverImageHref);
-    console.log(coverImagePath, coverImagePath in zip);
+    // console.log(coverImagePath, coverImagePath in zip);
 
     const bytes = zip[coverImagePath];
     const coverImageBase64: string = await base64.bytesToBase64(bytes);
