@@ -12,31 +12,31 @@ function App() {
   }
 
   return (
-    <Container>
-      <h1>Welcome to Tauri!</h1>
+    <Center>
+      <Container>
+        <h1>Welcome to Tauri!</h1>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <Group>
-          <Input
-            id="greet-input"
-            onChange={(e) => setName(e.currentTarget.value)}
-            placeholder="Enter a name..."
-          />
+        <form
+          className="row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            greet();
+          }}
+        >
+          <Group>
+            <Input
+              id="greet-input"
+              onChange={(e) => setName(e.currentTarget.value)}
+              placeholder="Enter a name..."
+            />
 
-          <Button type="submit">Greet</Button>
-        </Group>
-      </form>
+            <Button type="submit">Greet</Button>
+          </Group>
+        </form>
 
-      <Center>
         <p>{greetMsg}</p>
-      </Center>
-    </Container>
+      </Container>
+    </Center>
   );
 }
 
