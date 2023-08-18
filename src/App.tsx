@@ -57,7 +57,6 @@ function App() {
                 </Card.Section>
                 <Group position="apart" mt="md">
                   <Text
-                    weight={500}
                     style={{
                       overflow: "hidden",
                       whiteSpace: "nowrap",
