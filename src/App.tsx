@@ -18,12 +18,15 @@ function App() {
   const [status, setStatus] = useState<Status>("initialize");
   const [entries, setEntries] = useState<FileEntry[]>([]);
 
+  const initializeKatalog = async () => {
+    const entries = await initialize();
+    setEntries(entries);
+    setStatus("ready");
+  };
+
   useEffect(() => {
     if (status === "initialize") {
-      initialize().then((entries) => {
-        setEntries(entries);
-        setStatus("ready");
-      });
+      initializeKatalog();
     }
   }, [status]);
 
@@ -33,10 +36,7 @@ function App() {
         <h1>Welcome to Tauri!</h1>
 
         <Group mb="md">
-          <Button
-            disabled={status === "loading"}
-            onClick={async () => setEntries(await initialize())}
-          >
+          <Button disabled={status === "loading"} onClick={initializeKatalog}>
             Reload
           </Button>
           <Text>{status}</Text>
