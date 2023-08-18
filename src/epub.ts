@@ -1,7 +1,7 @@
 import { FileEntry, readBinaryFile } from "@tauri-apps/api/fs";
 import { unzip as unzipcb, Unzipped, strFromU8 } from "fflate/browser";
 import { XMLParser } from "fast-xml-parser";
-import { bufferToBase64 } from "./utils";
+import * as base64 from "byte-base64";
 
 const unzip = (buffer: Uint8Array): Promise<Unzipped> =>
   new Promise((resolve, reject) =>
