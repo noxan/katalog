@@ -67,7 +67,7 @@ function App() {
                 <Card.Section>
                   <Image
                     height={200}
-                    src={status === "ready" ? entry?.metadata?.cover : null}
+                    src={entry?.coverImage}
                     alt="Book cover image"
                     withPlaceholder
                     placeholder={
