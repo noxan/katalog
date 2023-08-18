@@ -34,8 +34,9 @@ export const initialize = async (): Promise<BookEntry[]> => {
   return filterFileEntries(entries);
 };
 
-const initializeBook = async (entry: FileEntry): Promise<BookEntry> => {
-  return { ...entry, metadata: await readEpub(entry) } as BookEntry;
+export const initializeBook = async (entry: FileEntry): Promise<BookEntry> => {
+  const epub = await readEpub(entry);
+  return { ...epub, ...entry } as BookEntry;
 };
 
 export const initializeBooks = async (
