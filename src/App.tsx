@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Center, Container, Button, Grid, Card, Text } from "@mantine/core";
+import {
+  Center,
+  Container,
+  Button,
+  Grid,
+  Card,
+  Text,
+  Image,
+  Group,
+} from "@mantine/core";
 import { FileEntry } from "@tauri-apps/api/fs";
 import { initialize } from "./utils";
 
@@ -33,18 +42,29 @@ function App() {
 
         <Grid gutter="lg">
           {entries.map((entry) => (
-            <Grid.Col key={entry.name} span={6}>
-              <Card withBorder shadow="sm" radius="md">
-                <Text
-                  weight={500}
-                  style={{
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {entry.name?.trim()}
-                </Text>
+            <Grid.Col key={entry.name} span={3}>
+              <Card shadow="sm" padding="lg" radius="md" withBorder>
+                <Card.Section>
+                  <Image
+                    height={120}
+                    src={null}
+                    alt="Book cover image"
+                    withPlaceholder
+                    placeholder={<Text align="center">Book cover</Text>}
+                  />
+                </Card.Section>
+                <Group position="apart" mt="md">
+                  <Text
+                    weight={500}
+                    style={{
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {entry.name?.trim()}
+                  </Text>
+                </Group>
               </Card>
             </Grid.Col>
           ))}
