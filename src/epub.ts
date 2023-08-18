@@ -33,7 +33,5 @@ export const readEpub = async (entry: FileEntry) => {
   const opfFile = readOpfFile(zip, opfFilePath);
   console.log(opfFile);
 
-  console.log(opfFile.metadata["dc:title"]);
-
   return opfFile;
 };
