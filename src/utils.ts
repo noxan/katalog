@@ -14,6 +14,9 @@ const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
     return [...acc, item];
   }, []);
 
+const filterFileEntries = (entries: FileEntry[]) =>
+  entries.filter((entry) => entry.name?.endsWith(".epub"));
+
 export const initialize = async () => {
   const dir = BaseDirectory.Home;
   const path = "Books";
@@ -25,6 +28,5 @@ export const initialize = async () => {
   const nestedEntries = await readDir(path, { dir, recursive: true });
   const entries = flattenFileEntries(nestedEntries);
 
-  console.log(entries);
-  return entries;
+  return filterFileEntries(entries);
 };
