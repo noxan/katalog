@@ -1,4 +1,5 @@
 import { FileEntry, readBinaryFile } from "@tauri-apps/api/fs";
+import { dirname, join } from "@tauri-apps/api/path";
 import { unzip as unzipcb, Unzipped, strFromU8 } from "fflate/browser";
 import { XMLParser } from "fast-xml-parser";
 import * as base64 from "byte-base64";
@@ -45,24 +46,27 @@ export const readEpub = async (entry: FileEntry) => {
   const zip = await unzip(buffer);
 
   const opfFilePath = findOpfFile(zip);
+  // console.log(opfFilePath);
   const opfFile = readOpfFile(zip, opfFilePath);
   // console.log(opfFile);
+  const directory = await dirname(opfFilePath);
 
   const coverImageId = findCoverImageId(opfFile.metadata.meta);
   if (coverImageId) {
     const coverImageItem = opfFile.manifest.item.find(
       (item: any) => item["@_id"] === coverImageId
     );
-    const coverImagePath = coverImageItem["@_href"];
-    // opfFile.coverImagePath = coverImagePath;
-    console.log(coverImagePath);
-    const binary = zip[coverImagePath];
-    const coverImageBase64: string = await bufferToBase64(binary);
+    const coverImageHref = coverImageItem["@_href"];
+    const coverImagePath =
+      directory === "" ? coverImageHref : await join(directory, coverImageHref);
+    console.log(coverImagePath, coverImagePath in zip);
+
+    const bytes = zip[coverImagePath];
+    const coverImageBase64: string = await base64.bytesToBase64(bytes);
     const coverImage =
       "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
 
     opfFile.coverImage = coverImage;
-    console.log(coverImage.substring(0, 100));
   }
 
   return opfFile;
