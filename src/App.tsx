@@ -19,6 +19,7 @@ function App() {
   const [entries, setEntries] = useState<FileEntry[]>([]);
 
   const initializeKatalog = async () => {
+    setStatus("loading");
     const entries = await initialize();
     setEntries(entries);
     setStatus("ready");
