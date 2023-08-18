@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Center, Container, Button, Group, Input } from "@mantine/core";
-import { invoke } from "@tauri-apps/api/tauri";
+import { Center, Container, Button } from "@mantine/core";
 import {
   createDir,
   exists,
@@ -33,14 +32,7 @@ const initialize = async () => {
 };
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
   const [entries, setEntries] = useState<FileEntry[]>([]);
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke("greet", { name }));
-  }
 
   return (
     <Center>
@@ -56,26 +48,6 @@ function App() {
             <li key={entry.name}>{JSON.stringify(entry)}</li>
           ))}
         </ul>
-
-        <form
-          className="row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            greet();
-          }}
-        >
-          <Group>
-            <Input
-              id="greet-input"
-              onChange={(e) => setName(e.currentTarget.value)}
-              placeholder="Enter a name..."
-            />
-
-            <Button type="submit">Greet</Button>
-          </Group>
-        </form>
-
-        <p>{greetMsg}</p>
       </Container>
     </Center>
   );
