@@ -36,7 +36,6 @@ function App() {
             epub.coverImage as unknown as Uint8Array
           );
         }
-        console.log(epub);
         setEntries((entries) =>
           entries.map((e) => (e.path === entry.path ? epub : e))
         );
