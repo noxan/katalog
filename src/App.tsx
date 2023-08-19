@@ -10,6 +10,7 @@ import {
   SimpleGrid,
   Title,
 } from "@mantine/core";
+import { invoke } from "@tauri-apps/api/tauri";
 import { BookEntry, initialize, initializeBook } from "./utils";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
@@ -36,6 +37,11 @@ function App() {
   };
 
   useEffect(() => {
+    const test = async () => {
+      const epub = await invoke("read_epub", { filename: "path/file.epub" });
+      console.log(epub);
+    };
+    test();
     if (status === "initialize") {
       initializeKatalog();
     }
