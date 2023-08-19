@@ -11,7 +11,7 @@ import {
   Title,
 } from "@mantine/core";
 import { invoke } from "@tauri-apps/api/tauri";
-import { BookEntry, initialize, initializeBook } from "./utils";
+import { BookEntry, initialize } from "./utils";
 import { encodeCoverImage } from "./epub";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
@@ -32,9 +32,9 @@ function App() {
           path: entry.path,
         })) as BookEntry;
         if (epub.coverImage) {
-          const [coverImage, coverImageFileType] = epub.coverImage as any[];
-          console.log(coverImageFileType);
-          epub.coverImage = await encodeCoverImage(coverImage);
+          epub.coverImage = await encodeCoverImage(
+            epub.coverImage as unknown as Uint8Array
+          );
         }
         console.log(epub);
         setEntries((entries) =>

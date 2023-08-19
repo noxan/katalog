@@ -12,11 +12,13 @@ fn greet(name: &str) -> String {
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct BookEntry {
     name: String,
     path: String,
     metadata: HashMap<String, Vec<String>>,
-    coverImage: (Vec<u8>, String),
+    cover_image: Vec<u8>,
+    cover_image_file_type: String,
 }
 
 #[tauri::command]
@@ -29,7 +31,8 @@ fn read_epub(name: &str, path: &str) -> BookEntry {
         name: String::from(name),
         path: String::from(path),
         metadata: epub.metadata,
-        coverImage: cover,
+        cover_image: cover.0,
+        cover_image_file_type: cover.1,
     };
 }
 
