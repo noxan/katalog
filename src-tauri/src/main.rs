@@ -7,14 +7,19 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[derive(serde::Serialize)]
 struct BookEntry {
-    // name: str,
-    // path: str,
+    name: String,
+    path: String,
 }
 
 #[tauri::command]
-fn read_epub(name: &str, path: &str) -> String {
-    format!("Read file with name {} at path {}.", name, path)
+fn read_epub(name: &str, path: &str) -> BookEntry {
+    format!("Read file with name {} at path {}.", name, path);
+    return BookEntry {
+        name: String::from(name),
+        path: String::from(path),
+    };
 }
 
 fn main() {
