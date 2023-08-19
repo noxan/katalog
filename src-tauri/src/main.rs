@@ -32,8 +32,7 @@ fn read_epub(name: &str, path: &str) -> BookEntry {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
-        .invoke_handler(tauri::generate_handler![read_epub])
+        .invoke_handler(tauri::generate_handler![greet, read_epub])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
