@@ -16,17 +16,20 @@ struct BookEntry {
     name: String,
     path: String,
     metadata: HashMap<String, Vec<String>>,
+    coverImage: (Vec<u8>, String),
 }
 
 #[tauri::command]
 fn read_epub(name: &str, path: &str) -> BookEntry {
     format!("Read file with name {} at path {}.", name, path);
-    let epub = EpubDoc::new(path).unwrap();
+    let mut epub = EpubDoc::new(path).unwrap();
+    let cover = epub.get_cover().unwrap();
 
     return BookEntry {
         name: String::from(name),
         path: String::from(path),
         metadata: epub.metadata,
+        coverImage: cover,
     };
 }
 

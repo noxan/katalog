@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import { invoke } from "@tauri-apps/api/tauri";
 import { BookEntry, initialize, initializeBook } from "./utils";
+import { encodeCoverImage } from "./epub";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 
@@ -30,6 +31,11 @@ function App() {
           name: entry.name,
           path: entry.path,
         })) as BookEntry;
+        if (epub.coverImage) {
+          const [coverImage, coverImageFileType] = epub.coverImage as any[];
+          console.log(coverImageFileType);
+          epub.coverImage = await encodeCoverImage(coverImage);
+        }
         console.log(epub);
         setEntries((entries) =>
           entries.map((e) => (e.path === entry.path ? epub : e))
@@ -68,9 +74,9 @@ function App() {
         </Container>
       </Center>
 
-      <Container>
+      {/* <Container>
         <Text>{JSON.stringify(entries[0])}</Text>
-      </Container>
+      </Container> */}
 
       <SimpleGrid
         cols={5}
