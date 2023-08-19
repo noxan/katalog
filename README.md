@@ -1,7 +1,14 @@
-# Tauri + React + Typescript
+# Katalog
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+The minimalist ebook manager.
 
-## Recommended IDE Setup
+## Roadmap
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- [x] Ebook library
+- [x] Epub file support (read-only)
+- [ ] View ebook metadata
+- [ ] Edit ebook metadata
+- [ ] Ebook reading mode
+- [ ] Convert epub to mobi
+- [ ] Transfer ebook to hardware reader (e.g. Kindle)
+- [ ] Caching of ebook library
