@@ -7,9 +7,14 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+struct BookEntry {
+    // name: str,
+    // path: str,
+}
+
 #[tauri::command]
-fn read_epub(filename: &str) -> String {
-    format!("Read {}", filename)
+fn read_epub(name: &str, path: &str) -> String {
+    format!("Read file with name {} at path {}.", name, path)
 }
 
 fn main() {

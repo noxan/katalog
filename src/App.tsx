@@ -25,23 +25,21 @@ function App() {
     setEntries(entries);
     setStatus("loading:details");
     await Promise.all(
-      entries.map(async (entry) => {
-        const book = await initializeBook(entry);
-        setEntries((entries) =>
-          entries.map((e) => (e.path === entry.path ? book : e))
-        );
-        return book;
+      entries.slice(entries.length - 1).map(async (entry) => {
+        const epub = await invoke("read_epub", {
+          name: entry.name,
+          path: entry.path,
+        });
+        console.log(epub);
+        // setEntries((entries) =>
+        //   entries.map((e) => (e.path === entry.path ? epub : e))
+        // );
       })
     );
     setStatus("ready");
   };
 
   useEffect(() => {
-    const test = async () => {
-      const epub = await invoke("read_epub", { filename: "path/file.epub" });
-      console.log(epub);
-    };
-    test();
     if (status === "initialize") {
       initializeKatalog();
     }
