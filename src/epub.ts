@@ -41,6 +41,11 @@ const findCoverImageId = (meta: object[]) => {
   return coverImageObject?.["@_content"] || "cover";
 };
 
+export const encodeCoverImage = async (bytes: Uint8Array) => {
+  const coverImageBase64: string = await base64.bytesToBase64(bytes);
+  return "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
+};
+
 export const readEpub = async (entry: FileEntry) => {
   const buffer = await readBinaryFile(entry.path);
   const zip = await unzip(buffer);
@@ -65,9 +70,7 @@ export const readEpub = async (entry: FileEntry) => {
       // console.log(coverImagePath, coverImagePath in zip);
 
       const bytes = zip[coverImagePath];
-      const coverImageBase64: string = await base64.bytesToBase64(bytes);
-      const coverImage =
-        "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
+      const coverImage = await encodeCoverImage(bytes);
 
       opfFile.coverImage = coverImage;
     }
