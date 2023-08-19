@@ -22,18 +22,23 @@ struct BookEntry {
 }
 
 #[tauri::command]
-fn read_epub(name: &str, path: &str) -> BookEntry {
+fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
     format!("Read file with name {} at path {}.", name, path);
-    let mut epub = EpubDoc::new(path).unwrap();
+
+    let mut epub = match EpubDoc::new(path) {
+        Ok(epub) => epub,
+        Err(e) => return Err(e.to_string()),
+    };
+
     let cover = epub.get_cover().unwrap();
 
-    return BookEntry {
+    Ok(BookEntry {
         name: String::from(name),
         path: String::from(path),
         metadata: epub.metadata,
         cover_image: cover.0,
         cover_image_file_type: cover.1,
-    };
+    })
 }
 
 fn main() {
