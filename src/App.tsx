@@ -8,6 +8,7 @@ import {
   Image,
   Group,
   SimpleGrid,
+  Title,
 } from "@mantine/core";
 import { BookEntry, initialize, initializeBook } from "./utils";
 
@@ -49,7 +50,7 @@ function App() {
     <Container fluid>
       <Center>
         <Container>
-          <h1>Welcome to Tauri!</h1>
+          <Title my="md">Welcome to Katalog!</Title>
 
           <Group mb="md">
             <Button
