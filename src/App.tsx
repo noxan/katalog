@@ -25,15 +25,15 @@ function App() {
     setEntries(entries);
     setStatus("loading:details");
     await Promise.all(
-      entries.slice(entries.length - 1).map(async (entry) => {
-        const epub = await invoke("read_epub", {
+      entries.slice(0, 1).map(async (entry) => {
+        const epub = (await invoke("read_epub", {
           name: entry.name,
           path: entry.path,
-        });
+        })) as BookEntry;
         console.log(epub);
-        // setEntries((entries) =>
-        //   entries.map((e) => (e.path === entry.path ? epub : e))
-        // );
+        setEntries((entries) =>
+          entries.map((e) => (e.path === entry.path ? epub : e))
+        );
       })
     );
     setStatus("ready");
@@ -67,6 +67,10 @@ function App() {
           </Group>
         </Container>
       </Center>
+
+      <Container>
+        <Text>{JSON.stringify(entries[0])}</Text>
+      </Container>
 
       <SimpleGrid
         cols={5}
