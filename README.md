@@ -12,4 +12,4 @@ The minimalist ebook manager.
 - [ ] Convert epub to mobi
 - [ ] Transfer ebook to hardware reader (e.g. Kindle)
 - [ ] Caching of ebook library
-- [ ] Dark mode
+- [x] Dark mode
