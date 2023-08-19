@@ -26,7 +26,7 @@ function App() {
     setEntries(entries);
     setStatus("loading:details");
     await Promise.all(
-      entries.slice(0, 1).map(async (entry) => {
+      entries.map(async (entry) => {
         const epub = (await invoke("read_epub", {
           name: entry.name,
           path: entry.path,
