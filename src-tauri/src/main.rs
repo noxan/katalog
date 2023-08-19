@@ -1,6 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::collections::HashMap;
+
+use epub::doc::EpubDoc;
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -11,14 +15,18 @@ fn greet(name: &str) -> String {
 struct BookEntry {
     name: String,
     path: String,
+    metadata: HashMap<String, Vec<String>>,
 }
 
 #[tauri::command]
 fn read_epub(name: &str, path: &str) -> BookEntry {
     format!("Read file with name {} at path {}.", name, path);
+    let epub = EpubDoc::new(path).unwrap();
+
     return BookEntry {
         name: String::from(name),
         path: String::from(path),
+        metadata: epub.metadata,
     };
 }
 
