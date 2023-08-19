@@ -17,8 +17,8 @@ struct BookEntry {
     name: String,
     path: String,
     metadata: HashMap<String, Vec<String>>,
-    cover_image: Vec<u8>,
-    cover_image_file_type: String,
+    cover_image: Option<Vec<u8>>,
+    cover_image_file_type: Option<String>,
 }
 
 #[tauri::command]
@@ -30,14 +30,22 @@ fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
         Err(e) => return Err(e.to_string()),
     };
 
-    let cover = epub.get_cover().unwrap();
+    let cover = epub.get_cover();
+    let cover_image = match cover.clone() {
+        None => None,
+        Some(cover) => Some(cover.0),
+    };
+    let cover_image_file_type = match cover.clone() {
+        None => None,
+        Some(cover) => Some(cover.1),
+    };
 
     Ok(BookEntry {
         name: String::from(name),
         path: String::from(path),
         metadata: epub.metadata,
-        cover_image: cover.0,
-        cover_image_file_type: cover.1,
+        cover_image: cover_image,
+        cover_image_file_type: cover_image_file_type,
     })
 }
 
