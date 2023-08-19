@@ -56,17 +56,21 @@ export const readEpub = async (entry: FileEntry) => {
     const coverImageItem = opfFile.manifest.item.find(
       (item: any) => item["@_id"] === coverImageId
     );
-    const coverImageHref = coverImageItem["@_href"];
-    const coverImagePath =
-      directory === "" ? coverImageHref : await join(directory, coverImageHref);
-    // console.log(coverImagePath, coverImagePath in zip);
+    if (coverImageItem) {
+      const coverImageHref = coverImageItem["@_href"];
+      const coverImagePath =
+        directory === ""
+          ? coverImageHref
+          : await join(directory, coverImageHref);
+      // console.log(coverImagePath, coverImagePath in zip);
 
-    const bytes = zip[coverImagePath];
-    const coverImageBase64: string = await base64.bytesToBase64(bytes);
-    const coverImage =
-      "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
+      const bytes = zip[coverImagePath];
+      const coverImageBase64: string = await base64.bytesToBase64(bytes);
+      const coverImage =
+        "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
 
-    opfFile.coverImage = coverImage;
+      opfFile.coverImage = coverImage;
+    }
   }
 
   return opfFile;
