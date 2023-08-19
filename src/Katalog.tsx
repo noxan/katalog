@@ -16,7 +16,7 @@ import { encodeCoverImage } from "./epub";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 
-function Katalog() {
+function Katalog({ children }: any) {
   const [status, setStatus] = useState<Status>("initialize");
   const [entries, setEntries] = useState<BookEntry[]>([]);
 
@@ -76,6 +76,8 @@ function Katalog() {
       {/* <Container>
         <Text>{JSON.stringify(entries[0])}</Text>
       </Container> */}
+
+      {children}
 
       <SimpleGrid
         cols={5}

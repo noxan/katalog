@@ -1,18 +1,26 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import ThemeProvider from "./ThemeProvider";
 import Katalog from "./Katalog";
+import KatalogRoute from "./routes/KatalogRoute";
+import BookRoute from "./routes/BookRoute";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Katalog />,
+    element: <KatalogRoute />,
+  },
+  {
+    path: "/book",
+    element: <BookRoute />,
   },
 ]);
 
 function App() {
   return (
     <ThemeProvider>
-      <RouterProvider router={router} />
+      <Katalog>
+        <RouterProvider router={router} />
+      </Katalog>
     </ThemeProvider>
   );
 }
