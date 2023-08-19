@@ -22,7 +22,7 @@ struct BookEntry {
 }
 
 #[tauri::command]
-fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
+async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
     format!("Read file with name {} at path {}.", name, path);
 
     let mut epub = match EpubDoc::new(path) {
