@@ -3,6 +3,7 @@ import ThemeProvider from "./ThemeProvider";
 import Katalog from "./Katalog";
 import KatalogRoute from "./routes/KatalogRoute";
 import BookRoute from "./routes/BookRoute";
+import { KatalogProvider } from "./KatalogProvider";
 
 const router = createBrowserRouter([
   {
@@ -18,9 +19,9 @@ const router = createBrowserRouter([
 function App() {
   return (
     <ThemeProvider>
-      <Katalog>
+      <KatalogProvider>
         <RouterProvider router={router} />
-      </Katalog>
+      </KatalogProvider>
     </ThemeProvider>
   );
 }
