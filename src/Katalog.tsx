@@ -30,7 +30,7 @@ function Katalog() {
           <Group mb="md">
             <Button
               disabled={status.startsWith("loading")}
-              onClick={initializeKatalog}
+              // onClick={initializeKatalog}
             >
               Reload
             </Button>
