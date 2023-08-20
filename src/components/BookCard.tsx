@@ -15,17 +15,19 @@ const displayTitle = (entry: BookEntry) => {
   return typeof title === "object" ? title["#text"] : title;
 };
 
+const animationStyle = "150ms cubic-bezier(0.4,0,0.2,1)";
+
 const useStyles = createStyles((theme) => ({
   card: {
     position: "relative",
-    transition: "transform 100ms ease-in",
+    transition: `transform ${animationStyle}`,
     "&:hover": {
       boxShadow: theme.shadows.md,
       transform: "scale(1.02)",
     },
   },
   title: {
-    transition: "opacity 100ms ease-in",
+    transition: `opacity ${animationStyle}`,
     position: "absolute",
     bottom: 0,
     background: "rgba(0,0,0,0.5)",
