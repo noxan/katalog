@@ -1,4 +1,4 @@
-import { Container, Image, Text, Title } from "@mantine/core";
+import { Button, Container, Image, Text, Title } from "@mantine/core";
 import { useContext } from "react";
 import { useParams } from "react-router";
 import { Link } from "react-router-dom";
@@ -11,7 +11,9 @@ export default function BookRoute() {
 
   return (
     <Container>
-      <Link to="/">Back</Link>
+      <Link to="/">
+        <Button variant="light">Back</Button>
+      </Link>
       <Image src={entry.coverImage} height={300} width={200} />
       <Title>{entry.metadata.title}</Title>
       {Object.keys(entry.metadata).map((key) => (
