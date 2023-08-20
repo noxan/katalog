@@ -24,40 +24,40 @@ export default function KatalogRoute() {
         ]}
       >
         {entries.map((entry) => (
-          <Link to={`/books/${entry.name}`}>
-            <Card
-              key={entry.name}
-              shadow="sm"
-              padding="lg"
-              radius="md"
-              withBorder
-            >
-              <Card.Section>
-                <Image
-                  height={200}
-                  src={entry?.coverImage}
-                  alt="Book cover image"
-                  withPlaceholder
-                  placeholder={
-                    <Text align="center" m="xs">
-                      {entry.name}
-                    </Text>
-                  }
-                />
-              </Card.Section>
-              <Group position="apart" mt="md">
-                <Text
-                  style={{
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {displayTitle(entry)}
-                </Text>
-              </Group>
-            </Card>
-          </Link>
+          <Card
+            key={entry.name}
+            shadow="sm"
+            padding="lg"
+            radius="md"
+            withBorder
+            component={Link}
+            to={`/books/${entry.name}`}
+          >
+            <Card.Section>
+              <Image
+                height={200}
+                src={entry?.coverImage}
+                alt="Book cover image"
+                withPlaceholder
+                placeholder={
+                  <Text align="center" m="xs">
+                    {entry.name}
+                  </Text>
+                }
+              />
+            </Card.Section>
+            <Group position="apart" mt="md">
+              <Text
+                style={{
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {displayTitle(entry)}
+              </Text>
+            </Group>
+          </Card>
         ))}
       </SimpleGrid>
     </Container>
