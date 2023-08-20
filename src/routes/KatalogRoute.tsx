@@ -1,28 +1,10 @@
-import { Dispatch, useContext } from "react";
-import {
-  Center,
-  Container,
-  Button,
-  Card,
-  Text,
-  Image,
-  Group,
-  SimpleGrid,
-  Title,
-} from "@mantine/core";
+import { useContext } from "react";
+import { Container, Card, Text, Image, Group, SimpleGrid } from "@mantine/core";
 import { BookEntry } from "../utils";
-import {
-  KatalogContext,
-  KatalogDispatchContext,
-  initializeKatalog as initializeKatalogAction,
-} from "../KatalogProvider";
+import { KatalogContext } from "../KatalogProvider";
 
 export default function KatalogRoute() {
-  const { status, entries } = useContext(KatalogContext);
-  const dispatch = useContext(KatalogDispatchContext);
-
-  const initializeKatalog = () =>
-    initializeKatalogAction(dispatch as Dispatch<any>);
+  const { entries } = useContext(KatalogContext);
 
   const displayTitle = (entry: BookEntry) => {
     const title = entry?.metadata?.["dc:title"] ?? entry.name;
@@ -31,26 +13,6 @@ export default function KatalogRoute() {
 
   return (
     <Container fluid>
-      <Center>
-        <Container>
-          <Title my="md">Welcome to Katalog!</Title>
-
-          <Group mb="md">
-            <Button
-              disabled={status.startsWith("loading")}
-              onClick={initializeKatalog}
-            >
-              Reload
-            </Button>
-            <Text>{status}</Text>
-          </Group>
-        </Container>
-      </Center>
-
-      {/* <Container>
-        <Text>{JSON.stringify(entries[0])}</Text>
-      </Container> */}
-
       <SimpleGrid
         cols={5}
         breakpoints={[
