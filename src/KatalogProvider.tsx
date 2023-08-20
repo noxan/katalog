@@ -1,10 +1,22 @@
-import { createContext, useReducer } from "react";
+import { createContext, useEffect, useReducer } from "react";
 import { BookEntry } from "./utils";
+
+let firstRun = true;
 
 export const KatalogContext = createContext<BookEntry[]>([]);
 
 export function KatalogProvider({ children }: { children: React.ReactNode }) {
   const [tasks, _dispatch] = useReducer(katalogReducer, []);
+
+  useEffect(() => {
+    const setup = async () => {
+      if (firstRun) {
+        firstRun = false;
+        console.log("initialize");
+      }
+    };
+    setup();
+  }, []);
 
   return (
     <KatalogContext.Provider value={tasks}>{children}</KatalogContext.Provider>
