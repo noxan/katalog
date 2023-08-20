@@ -10,6 +10,7 @@ The minimalist ebook manager.
 - [x] Epub file support (read-only)
 - [x] View ebook metadata
 - [ ] Import book into library
+- [ ] Welcome screen when library is empty
 - [ ] Edit ebook metadata
 - [ ] Convert epub to mobi
 - [ ] Transfer ebook to hardware reader (e.g. Kindle)
