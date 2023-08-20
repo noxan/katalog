@@ -6,7 +6,7 @@ The minimalist ebook manager.
 
 - [x] Ebook library
 - [x] Epub file support (read-only)
-- [ ] View ebook metadata
+- [x] View ebook metadata
 - [ ] Edit ebook metadata
 - [ ] Ebook reading mode
 - [ ] Convert epub to mobi
