@@ -35,13 +35,13 @@ export function KatalogHeader() {
         </Group>
 
         <Group>
+          <Text>{status}</Text>
           <Button
             disabled={status.startsWith("loading")}
             onClick={initializeKatalog}
           >
             Reload
           </Button>
-          <Text>{status}</Text>
         </Group>
       </div>
     </Header>
