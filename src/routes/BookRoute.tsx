@@ -16,7 +16,7 @@ export default function BookRoute() {
       <Title>{entry.metadata.title}</Title>
       {Object.keys(entry.metadata).map((key) => (
         <Text key={key}>
-          {key}: {entry.metadata[key]}
+          <b>{key}</b>: {entry.metadata[key]}
         </Text>
       ))}
     </Container>
