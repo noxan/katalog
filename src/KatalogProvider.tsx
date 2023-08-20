@@ -6,7 +6,7 @@ let firstRun = true;
 export const KatalogContext = createContext<BookEntry[]>([]);
 
 export function KatalogProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, dispatch] = useReducer(katalogReducer, []);
+  const [entries, dispatch] = useReducer(katalogReducer, []);
 
   useEffect(() => {
     const setup = async () => {
@@ -20,7 +20,9 @@ export function KatalogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <KatalogContext.Provider value={tasks}>{children}</KatalogContext.Provider>
+    <KatalogContext.Provider value={entries}>
+      {children}
+    </KatalogContext.Provider>
   );
 }
 
