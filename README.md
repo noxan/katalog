@@ -8,8 +8,8 @@ The minimalist ebook manager.
 - [x] Epub file support (read-only)
 - [x] View ebook metadata
 - [ ] Edit ebook metadata
-- [ ] Ebook reading mode
 - [ ] Convert epub to mobi
 - [ ] Transfer ebook to hardware reader (e.g. Kindle)
 - [ ] Caching of ebook library
 - [x] Dark mode
+- [ ] Ebook reading mode
