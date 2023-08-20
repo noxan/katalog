@@ -3,7 +3,7 @@ import { useContext } from "react";
 import { KatalogContext } from "../KatalogProvider";
 
 export default function KatalogRoute() {
-  const entries = useContext(KatalogContext);
+  const { entries } = useContext(KatalogContext);
 
   return (
     <Container>

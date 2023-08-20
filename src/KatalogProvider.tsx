@@ -1,9 +1,18 @@
 import { createContext, useEffect, useReducer } from "react";
 import { BookEntry, initialize } from "./utils";
 
+type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
+type KatalogContext = {
+  status: Status;
+  entries: BookEntry[];
+};
+
 let firstRun = true;
 
-export const KatalogContext = createContext<BookEntry[]>([]);
+export const KatalogContext = createContext<KatalogContext>({
+  status: "initialize",
+  entries: [],
+});
 
 export function KatalogProvider({ children }: { children: React.ReactNode }) {
   const [entries, dispatch] = useReducer(katalogReducer, []);
