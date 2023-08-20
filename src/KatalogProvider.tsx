@@ -39,13 +39,7 @@ const initializeKatalog = async (dispatch: Dispatch<any>) => {
           epub.coverImage as unknown as Uint8Array
         );
       }
-      dispatch({
-        type: "initialize",
-        payload: {
-          status: "loading:entries",
-          entries: entries.map((e) => (e.path === entry.path ? epub : e)),
-        },
-      });
+      dispatch({ type: "initialize:epub", payload: epub });
     })
   );
   dispatch({
@@ -75,6 +69,13 @@ function katalogReducer(previous: KatalogContextType, action: any) {
   switch (action.type) {
     case "initialize":
       return { ...previous, ...action.payload };
+    case "initialize:epub":
+      return {
+        ...previous,
+        entries: previous.entries.map((entry) =>
+          entry.path === action.payload.path ? action.payload : entry
+        ),
+      };
     default: {
       throw Error("Unknown action: " + action.type);
     }
