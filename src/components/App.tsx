@@ -11,7 +11,7 @@ const router = createBrowserRouter([
     element: <KatalogRoute />,
   },
   {
-    path: "/book/:id",
+    path: "/books/:id",
     element: <BookRoute />,
   },
 ]);

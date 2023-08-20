@@ -1,5 +1,6 @@
 import { useContext } from "react";
 import { Container, Card, Text, Image, Group, SimpleGrid } from "@mantine/core";
+import { Link } from "react-router-dom";
 import { BookEntry } from "../helpers/utils";
 import { KatalogContext } from "../providers/KatalogProvider";
 
@@ -23,38 +24,40 @@ export default function KatalogRoute() {
         ]}
       >
         {entries.map((entry) => (
-          <Card
-            key={entry.name}
-            shadow="sm"
-            padding="lg"
-            radius="md"
-            withBorder
-          >
-            <Card.Section>
-              <Image
-                height={200}
-                src={entry?.coverImage}
-                alt="Book cover image"
-                withPlaceholder
-                placeholder={
-                  <Text align="center" m="xs">
-                    {entry.name}
-                  </Text>
-                }
-              />
-            </Card.Section>
-            <Group position="apart" mt="md">
-              <Text
-                style={{
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {displayTitle(entry)}
-              </Text>
-            </Group>
-          </Card>
+          <Link to={`/books/${entry.name}`}>
+            <Card
+              key={entry.name}
+              shadow="sm"
+              padding="lg"
+              radius="md"
+              withBorder
+            >
+              <Card.Section>
+                <Image
+                  height={200}
+                  src={entry?.coverImage}
+                  alt="Book cover image"
+                  withPlaceholder
+                  placeholder={
+                    <Text align="center" m="xs">
+                      {entry.name}
+                    </Text>
+                  }
+                />
+              </Card.Section>
+              <Group position="apart" mt="md">
+                <Text
+                  style={{
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {displayTitle(entry)}
+                </Text>
+              </Group>
+            </Card>
+          </Link>
         ))}
       </SimpleGrid>
     </Container>
