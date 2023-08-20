@@ -1,5 +1,13 @@
 import { useContext } from "react";
-import { Container, Card, Text, Image, Group, SimpleGrid } from "@mantine/core";
+import {
+  Container,
+  Card,
+  Text,
+  Image,
+  Group,
+  SimpleGrid,
+  AspectRatio,
+} from "@mantine/core";
 import { Link } from "react-router-dom";
 import { BookEntry } from "../helpers/utils";
 import { KatalogContext } from "../providers/KatalogProvider";
@@ -34,17 +42,18 @@ export default function KatalogRoute() {
             to={`/books/${entry.name}`}
           >
             <Card.Section>
-              <Image
-                height={200}
-                src={entry?.coverImage}
-                alt="Book cover image"
-                withPlaceholder
-                placeholder={
-                  <Text align="center" m="xs">
-                    {entry.name}
-                  </Text>
-                }
-              />
+              <AspectRatio ratio={0.75}>
+                <Image
+                  src={entry?.coverImage}
+                  alt="Book cover image"
+                  withPlaceholder
+                  placeholder={
+                    <Text align="center" m="xs">
+                      {entry.name}
+                    </Text>
+                  }
+                />
+              </AspectRatio>
             </Card.Section>
             <Group position="apart" mt="md">
               <Text
