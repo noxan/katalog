@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { Dispatch, useContext } from "react";
 import {
   Center,
   Container,
@@ -11,10 +11,18 @@ import {
   Title,
 } from "@mantine/core";
 import { BookEntry } from "./utils";
-import { KatalogContext } from "./KatalogProvider";
+import {
+  KatalogContext,
+  KatalogDispatchContext,
+  initializeKatalog as initializeKatalogAction,
+} from "./KatalogProvider";
 
 function Katalog() {
   const { status, entries } = useContext(KatalogContext);
+  const dispatch = useContext(KatalogDispatchContext);
+
+  const initializeKatalog = () =>
+    initializeKatalogAction(dispatch as Dispatch<any>);
 
   const displayTitle = (entry: BookEntry) => {
     const title = entry?.metadata?.["dc:title"] ?? entry.name;
@@ -30,7 +38,7 @@ function Katalog() {
           <Group mb="md">
             <Button
               disabled={status.startsWith("loading")}
-              // onClick={initializeKatalog}
+              onClick={initializeKatalog}
             >
               Reload
             </Button>

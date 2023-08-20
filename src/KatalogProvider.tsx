@@ -17,8 +17,9 @@ const defaultValue = {
 };
 
 export const KatalogContext = createContext<KatalogContextType>(defaultValue);
+export const KatalogDispatchContext = createContext<Dispatch<any> | null>(null);
 
-const initializeKatalog = async (dispatch: Dispatch<any>) => {
+export const initializeKatalog = async (dispatch: Dispatch<any>) => {
   dispatch({
     type: "initialize",
     payload: { status: "loading:entries" },
@@ -60,7 +61,9 @@ export function KatalogProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <KatalogContext.Provider value={entries}>
-      {children}
+      <KatalogDispatchContext.Provider value={dispatch}>
+        {children}
+      </KatalogDispatchContext.Provider>
     </KatalogContext.Provider>
   );
 }
