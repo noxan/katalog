@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "katalog",
+    "productName": "Katalog",
     "version": "0.3.0"
   },
   "tauri": {
