@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import ThemeProvider from "./ThemeProvider";
+import ThemeProvider from "./providers/ThemeProvider";
 import KatalogRoute from "./routes/KatalogRoute";
 import BookRoute from "./routes/BookRoute";
 import { KatalogProvider } from "./providers/KatalogProvider";
