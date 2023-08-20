@@ -14,7 +14,11 @@ export default function BookRoute() {
       <Link to="/">Back</Link>
       <Image src={entry.coverImage} height={300} width={200} />
       <Title>{entry.metadata.title}</Title>
-      <Text>{JSON.stringify(entry.metadata)}</Text>
+      {Object.keys(entry.metadata).map((key) => (
+        <Text key={key}>
+          {key}: {entry.metadata[key]}
+        </Text>
+      ))}
     </Container>
   );
 }
