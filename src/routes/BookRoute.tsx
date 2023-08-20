@@ -13,6 +13,9 @@ export default function BookRoute() {
       <Link to="/">
         <Button variant="light">Back</Button>
       </Link>
+      <Link to="./edit">
+        <Button variant="light">Edit</Button>
+      </Link>
       <Image src={entry.coverImage} height={300} width={200} />
       <Title>{entry.metadata.title}</Title>
       {Object.keys(entry.metadata).map((key) => (
