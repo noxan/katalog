@@ -1,6 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import ThemeProvider from "./ThemeProvider";
-import Katalog from "./Katalog";
 import KatalogRoute from "./routes/KatalogRoute";
 import BookRoute from "./routes/BookRoute";
 import { KatalogProvider } from "./KatalogProvider";
@@ -11,7 +10,7 @@ const router = createBrowserRouter([
     element: <KatalogRoute />,
   },
   {
-    path: "/book",
+    path: "/book/:id",
     element: <BookRoute />,
   },
 ]);
