@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext } from "react";
 import {
   Center,
   Container,
@@ -10,45 +10,11 @@ import {
   SimpleGrid,
   Title,
 } from "@mantine/core";
-import { invoke } from "@tauri-apps/api/tauri";
-import { BookEntry, initialize } from "./utils";
-import { encodeCoverImage } from "./epub";
+import { BookEntry } from "./utils";
+import { KatalogContext } from "./KatalogProvider";
 
-type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
-
-function Katalog({ children }: any) {
-  const [status, setStatus] = useState<Status>("initialize");
-  const [entries, setEntries] = useState<BookEntry[]>([]);
-
-  const initializeKatalog = async () => {
-    setStatus("loading:entries");
-    const entries = await initialize();
-    setEntries(entries);
-    setStatus("loading:details");
-    await Promise.all(
-      entries.map(async (entry) => {
-        const epub = (await invoke("read_epub", {
-          name: entry.name,
-          path: entry.path,
-        })) as BookEntry;
-        if (epub.coverImage) {
-          epub.coverImage = await encodeCoverImage(
-            epub.coverImage as unknown as Uint8Array
-          );
-        }
-        setEntries((entries) =>
-          entries.map((e) => (e.path === entry.path ? epub : e))
-        );
-      })
-    );
-    setStatus("ready");
-  };
-
-  useEffect(() => {
-    if (status === "initialize") {
-      initializeKatalog();
-    }
-  }, [status]);
+function Katalog() {
+  const { status, entries } = useContext(KatalogContext);
 
   const displayTitle = (entry: BookEntry) => {
     const title = entry?.metadata?.["dc:title"] ?? entry.name;
@@ -76,8 +42,6 @@ function Katalog({ children }: any) {
       {/* <Container>
         <Text>{JSON.stringify(entries[0])}</Text>
       </Container> */}
-
-      {children}
 
       <SimpleGrid
         cols={5}
