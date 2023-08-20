@@ -2,7 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import ThemeProvider from "./ThemeProvider";
 import KatalogRoute from "./routes/KatalogRoute";
 import BookRoute from "./routes/BookRoute";
-import { KatalogProvider } from "./KatalogProvider";
+import { KatalogProvider } from "./providers/KatalogProvider";
 import { KatalogHeader } from "./components/KatalogHeader";
 
 const router = createBrowserRouter([

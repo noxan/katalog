@@ -4,7 +4,7 @@ import {
   KatalogContext,
   KatalogDispatchContext,
   initializeKatalog as initializeKatalogAction,
-} from "../KatalogProvider";
+} from "../providers/KatalogProvider";
 
 export function KatalogHeader() {
   const { status } = useContext(KatalogContext);

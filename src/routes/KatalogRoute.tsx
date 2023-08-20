@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { Container, Card, Text, Image, Group, SimpleGrid } from "@mantine/core";
 import { BookEntry } from "../utils";
-import { KatalogContext } from "../KatalogProvider";
+import { KatalogContext } from "../providers/KatalogProvider";
 
 export default function KatalogRoute() {
   const { entries } = useContext(KatalogContext);
