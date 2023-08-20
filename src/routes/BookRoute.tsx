@@ -9,7 +9,7 @@ export default function BookRoute() {
   const entry = entries.filter((value) => value.name === name)[0];
 
   return (
-    <Container>
+    <Container mb="md">
       <Link to="/">
         <Button variant="light">Back</Button>
       </Link>

@@ -7,7 +7,7 @@ export default function KatalogRoute() {
   const { entries } = useContext(KatalogContext);
 
   return (
-    <Container fluid>
+    <Container fluid mb="md">
       <SimpleGrid
         cols={5}
         breakpoints={[
