@@ -10,7 +10,7 @@ export default function KatalogRoute() {
       <Text>KatalogRoute</Text>
       <ul>
         {entries.map((entry) => (
-          <li>{JSON.stringify(entry)}</li>
+          <li key={entry.name}>{JSON.stringify(entry)}</li>
         ))}
       </ul>
     </Container>
