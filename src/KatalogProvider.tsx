@@ -1,18 +1,19 @@
 import { createContext, useEffect, useReducer } from "react";
-import { BookEntry } from "./utils";
+import { BookEntry, initialize } from "./utils";
 
 let firstRun = true;
 
 export const KatalogContext = createContext<BookEntry[]>([]);
 
 export function KatalogProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, _dispatch] = useReducer(katalogReducer, []);
+  const [tasks, dispatch] = useReducer(katalogReducer, []);
 
   useEffect(() => {
     const setup = async () => {
       if (firstRun) {
         firstRun = false;
-        console.log("initialize");
+        const entries = await initialize();
+        dispatch({ type: "initialize", entries });
       }
     };
     setup();
@@ -23,8 +24,10 @@ export function KatalogProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function katalogReducer(entries: BookEntry[], action: { type: string }) {
+function katalogReducer(entries: BookEntry[], action: any) {
   switch (action.type) {
+    case "initialize":
+      return action.entries;
     case "added": {
       return [...entries];
     }
