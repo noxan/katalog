@@ -37,8 +37,3 @@ export const initializeBook = async (entry: FileEntry): Promise<BookEntry> => {
   const epub = await readEpub(entry);
   return { ...epub, ...entry } as BookEntry;
 };
-
-export const initializeBooks = async (
-  entries: FileEntry[]
-): Promise<BookEntry[]> =>
-  Promise.all(entries.map(async (entry) => await initializeBook(entry)));
