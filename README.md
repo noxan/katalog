@@ -26,3 +26,17 @@
 
 - [ ] Cover image display fails for newly imported books
 - [ ] Newly imported books are not sorted and in wrong order
+
+## Release guide
+
+1. Increment version number in `package.json`
+2. Increment version number in `src-tauri/tauri.conf.json`
+3. Create a new git tag with the version number
+4. Commit and push changes
+5. Export environment variables for signing the app
+   `export TAURI_PRIVATE_KEY="content of the generated key"`
+   `export TAURI_KEY_PASSWORD="password"`
+6. Build the app with `pnpm tauri build`
+7. Create a new release on GitHub
+8. Upload the generated binaries to the release on Github
+9. Update the `assets/updater.json` with the new download url and signature
