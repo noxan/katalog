@@ -15,8 +15,7 @@ export function EmptyLibrary() {
     );
     epubFiles.map(async (file) => {
       const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      await copyBookToKatalog(file.name, bytes);
+      await copyBookToKatalog(file.name, arrayBuffer);
     });
   };
 

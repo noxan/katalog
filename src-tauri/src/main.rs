@@ -49,9 +49,27 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
     })
 }
 
+#[tauri::command]
+async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<String, String> {
+    format!("Copy book with name {} to katalog.", name);
+
+    let reader = std::io::Cursor::new(data);
+
+    let epub = match EpubDoc::from_reader(reader) {
+        Ok(epub) => epub,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    Ok(String::from("Success"))
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, read_epub])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            read_epub,
+            copy_book_to_katalog
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
