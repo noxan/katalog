@@ -1,10 +1,5 @@
-import { Dispatch, useContext } from "react";
 import { Button, Group, Header, Text, createStyles, rem } from "@mantine/core";
-import {
-  KatalogContext,
-  KatalogDispatchContext,
-  initializeKatalog as initializeKatalogAction,
-} from "../providers/KatalogProvider";
+import { useKatalogStore } from "../stores/katalog";
 
 const useStyles = createStyles((theme) => ({
   header: {
@@ -20,12 +15,10 @@ const useStyles = createStyles((theme) => ({
 }));
 
 export function KatalogHeader() {
-  const { status } = useContext(KatalogContext);
-  const dispatch = useContext(KatalogDispatchContext);
+  const importBook = useKatalogStore((state) => state.importBook);
+  const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
+  const status = useKatalogStore((state) => state.status);
   const { classes } = useStyles();
-
-  const initializeKatalog = () =>
-    initializeKatalogAction(dispatch as Dispatch<any>);
 
   return (
     <Header height={56} className={classes.header} mb="md">
@@ -41,6 +34,9 @@ export function KatalogHeader() {
             onClick={initializeKatalog}
           >
             Reload
+          </Button>
+          <Button disabled={status.startsWith("loading")} onClick={importBook}>
+            Import
           </Button>
         </Group>
       </div>

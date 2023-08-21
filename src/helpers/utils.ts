@@ -6,8 +6,7 @@ import {
   FileEntry,
 } from "@tauri-apps/api/fs";
 import { readEpub } from "./epub";
-
-export type BookEntry = FileEntry & { metadata?: any; coverImage?: string };
+import { BookEntry } from "../types";
 
 const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
   array.reduce<FileEntry[]>((acc, item) => {
