@@ -6,6 +6,7 @@ use std::io::{Read, Seek, Write};
 
 use epub::doc::EpubDoc;
 use tauri::api::path::home_dir;
+use tauri::RunEvent;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -108,6 +109,11 @@ fn main() {
             read_epub,
             copy_book_to_katalog
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|_app_handle, event| {
+            if let RunEvent::Updater(updater_event) = event {
+                dbg!(updater_event);
+            }
+        })
 }
