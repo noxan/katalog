@@ -2,9 +2,14 @@ import { useContext } from "react";
 import { Container, SimpleGrid } from "@mantine/core";
 import { KatalogContext } from "../providers/KatalogProvider";
 import { BookCard } from "../components/BookCard";
+import { EmptyLibrary } from "../components/EmptyLibrary";
 
 export default function KatalogRoute() {
   const { entries } = useContext(KatalogContext);
+
+  if (entries.length <= 0) {
+    return <EmptyLibrary />;
+  }
 
   return (
     <Container fluid mb="md">
