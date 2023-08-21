@@ -1,8 +1,6 @@
-# Katalog
+# Katalog: Your minimalist ebook manager.
 
 ![Screenshot of Katalog 0.5](https://github.com/noxan/katalog/blob/66fd1dba2552816c70f4b6b03332d8cdcb3180b4/assets/katalog-0.5.png?raw=true)
-
-The minimalist ebook manager.
 
 ## Roadmap
 
