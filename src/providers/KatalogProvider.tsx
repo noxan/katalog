@@ -19,35 +19,7 @@ const defaultValue = {
 export const KatalogContext = createContext<KatalogContextType>(defaultValue);
 export const KatalogDispatchContext = createContext<Dispatch<any> | null>(null);
 
-export const initializeKatalog = async (dispatch: Dispatch<any>) => {
-  dispatch({
-    type: "initialize",
-    payload: { status: "loading:entries" },
-  });
-  const entries = await initialize();
-  dispatch({
-    type: "initialize",
-    payload: { status: "loading:entries", entries },
-  });
-  await Promise.all(
-    entries.map(async (entry) => {
-      const epub = (await invoke("read_epub", {
-        name: entry.name,
-        path: entry.path,
-      })) as BookEntry;
-      if (epub.coverImage) {
-        epub.coverImage = await encodeCoverImage(
-          epub.coverImage as unknown as Uint8Array
-        );
-      }
-      dispatch({ type: "initialize:epub", payload: epub });
-    })
-  );
-  dispatch({
-    type: "initialize",
-    payload: { status: "ready" },
-  });
-};
+export const initializeKatalog = async (dispatch: Dispatch<any>) => {};
 
 export function KatalogProvider({ children }: { children: React.ReactNode }) {
   const [entries, dispatch] = useReducer(katalogReducer, defaultValue);
