@@ -24,10 +24,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
     set({ status: KatalogStatus.LOADING_DETAILS, entries });
     await Promise.all(
       entries.map(async (entry) => {
-        const epub = (await invoke("read_epub", {
-          name: entry.name,
-          path: entry.path,
-        })) as BookEntry;
+        const epub = (await invoke("read_epub", { ...entry })) as BookEntry;
         if (epub.coverImage) {
           epub.coverImage = await encodeCoverImage(
             epub.coverImage as unknown as Uint8Array
