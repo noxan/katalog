@@ -20,6 +20,7 @@
 - [ ] Delete ebook from library
 - [ ] Search ebook library
 - [ ] Sort ebook library by author and book title
+- [ ] Automatic updates
 
 ## Known issues
 
