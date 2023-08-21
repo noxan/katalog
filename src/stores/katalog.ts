@@ -24,10 +24,10 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
   copyBookToKatalog: async (name, arrayBuffer) => {
     const bytes = new Uint8Array(arrayBuffer);
     const data = Array.from(bytes);
+    const payload = { name, data };
 
-    console.log("copyBookToKatalog", name, bytes.length);
-    const result = await invoke("copy_book_to_katalog", { name, data });
-    console.log("copyBookToKatalog result", result);
+    const book = await invoke<BookEntry>("copy_book_to_katalog", payload);
+    set((state) => ({ entries: [...state.entries, book] }));
   },
   initializeKatalog: async () => {
     set({ status: KatalogStatus.LOADING_ENTRIES });
