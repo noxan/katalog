@@ -23,7 +23,7 @@ struct BookEntry {
     cover_image_file_type: Option<String>,
 }
 
-fn read_book_entry<R: Read + Seek>(
+async fn read_book_entry<R: Read + Seek>(
     mut epub: EpubDoc<R>,
 ) -> (
     HashMap<std::string::String, Vec<std::string::String>>,
@@ -52,7 +52,7 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
         Err(e) => return Err(e.to_string()),
     };
 
-    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub);
+    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub).await;
 
     Ok(BookEntry {
         name: String::from(name),
@@ -74,7 +74,7 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
         Err(e) => return Err(e.to_string()),
     };
 
-    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub);
+    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub).await;
 
     // write the book file to katalog folder
     let mut path = home_dir().unwrap();
