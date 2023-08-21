@@ -1,11 +1,11 @@
 {
-  "version": "0.7.0",
+  "version": "0.8.0",
   "notes": "Preview version",
-  "pub_date": "2023-08-21T13:38:39Z",
+  "pub_date": "2023-08-21T21:00:00Z",
   "platforms": {
     "darwin-x86_64": {
-      "signature": "Content of app.tar.gz.sig",
-      "url": "https://github.com/noxan/katalog/releases/download/0.7/Katalog_0.7.0_x64.dmg"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcW5ERGR5citBRStIcm85MTJ0S1lZVTM2Q3hBdm96Y0VoTkp5SktSMU5sZyswemwrZEZLYndGVS90VnNIbkcrMFVwbXY3bkVwenFkbWV0ZUhCanRFb2dzWURqYTgvOWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNjkyNjQ0NDc3CWZpbGU6S2F0YWxvZy5hcHAudGFyLmd6Cjh0aFJWcG12QVMzZkVWbGIwZS9uQWRUVmpwa1pBMXFqQVBJM1JkbkhxRTMzRTNwQUZkMDJFWnhoVmlZRTZPRVNmSFdYVjVyM0NTelJWS2NjUHJaZUJBPT0K",
+      "url": "https://github.com/noxan/katalog/releases/download/0.8/Katalog_0.8.0_x64.dmg"
     }
   }
 }
