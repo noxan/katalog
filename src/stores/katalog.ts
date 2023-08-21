@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { BookEntry } from "../helpers/utils";
+import { BookEntry } from "../types";
 
 interface KatalogStore {
   status: "initialize" | "loading" | "ready";

@@ -1,7 +1,8 @@
 import { Dispatch, createContext, useEffect, useReducer } from "react";
-import { BookEntry, initialize } from "../helpers/utils";
+import { initialize } from "../helpers/utils";
 import { invoke } from "@tauri-apps/api/tauri";
 import { encodeCoverImage } from "../helpers/epub";
+import { BookEntry } from "../types";
 
 type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 type KatalogContextType = {

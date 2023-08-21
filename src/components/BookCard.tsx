@@ -1,6 +1,6 @@
 import { AspectRatio, Card, Image, Text, createStyles } from "@mantine/core";
 import { Link } from "react-router-dom";
-import { BookEntry } from "../helpers/utils";
+import { BookEntry } from "../types";
 
 const displayTitle = (entry: BookEntry) => {
   return entry?.metadata?.title ?? entry.name;
