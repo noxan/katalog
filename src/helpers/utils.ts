@@ -9,6 +9,15 @@ import { encodeCoverImage } from "./epub";
 import { BookEntry } from "../types";
 import { invoke } from "@tauri-apps/api";
 
+export const BASE_DIRECTORY = BaseDirectory.Home;
+export const KATALOG_PATH = "Books";
+
+export const ensureKatalogDirectory = async () => {
+  if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
+    await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
+  }
+};
+
 const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
   array.reduce<FileEntry[]>((acc, item) => {
     if (item.children) {
@@ -19,15 +28,6 @@ const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
 
 const filterFileEntries = (entries: FileEntry[]) =>
   entries.filter((entry) => entry.name?.endsWith(".epub"));
-
-export const BASE_DIRECTORY = BaseDirectory.Home;
-export const KATALOG_PATH = "Books";
-
-export const ensureKatalogDirectory = async () => {
-  if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
-    await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
-  }
-};
 
 export const initializeEntries = async (): Promise<BookEntry[]> => {
   await ensureKatalogDirectory();
