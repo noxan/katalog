@@ -2,11 +2,13 @@ import { Container, Group, Text, rem, useMantineTheme } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
 import { IconBooks, IconUpload, IconX } from "@tabler/icons-react";
 
+const EPUB_MIME_TYPE = ["application/epub+zip"];
+
 export function EmptyLibrary() {
   const theme = useMantineTheme();
   return (
     <Container fluid mb="md">
-      <Dropzone>
+      <Dropzone onDrop={(files) => console.log(files)} accept={EPUB_MIME_TYPE}>
         <Group
           position="center"
           spacing="xl"
