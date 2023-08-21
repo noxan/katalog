@@ -18,6 +18,8 @@ The minimalist ebook manager.
 - [x] Dark mode
 - [ ] Ebook reading mode
 - [ ] Delete ebook from library
+- [ ] Search ebook library
+- [ ] Sort ebook library
 
 ## Known issues
 
