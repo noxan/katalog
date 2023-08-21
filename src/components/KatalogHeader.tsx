@@ -1,10 +1,4 @@
-import { Dispatch, useContext } from "react";
 import { Button, Group, Header, Text, createStyles, rem } from "@mantine/core";
-import {
-  KatalogContext,
-  KatalogDispatchContext,
-  initializeKatalog as initializeKatalogAction,
-} from "../providers/KatalogProvider";
 import { useKatalogStore } from "../stores/katalog";
 
 const useStyles = createStyles((theme) => ({
@@ -22,12 +16,9 @@ const useStyles = createStyles((theme) => ({
 
 export function KatalogHeader() {
   const importBook = useKatalogStore((state) => state.importBook);
-  const { status } = useContext(KatalogContext);
-  const dispatch = useContext(KatalogDispatchContext);
+  const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
+  const status = useKatalogStore((state) => state.status);
   const { classes } = useStyles();
-
-  const initializeKatalog = () =>
-    initializeKatalogAction(dispatch as Dispatch<any>);
 
   return (
     <Header height={56} className={classes.header} mb="md">
