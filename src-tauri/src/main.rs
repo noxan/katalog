@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
+use std::io::{Read, Seek};
 
 use epub::doc::EpubDoc;
 
@@ -21,15 +22,13 @@ struct BookEntry {
     cover_image_file_type: Option<String>,
 }
 
-#[tauri::command]
-async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
-    format!("Read file with name {} at path {}.", name, path);
-
-    let mut epub = match EpubDoc::new(path) {
-        Ok(epub) => epub,
-        Err(e) => return Err(e.to_string()),
-    };
-
+fn read_book_entry<R: Read + Seek>(
+    mut epub: EpubDoc<R>,
+) -> (
+    HashMap<std::string::String, Vec<std::string::String>>,
+    std::option::Option<Vec<u8>>,
+    std::option::Option<std::string::String>,
+) {
     let cover = epub.get_cover();
     let cover_image = match cover.clone() {
         None => None,
@@ -40,17 +39,31 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
         Some(cover) => Some(cover.1),
     };
 
+    (epub.metadata, cover_image, cover_image_file_type)
+}
+
+#[tauri::command]
+async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
+    format!("Read file with name {} at path {}.", name, path);
+
+    let epub = match EpubDoc::new(path) {
+        Ok(epub) => epub,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub);
+
     Ok(BookEntry {
         name: String::from(name),
         path: String::from(path),
-        metadata: epub.metadata,
+        metadata: metadata,
         cover_image: cover_image,
         cover_image_file_type: cover_image_file_type,
     })
 }
 
 #[tauri::command]
-async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<String, String> {
+async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, String> {
     format!("Copy book with name {} to katalog.", name);
 
     let reader = std::io::Cursor::new(data);
@@ -60,7 +73,15 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<String, Strin
         Err(e) => return Err(e.to_string()),
     };
 
-    Ok(String::from("Success"))
+    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub);
+
+    Ok(BookEntry {
+        name: String::from(name),
+        path: String::from(name),
+        metadata: metadata,
+        cover_image: cover_image,
+        cover_image_file_type: cover_image_file_type,
+    })
 }
 
 fn main() {
