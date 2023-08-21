@@ -22,17 +22,21 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
       entries: [...state.entries, { name: "test-name", path: "test-path" }],
     })),
   copyBooksToKatalog: async (files: File[]) => {
+    set({ status: KatalogStatus.LOADING_IMPORT });
     const epubFiles = files.filter((file) =>
       ACCEPTED_MIME_TYPES.includes(file.type)
     );
-    epubFiles.map(async (file) => {
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      const data = Array.from(bytes);
-      const payload = { name: file.name, data };
-      const book = await invoke<BookEntry>("copy_book_to_katalog", payload);
-      set((state) => ({ entries: [...state.entries, book] }));
-    });
+    await Promise.all(
+      epubFiles.map(async (file) => {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const data = Array.from(bytes);
+        const payload = { name: file.name, data };
+        const book = await invoke<BookEntry>("copy_book_to_katalog", payload);
+        set((state) => ({ entries: [...state.entries, book] }));
+      })
+    );
+    set({ status: KatalogStatus.READY });
   },
   initializeKatalog: async () => {
     set({ status: KatalogStatus.LOADING_ENTRIES });

@@ -6,6 +6,7 @@ export enum KatalogStatus {
   INITIALIZE = "initialize",
   LOADING_ENTRIES = "loading:entries",
   LOADING_DETAILS = "loading:details",
+  LOADING_IMPORT = "loading:import",
   READY = "ready",
 }
 
