@@ -1,13 +1,6 @@
-import {
-  Button,
-  Container,
-  Group,
-  Text,
-  rem,
-  useMantineTheme,
-} from "@mantine/core";
+import { Container, Group, Text, rem, useMantineTheme } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
-import { IconBooks, IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
+import { IconBooks, IconUpload, IconX } from "@tabler/icons-react";
 
 export function EmptyLibrary() {
   const theme = useMantineTheme();
@@ -38,12 +31,12 @@ export function EmptyLibrary() {
             />
           </Dropzone.Reject>
           <Dropzone.Idle>
-            <IconPhoto size="3.2rem" stroke={1.5} />
+            <IconBooks size="3.2rem" stroke={1.5} />
           </Dropzone.Idle>
 
           <div>
             <Text size="xl" inline>
-              Drag images here or click to select files
+              Drag ebooks here or click to select files
             </Text>
             <Text size="sm" color="dimmed" inline mt={7}>
               Attach as many files as you like, each file should not exceed 5mb
@@ -51,10 +44,6 @@ export function EmptyLibrary() {
           </div>
         </Group>
       </Dropzone>
-      <IconBooks strokeWidth={1} size={128} />
-
-      <Text>There are no books in the katalog.</Text>
-      <Button mt="md">Import book</Button>
     </Container>
   );
 }
