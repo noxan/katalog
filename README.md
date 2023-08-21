@@ -17,6 +17,7 @@ The minimalist ebook manager.
 - [ ] Caching of ebook library
 - [x] Dark mode
 - [ ] Ebook reading mode
+- [ ] Delete ebook from library
 
 ## Known issues
 
