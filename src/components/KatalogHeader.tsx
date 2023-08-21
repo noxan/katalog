@@ -48,10 +48,13 @@ export function KatalogHeader() {
           </Button>
           <FileButton
             accept={ACCEPTED_MIME_TYPES.join(",")}
-            disabled={status.startsWith("loading")}
             onChange={(file: File) => copyBooksToKatalog([file])}
           >
-            {(props) => <Button {...props}>Import</Button>}
+            {(props) => (
+              <Button disabled={status.startsWith("loading")} {...props}>
+                Import
+              </Button>
+            )}
           </FileButton>
         </Group>
       </div>
