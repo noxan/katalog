@@ -20,15 +20,18 @@ const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
 const filterFileEntries = (entries: FileEntry[]) =>
   entries.filter((entry) => entry.name?.endsWith(".epub"));
 
-export const initializeEntries = async (): Promise<BookEntry[]> => {
-  const dir = BaseDirectory.Home;
-  const path = "Books";
+export const BASE_DIRECTORY = BaseDirectory.Home;
+export const KATALOG_PATH = "Books";
 
-  if (!(await exists(path, { dir }))) {
-    await createDir(path, { dir });
+export const initializeEntries = async (): Promise<BookEntry[]> => {
+  if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
+    await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
   }
 
-  const nestedEntries = await readDir(path, { dir, recursive: true });
+  const nestedEntries = await readDir(KATALOG_PATH, {
+    dir: BASE_DIRECTORY,
+    recursive: true,
+  });
   const entries = flattenFileEntries(nestedEntries);
 
   return filterFileEntries(entries);
