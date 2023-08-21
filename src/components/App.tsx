@@ -3,7 +3,6 @@ import ThemeProvider from "../providers/ThemeProvider";
 import KatalogRoute from "../routes/KatalogRoute";
 import BookRoute from "../routes/BookRoute";
 import BookEditRoute from "../routes/BookEditRoute";
-import { KatalogProvider } from "../providers/KatalogProvider";
 import { KatalogHeader } from "./KatalogHeader";
 import { useEffect } from "react";
 import { useKatalogStore } from "../stores/katalog";
@@ -35,10 +34,8 @@ function App() {
   }, []);
   return (
     <ThemeProvider>
-      <KatalogProvider>
-        <KatalogHeader />
-        <RouterProvider router={router} />
-      </KatalogProvider>
+      <KatalogHeader />
+      <RouterProvider router={router} />
     </ThemeProvider>
   );
 }
