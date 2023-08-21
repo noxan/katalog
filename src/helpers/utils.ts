@@ -23,10 +23,14 @@ const filterFileEntries = (entries: FileEntry[]) =>
 export const BASE_DIRECTORY = BaseDirectory.Home;
 export const KATALOG_PATH = "Books";
 
-export const initializeEntries = async (): Promise<BookEntry[]> => {
+export const ensureKatalogDirectory = async () => {
   if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
     await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
   }
+};
+
+export const initializeEntries = async (): Promise<BookEntry[]> => {
+  await ensureKatalogDirectory();
 
   const nestedEntries = await readDir(KATALOG_PATH, {
     dir: BASE_DIRECTORY,
