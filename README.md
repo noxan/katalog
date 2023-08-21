@@ -19,7 +19,7 @@
 - [ ] Ebook reading mode
 - [ ] Delete ebook from library
 - [ ] Search ebook library
-- [ ] Sort ebook library
+- [ ] Sort ebook library by author and book title
 
 ## Known issues
 
