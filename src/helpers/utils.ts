@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api";
 import {
   createDir,
   exists,
@@ -5,9 +6,8 @@ import {
   BaseDirectory,
   FileEntry,
 } from "@tauri-apps/api/fs";
-import { encodeCoverImage } from "./epub";
+import { bytesToBase64 } from "byte-base64";
 import { BookEntry } from "../types";
-import { invoke } from "@tauri-apps/api";
 
 export const BASE_DIRECTORY = BaseDirectory.Home;
 export const KATALOG_PATH = "Books";
@@ -39,6 +39,11 @@ export const initializeEntries = async (): Promise<BookEntry[]> => {
   const entries = flattenFileEntries(nestedEntries);
 
   return filterFileEntries(entries);
+};
+
+const encodeCoverImage = async (bytes: Uint8Array) => {
+  const coverImageBase64: string = await bytesToBase64(bytes);
+  return "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
 };
 
 export const readEpub = async (entry: FileEntry): Promise<BookEntry> => {
