@@ -2,9 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, Write};
 
 use epub::doc::EpubDoc;
+use tauri::api::path::home_dir;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -66,7 +67,7 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
 async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, String> {
     format!("Copy book with name {} to katalog.", name);
 
-    let reader = std::io::Cursor::new(data);
+    let reader = std::io::Cursor::new(data.clone());
 
     let epub = match EpubDoc::from_reader(reader) {
         Ok(epub) => epub,
@@ -74,6 +75,22 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
     };
 
     let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub);
+
+    // write the book file to katalog folder
+    let mut path = home_dir().unwrap();
+    path.push("Books");
+    path.push(name);
+    path.set_extension("epub");
+
+    let mut file = match std::fs::File::create(&path) {
+        Ok(file) => file,
+        Err(e) => return Err(e.to_string()),
+    };
+    let bytes = &data;
+    match file.write_all(&bytes) {
+        Ok(_) => (),
+        Err(e) => return Err(e.to_string()),
+    }
 
     Ok(BookEntry {
         name: String::from(name),
