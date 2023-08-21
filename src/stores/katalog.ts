@@ -6,6 +6,7 @@ interface KatalogStore {
   status: KatalogStatus;
   entries: BookEntry[];
   initializeKatalog: () => void;
+  copyBookToKatalog: (name: string, bytes: Uint8Array) => void;
   importBook: () => void;
 }
 
@@ -19,6 +20,9 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
     set((state) => ({
       entries: [...state.entries, { name: "test-name", path: "test-path" }],
     })),
+  copyBookToKatalog: (name, bytes) => {
+    console.log("copyBookToKatalog", name, bytes.length);
+  },
   initializeKatalog: async () => {
     set({ status: KatalogStatus.LOADING_ENTRIES });
     const entries = await initializeEntries();

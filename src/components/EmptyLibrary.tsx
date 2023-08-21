@@ -1,14 +1,28 @@
 import { Container, Group, Text, rem, useMantineTheme } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
 import { IconBooks, IconUpload, IconX } from "@tabler/icons-react";
+import { useKatalogStore } from "../stores/katalog";
 
 const EPUB_MIME_TYPE = ["application/epub+zip"];
 
 export function EmptyLibrary() {
   const theme = useMantineTheme();
+  const copyBookToKatalog = useKatalogStore((state) => state.copyBookToKatalog);
+
+  const handleDrop = (files: File[]) => {
+    const epubFiles = files.filter((file) =>
+      EPUB_MIME_TYPE.includes(file.type)
+    );
+    epubFiles.map(async (file) => {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      await copyBookToKatalog(file.name, bytes);
+    });
+  };
+
   return (
     <Container fluid mb="md">
-      <Dropzone onDrop={(files) => console.log(files)} accept={EPUB_MIME_TYPE}>
+      <Dropzone onDrop={handleDrop} accept={EPUB_MIME_TYPE}>
         <Group
           position="center"
           spacing="xl"
