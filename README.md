@@ -24,3 +24,4 @@
 ## Known issues
 
 - [ ] Cover image display fails for newly imported books
+- [ ] Newly imported books are not sorted and in wrong order
