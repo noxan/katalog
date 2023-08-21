@@ -1,11 +1,10 @@
 import { Button, Container, Group, Image, Text, Title } from "@mantine/core";
-import { useContext } from "react";
 import { useParams, Link } from "react-router-dom";
-import { KatalogContext } from "../providers/KatalogProvider";
+import { useKatalogStore } from "../stores/katalog";
 
 export default function BookRoute() {
   const { name } = useParams();
-  const { entries } = useContext(KatalogContext);
+  const entries = useKatalogStore((store) => store.entries);
   const entry = entries.filter((value) => value.name === name)[0];
 
   return (
