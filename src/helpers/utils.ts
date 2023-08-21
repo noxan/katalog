@@ -20,7 +20,7 @@ const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
 const filterFileEntries = (entries: FileEntry[]) =>
   entries.filter((entry) => entry.name?.endsWith(".epub"));
 
-export const initialize = async (): Promise<BookEntry[]> => {
+export const initializeEntries = async (): Promise<BookEntry[]> => {
   const dir = BaseDirectory.Home;
   const path = "Books";
 

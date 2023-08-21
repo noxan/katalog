@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { BookEntry, KatalogStatus } from "../types";
-import { initialize, readEpub } from "../helpers/utils";
+import { initializeEntries, readEpub } from "../helpers/utils";
 
 interface KatalogStore {
   status: KatalogStatus;
@@ -21,7 +21,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
     })),
   initializeKatalog: async () => {
     set({ status: KatalogStatus.LOADING_ENTRIES });
-    const entries = await initialize();
+    const entries = await initializeEntries();
     set({ status: KatalogStatus.LOADING_DETAILS, entries });
     await Promise.all(
       entries.map(async (entry) => {
