@@ -2,18 +2,17 @@ import { Dispatch, createContext, useEffect, useReducer } from "react";
 import { initialize } from "../helpers/utils";
 import { invoke } from "@tauri-apps/api/tauri";
 import { encodeCoverImage } from "../helpers/epub";
-import { BookEntry } from "../types";
+import { BookEntry, KatalogStatus } from "../types";
 
-type Status = "initialize" | "loading:entries" | "loading:details" | "ready";
 type KatalogContextType = {
-  status: Status;
+  status: KatalogStatus;
   entries: BookEntry[];
 };
 
 let firstRun = true;
 
 const defaultValue = {
-  status: "initialize" as Status,
+  status: "initialize" as KatalogStatus,
   entries: [] as BookEntry[],
 };
 
