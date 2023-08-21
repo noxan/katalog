@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import { BookEntry, KatalogStatus } from "../types";
-import { initialize } from "../helpers/utils";
-import { encodeCoverImage } from "../helpers/epub";
-import { invoke } from "@tauri-apps/api";
+import { initialize, readEpub } from "../helpers/utils";
 
 interface KatalogStore {
   status: KatalogStatus;
@@ -24,12 +22,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
     set({ status: KatalogStatus.LOADING_DETAILS, entries });
     await Promise.all(
       entries.map(async (entry) => {
-        const epub = await invoke<BookEntry>("read_epub", { ...entry });
-        if (epub.coverImage) {
-          epub.coverImage = await encodeCoverImage(
-            epub.coverImage as unknown as Uint8Array
-          );
-        }
+        const epub = await readEpub(entry);
         set((state) => ({
           entries: state.entries.map((entry) =>
             entry.path === epub.path ? epub : entry

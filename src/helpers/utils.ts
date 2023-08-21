@@ -5,8 +5,9 @@ import {
   BaseDirectory,
   FileEntry,
 } from "@tauri-apps/api/fs";
-import { readEpub } from "./epub";
+import { encodeCoverImage } from "./epub";
 import { BookEntry } from "../types";
+import { invoke } from "@tauri-apps/api";
 
 const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
   array.reduce<FileEntry[]>((acc, item) => {
@@ -33,7 +34,12 @@ export const initialize = async (): Promise<BookEntry[]> => {
   return filterFileEntries(entries);
 };
 
-export const initializeBook = async (entry: FileEntry): Promise<BookEntry> => {
-  const epub = await readEpub(entry);
-  return { ...epub, ...entry } as BookEntry;
+export const readEpub = async (entry: FileEntry): Promise<BookEntry> => {
+  const epub = await invoke<BookEntry>("read_epub", { ...entry });
+  if (epub.coverImage) {
+    epub.coverImage = await encodeCoverImage(
+      epub.coverImage as unknown as Uint8Array
+    );
+  }
+  return epub;
 };
