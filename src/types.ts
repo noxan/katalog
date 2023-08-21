@@ -8,3 +8,5 @@ export enum KatalogStatus {
   LOADING_DETAILS = "loading:details",
   READY = "ready",
 }
+
+export const ACCEPTED_MIME_TYPES = ["application/epub+zip"];
