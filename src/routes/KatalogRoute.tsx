@@ -22,7 +22,7 @@ export default function KatalogRoute() {
         ]}
       >
         {entries.map((entry) => (
-          <BookCard entry={entry} />
+          <BookCard key={entry.name} entry={entry} />
         ))}
       </SimpleGrid>
     </Container>
