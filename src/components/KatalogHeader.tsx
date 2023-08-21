@@ -1,3 +1,4 @@
+import { emit } from "@tauri-apps/api/event";
 import {
   Button,
   FileButton,
@@ -40,6 +41,13 @@ export function KatalogHeader() {
 
         <Group>
           <Text>{status}</Text>
+          <Button
+            disabled={status.startsWith("loading")}
+            onClick={() => emit("tauri://update")}
+            variant="light"
+          >
+            Update
+          </Button>
           <Button
             disabled={status.startsWith("loading")}
             onClick={initializeKatalog}
