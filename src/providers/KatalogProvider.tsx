@@ -9,8 +9,6 @@ type KatalogContextType = {
   entries: BookEntry[];
 };
 
-let firstRun = true;
-
 const defaultValue = {
   status: "initialize" as KatalogStatus,
   entries: [] as BookEntry[],
@@ -23,13 +21,6 @@ export const initializeKatalog = async (dispatch: Dispatch<any>) => {};
 
 export function KatalogProvider({ children }: { children: React.ReactNode }) {
   const [entries, dispatch] = useReducer(katalogReducer, defaultValue);
-
-  useEffect(() => {
-    if (firstRun) {
-      firstRun = false;
-      initializeKatalog(dispatch);
-    }
-  }, []);
 
   return (
     <KatalogContext.Provider value={entries}>

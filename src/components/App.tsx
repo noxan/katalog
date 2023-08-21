@@ -5,6 +5,8 @@ import BookRoute from "../routes/BookRoute";
 import BookEditRoute from "../routes/BookEditRoute";
 import { KatalogProvider } from "../providers/KatalogProvider";
 import { KatalogHeader } from "./KatalogHeader";
+import { useEffect } from "react";
+import { useKatalogStore } from "../stores/katalog";
 
 const router = createBrowserRouter([
   {
@@ -21,7 +23,16 @@ const router = createBrowserRouter([
   },
 ]);
 
+let firstRun = true;
+
 function App() {
+  const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
+  useEffect(() => {
+    if (firstRun) {
+      firstRun = false;
+      initializeKatalog();
+    }
+  }, []);
   return (
     <ThemeProvider>
       <KatalogProvider>
