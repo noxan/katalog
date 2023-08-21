@@ -6,21 +6,13 @@ import { ACCEPTED_MIME_TYPES } from "../types";
 
 export function EmptyLibrary() {
   const theme = useMantineTheme();
-  const copyBookToKatalog = useKatalogStore((state) => state.copyBookToKatalog);
-
-  const handleDrop = (files: File[]) => {
-    const epubFiles = files.filter((file) =>
-      ACCEPTED_MIME_TYPES.includes(file.type)
-    );
-    epubFiles.map(async (file) => {
-      const arrayBuffer = await file.arrayBuffer();
-      await copyBookToKatalog(file.name, arrayBuffer);
-    });
-  };
+  const copyBooksToKatalog = useKatalogStore(
+    (state) => state.copyBooksToKatalog
+  );
 
   return (
     <Container fluid mb="md">
-      <Dropzone onDrop={handleDrop} accept={ACCEPTED_MIME_TYPES}>
+      <Dropzone onDrop={copyBooksToKatalog} accept={ACCEPTED_MIME_TYPES}>
         <Group
           position="center"
           spacing="xl"

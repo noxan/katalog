@@ -24,7 +24,9 @@ const useStyles = createStyles((theme) => ({
 }));
 
 export function KatalogHeader() {
-  const importBook = useKatalogStore((state) => state.importBook);
+  const copyBooksToKatalog = useKatalogStore(
+    (state) => state.copyBooksToKatalog
+  );
   const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
   const status = useKatalogStore((state) => state.status);
   const { classes } = useStyles();
@@ -47,7 +49,7 @@ export function KatalogHeader() {
           <FileButton
             accept={ACCEPTED_MIME_TYPES.join(",")}
             disabled={status.startsWith("loading")}
-            onChange={(file: File) => console.log("change", file)}
+            onChange={(file: File) => copyBooksToKatalog([file])}
           >
             {(props) => <Button {...props}>Import</Button>}
           </FileButton>
