@@ -1,5 +1,14 @@
-import { Button, Group, Header, Text, createStyles, rem } from "@mantine/core";
+import {
+  Button,
+  FileButton,
+  Group,
+  Header,
+  Text,
+  createStyles,
+  rem,
+} from "@mantine/core";
 import { useKatalogStore } from "../stores/katalog";
+import { ACCEPTED_MIME_TYPES } from "../types";
 
 const useStyles = createStyles((theme) => ({
   header: {
@@ -35,9 +44,13 @@ export function KatalogHeader() {
           >
             Reload
           </Button>
-          <Button disabled={status.startsWith("loading")} onClick={importBook}>
-            Import
-          </Button>
+          <FileButton
+            accept={ACCEPTED_MIME_TYPES.join(",")}
+            disabled={status.startsWith("loading")}
+            onChange={(file: File) => console.log("change", file)}
+          >
+            {(props) => <Button {...props}>Import</Button>}
+          </FileButton>
         </Group>
       </div>
     </Header>
