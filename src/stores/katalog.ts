@@ -6,7 +6,7 @@ interface KatalogStore {
   entries: BookEntry[];
 }
 
-export const useStore = create<KatalogStore>((set) => ({
+export const useKatalogStore = create<KatalogStore>((set) => ({
   status: "initialize",
   entries: [],
   update: () =>
