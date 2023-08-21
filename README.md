@@ -9,7 +9,7 @@ The minimalist ebook manager.
 - [x] Ebook library
 - [x] Epub file support (read-only)
 - [x] View ebook metadata
-- [ ] Import book into library
+- [x] Import book into library
 - [x] Welcome screen when library is empty
 - [ ] Edit ebook metadata
 - [ ] Convert epub to mobi
@@ -17,3 +17,7 @@ The minimalist ebook manager.
 - [ ] Caching of ebook library
 - [x] Dark mode
 - [ ] Ebook reading mode
+
+## Known issues
+
+- [ ] Cover image display fails for newly imported books
