@@ -29,7 +29,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
       const arrayBuffer = await file.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
       const data = Array.from(bytes);
-      const payload = { name, data };
+      const payload = { name: file.name, data };
       const book = await invoke<BookEntry>("copy_book_to_katalog", payload);
       set((state) => ({ entries: [...state.entries, book] }));
     });
