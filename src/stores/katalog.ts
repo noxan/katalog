@@ -1,23 +1,23 @@
 import { create } from "zustand";
-import { BookEntry } from "../types";
+import { BookEntry, KatalogStatus } from "../types";
 
 interface KatalogStore {
-  status: "initialize" | "loading" | "ready";
+  status: KatalogStatus;
   entries: BookEntry[];
   initializeKatalog: () => void;
   importBook: () => void;
 }
 
 export const useKatalogStore = create<KatalogStore>((set) => ({
-  status: "initialize",
+  status: KatalogStatus.INITIALIZE,
   entries: [],
   importBook: () =>
     set((state) => ({
       entries: [...state.entries, { name: "test-name", path: "test-path" }],
     })),
   initializeKatalog: async () => {
-    set({ status: "loading" });
+    set({ status: KatalogStatus.LOADING_ENTRIES });
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    set({ status: "ready" });
+    set({ status: KatalogStatus.READY });
   },
 }));
