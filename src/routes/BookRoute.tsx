@@ -5,7 +5,12 @@ import { useKatalogStore } from "../stores/katalog";
 export default function BookRoute() {
   const { name } = useParams();
   const entries = useKatalogStore((store) => store.entries);
+  const status = useKatalogStore((store) => store.status);
   const entry = entries.filter((value) => value.name === name)[0];
+
+  if (status !== "ready") {
+    return <Container>Loading...</Container>;
+  }
 
   return (
     <Container mb="md">

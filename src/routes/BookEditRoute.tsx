@@ -15,7 +15,13 @@ import { BookEntry } from "../types";
 
 export default function BookEditRoute() {
   const { name } = useParams();
+  const status = useKatalogStore((store) => store.status);
   const entries = useKatalogStore((store) => store.entries);
+
+  if (status !== "ready") {
+    return <Container>Loading...</Container>;
+  }
+
   const entry = entries.filter((value) => value.name === name)[0];
 
   const replaceCoverImage = async (entry: BookEntry, files: FileWithPath[]) => {
