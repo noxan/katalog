@@ -46,6 +46,14 @@ export default function BookEditRoute() {
     });
   };
 
+  const handleSubmit = (
+    values: {
+      title: any;
+      date: any;
+    },
+    event: React.FormEvent<HTMLFormElement>
+  ) => console.log(values, event);
+
   return (
     <Container mb="md">
       <Input.Wrapper id={id} label="Cover image">
@@ -60,7 +68,7 @@ export default function BookEditRoute() {
         </Dropzone>
       </Input.Wrapper>
 
-      <form onSubmit={form.onSubmit((values) => console.log(values))}>
+      <form onSubmit={form.onSubmit(handleSubmit)}>
         <TextInput label="Title" {...form.getInputProps("title")} />
         {/* <TextInput label="Author" />
       <Group grow>
