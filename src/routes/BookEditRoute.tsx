@@ -51,8 +51,6 @@ export default function BookEditRoute() {
         Drop files here
       </Dropzone>
 
-      {/* <Button onClick={() => editEpub()}>Edit</Button> */}
-
       <TextInput label="Title" />
       <TextInput label="Author" />
       <Group grow>
