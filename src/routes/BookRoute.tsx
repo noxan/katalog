@@ -20,11 +20,19 @@ export default function BookRoute() {
     return <Container>Loading...</Container>;
   }
 
+  const imageLongEdge = 500;
+  const imageRatio = 2 / 3;
+  const imageShortEdge = imageLongEdge * imageRatio;
+
   return (
     <Container mb="md">
       <Flex gap="md" direction={{ base: "column", sm: "row" }}>
         <div>
-          <Image src={entry.coverImage} height={300} width={200} />
+          <Image
+            src={entry.coverImage}
+            height={imageLongEdge}
+            width={imageShortEdge}
+          />
           <Group>
             <Link to="/">
               <Button variant="light">Back</Button>
