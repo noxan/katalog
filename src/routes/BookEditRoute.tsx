@@ -9,7 +9,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
 import { invoke } from "@tauri-apps/api/tauri";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
@@ -25,10 +25,12 @@ const unwrapArray = (value: string | Array<string>) => {
 
 export default function BookEditRoute() {
   const { name } = useParams();
+  const navigate = useNavigate();
   const id = useId();
   const status = useKatalogStore((store) => store.status);
   const entries = useKatalogStore((store) => store.entries);
   const entry = entries.filter((value) => value.name === name)[0];
+
   const form = useForm({
     initialValues: {
       title: entry?.metadata?.title ?? "",
@@ -59,13 +61,15 @@ export default function BookEditRoute() {
       date: any;
     },
     _event: React.FormEvent<HTMLFormElement>
-  ) =>
+  ) => {
     await invoke("edit_epub", {
       path: entry.path,
       values: Object.fromEntries(
         Object.entries(values).map(([key, value]) => [key, unwrapArray(value)])
       ),
     });
+    navigate(`/books/${name}`);
+  };
 
   return (
     <Container mb="md">
