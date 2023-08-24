@@ -24,7 +24,7 @@ struct BookEntry {
     name: String,
     path: String,
     metadata: HashMap<String, Vec<String>>,
-    cover_image_path: Option<(PathBuf)>,
+    cover_image_path: Option<PathBuf>,
     cover_image: Option<Vec<u8>>,
     cover_image_file_type: Option<String>,
 }
