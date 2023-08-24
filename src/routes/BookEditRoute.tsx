@@ -46,13 +46,17 @@ export default function BookEditRoute() {
     });
   };
 
-  const handleSubmit = (
+  const handleSubmit = async (
     values: {
       title: any;
       date: any;
     },
-    event: React.FormEvent<HTMLFormElement>
-  ) => console.log(values, event);
+    _event: React.FormEvent<HTMLFormElement>
+  ) =>
+    await invoke("edit_epub", {
+      path: entry.path,
+      values,
+    });
 
   return (
     <Container mb="md">
