@@ -10,14 +10,25 @@ import {
 import { useParams, Link } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
 import { invoke } from "@tauri-apps/api/tauri";
+import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
+import { BookEntry } from "../types";
 
 export default function BookEditRoute() {
   const { name } = useParams();
   const entries = useKatalogStore((store) => store.entries);
   const entry = entries.filter((value) => value.name === name)[0];
 
-  const editEpub = () => {
-    invoke("edit_epub", { path: entry.path });
+  const replaceCoverImage = async (entry: BookEntry, files: FileWithPath[]) => {
+    const file = files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    const data = Array.from(bytes);
+    console.log(entry.path, entry.coverImagePath);
+    invoke("edit_epub", {
+      path: entry.path,
+      targetFileName: entry.coverImagePath,
+      coverImage: data,
+    });
   };
 
   return (
@@ -26,7 +37,15 @@ export default function BookEditRoute() {
         <Button variant="light">Back</Button>
       </Link>
 
-      <Button onClick={() => editEpub()}>Edit</Button>
+      <Dropzone
+        multiple={false}
+        accept={IMAGE_MIME_TYPE}
+        onDrop={(files) => replaceCoverImage(entry, files)}
+      >
+        Drop files here
+      </Dropzone>
+
+      {/* <Button onClick={() => editEpub()}>Edit</Button> */}
 
       <TextInput label="Title" />
       <TextInput label="Author" />

@@ -122,18 +122,20 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
         name: String::from(name),
         path: String::from(name),
         metadata: metadata,
+        cover_image_path: cover_image_path,
         cover_image: cover_image,
         cover_image_file_type: cover_image_file_type,
     })
 }
 
-async fn edit_epub_interal(path: &str) -> Result<(), io::Error> {
-    let mut archive = ZipArchive::new(File::open(path)?)?;
+async fn edit_epub_interal(
+    zip_path: &str,
+    target_file_name: &str,
+    cover_image: Vec<u8>,
+) -> Result<(), io::Error> {
+    let mut archive = ZipArchive::new(File::open(zip_path)?)?;
     let mut new_archive = File::create("temp.zip")?;
     let mut zip = ZipWriter::new(&mut new_archive);
-
-    let target_file_name = "test.txt";
-    let new_content = "This is the new content for the file";
 
     let mut file_exists = false;
 
@@ -145,7 +147,7 @@ async fn edit_epub_interal(path: &str) -> Result<(), io::Error> {
         zip.start_file(file.name().to_string(), options)?;
 
         if file.name() == target_file_name {
-            zip.write_all(new_content.as_bytes())?;
+            zip.write_all(&cover_image)?;
             file_exists = true;
         } else {
             std::io::copy(&mut file, &mut zip)?;
@@ -154,25 +156,22 @@ async fn edit_epub_interal(path: &str) -> Result<(), io::Error> {
 
     if !file_exists {
         zip.start_file(target_file_name, FileOptions::default())?;
-        zip.write_all(new_content.as_bytes())?;
+        zip.write_all(&cover_image)?;
     }
 
     zip.finish()?;
 
-    std::fs::rename("temp.zip", path)?;
+    std::fs::rename("temp.zip", zip_path)?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn edit_epub(path: &str) -> Result<(), String> {
-    format!("Edit epub.");
-
-    match edit_epub_interal(path).await {
+async fn edit_epub(path: &str, target_file_name: &str, cover_image: Vec<u8>) -> Result<(), String> {
+    match edit_epub_interal(path, target_file_name, cover_image).await {
         Err(e) => return Err(e.to_string()),
         Ok(_) => (),
     }
-
     Ok(())
 }
 
