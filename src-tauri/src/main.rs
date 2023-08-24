@@ -128,10 +128,10 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
     })
 }
 
-fn edit_epub_cover_interal(
+fn add_or_replace_file_in_epub(
     zip_path: &str,
     target_file_name: &str,
-    cover_image: Vec<u8>,
+    target_file_content: Vec<u8>,
 ) -> Result<(), io::Error> {
     let mut archive = ZipArchive::new(File::open(zip_path)?)?;
     let mut new_archive = File::create("temp.zip")?;
@@ -147,7 +147,7 @@ fn edit_epub_cover_interal(
         zip.start_file(file.name().to_string(), options)?;
 
         if file.name() == target_file_name {
-            zip.write_all(&cover_image)?;
+            zip.write_all(&target_file_content)?;
             file_exists = true;
         } else {
             std::io::copy(&mut file, &mut zip)?;
@@ -156,7 +156,7 @@ fn edit_epub_cover_interal(
 
     if !file_exists {
         zip.start_file(target_file_name, FileOptions::default())?;
-        zip.write_all(&cover_image)?;
+        zip.write_all(&target_file_content)?;
     }
 
     zip.finish()?;
@@ -172,7 +172,7 @@ async fn edit_epub_cover(
     target_file_name: &str,
     cover_image: Vec<u8>,
 ) -> Result<(), String> {
-    match edit_epub_cover_interal(path, target_file_name, cover_image) {
+    match add_or_replace_file_in_epub(path, target_file_name, cover_image) {
         Err(e) => return Err(e.to_string()),
         Ok(_) => (),
     }
@@ -182,6 +182,9 @@ async fn edit_epub_cover(
 #[tauri::command]
 async fn edit_epub_metadata(path: &str, values: HashMap<&str, &str>) -> Result<(), String> {
     println!("Edit file at path {} with {:?}.", path, values.keys());
+
+    // add_or_replace_file_in_epub(path, "metadata.opf", Vec::new())?;
+
     Ok(())
 }
 
