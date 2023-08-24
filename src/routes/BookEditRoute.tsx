@@ -48,10 +48,6 @@ export default function BookEditRoute() {
 
   return (
     <Container mb="md">
-      <Link to={`/books/${name}`}>
-        <Button variant="light">Back</Button>
-      </Link>
-
       <Input.Wrapper id={id} label="Cover image">
         <Dropzone
           id={id}
@@ -78,6 +74,13 @@ export default function BookEditRoute() {
       {/* <TextInput label="Publisher" />
       <TextInput label="Languages" />
       <Textarea label="Comments" /> */}
+
+      <Group mt="md">
+        <Link to={`/books/${name}`}>
+          <Button variant="light">Back</Button>
+        </Link>
+        <Button>Save</Button>
+      </Group>
     </Container>
   );
 }
