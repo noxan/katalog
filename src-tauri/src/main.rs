@@ -179,11 +179,52 @@ async fn edit_epub_cover(
     Ok(())
 }
 
+fn edit_epub_metadata_internal(
+    zip_path: &str,
+    values: HashMap<&str, &str>,
+) -> Result<(), io::Error> {
+    let mut archive = ZipArchive::new(File::open(zip_path)?)?;
+    let mut new_archive = File::create("temp.zip")?;
+    let mut zip = ZipWriter::new(&mut new_archive);
+
+    // Assume we have a valid container file in the epub
+    let target_file_name = "META-INF/container.xml";
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let options = FileOptions::default()
+            .compression_method(CompressionMethod::Stored)
+            .unix_permissions(file.unix_mode().unwrap_or(0o755));
+        zip.start_file(file.name().to_string(), options)?;
+
+        if file.name() == target_file_name {
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer)?;
+
+            let content = String::from_utf8(buffer.clone()).unwrap();
+            println!("Content: {}", content);
+
+            zip.write_all(&buffer)?;
+        } else {
+            std::io::copy(&mut file, &mut zip)?;
+        }
+    }
+
+    zip.finish()?;
+
+    std::fs::rename("temp.zip", zip_path)?;
+
+    Ok(())
+}
+
 #[tauri::command]
 async fn edit_epub_metadata(path: &str, values: HashMap<&str, &str>) -> Result<(), String> {
     println!("Edit file at path {} with {:?}.", path, values.keys());
 
-    // add_or_replace_file_in_epub(path, "metadata.opf", Vec::new())?;
+    match edit_epub_metadata_internal(path, values) {
+        Err(e) => return Err(e.to_string()),
+        Ok(_) => (),
+    }
 
     Ok(())
 }
