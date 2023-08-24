@@ -128,7 +128,7 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
     })
 }
 
-async fn edit_epub_interal(
+async fn edit_epub_cover_interal(
     zip_path: &str,
     target_file_name: &str,
     cover_image: Vec<u8>,
@@ -167,8 +167,12 @@ async fn edit_epub_interal(
 }
 
 #[tauri::command]
-async fn edit_epub(path: &str, target_file_name: &str, cover_image: Vec<u8>) -> Result<(), String> {
-    match edit_epub_interal(path, target_file_name, cover_image).await {
+async fn edit_epub_cover(
+    path: &str,
+    target_file_name: &str,
+    cover_image: Vec<u8>,
+) -> Result<(), String> {
+    match edit_epub_cover_interal(path, target_file_name, cover_image).await {
         Err(e) => return Err(e.to_string()),
         Ok(_) => (),
     }
@@ -180,7 +184,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             greet,
             read_epub,
-            edit_epub,
+            edit_epub_cover,
             copy_book_to_katalog
         ])
         .run(tauri::generate_context!())

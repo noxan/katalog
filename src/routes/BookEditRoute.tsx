@@ -39,7 +39,7 @@ export default function BookEditRoute() {
     const bytes = new Uint8Array(arrayBuffer);
     const data = Array.from(bytes);
     console.log(entry.path, entry.coverImagePath);
-    invoke("edit_epub", {
+    invoke("edit_epub_cover", {
       path: entry.path,
       targetFileName: entry.coverImagePath,
       coverImage: data,
