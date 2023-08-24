@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read, Seek, Write};
+use std::path::PathBuf;
 
 use epub::doc::EpubDoc;
 use tauri::api::path::home_dir;
@@ -23,6 +24,7 @@ struct BookEntry {
     name: String,
     path: String,
     metadata: HashMap<String, Vec<String>>,
+    cover_image_path: Option<(PathBuf)>,
     cover_image: Option<Vec<u8>>,
     cover_image_file_type: Option<String>,
 }
@@ -31,9 +33,21 @@ async fn read_book_entry<R: Read + Seek>(
     mut epub: EpubDoc<R>,
 ) -> (
     HashMap<std::string::String, Vec<std::string::String>>,
+    std::option::Option<PathBuf>,
     std::option::Option<Vec<u8>>,
     std::option::Option<std::string::String>,
 ) {
+    let cover_image_path;
+    {
+        let cover_resource = match epub.get_cover_id() {
+            None => None,
+            Some(cover_resource) => epub.resources.get(&cover_resource).cloned(),
+        };
+        cover_image_path = match cover_resource {
+            None => None,
+            Some(cover_resource) => Some(cover_resource.0),
+        };
+    }
     let cover = epub.get_cover();
     let cover_image = match cover.clone() {
         None => None,
@@ -44,7 +58,12 @@ async fn read_book_entry<R: Read + Seek>(
         Some(cover) => Some(cover.1),
     };
 
-    (epub.metadata, cover_image, cover_image_file_type)
+    (
+        epub.metadata,
+        cover_image_path,
+        cover_image,
+        cover_image_file_type,
+    )
 }
 
 #[tauri::command]
@@ -56,12 +75,14 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
         Err(e) => return Err(e.to_string()),
     };
 
-    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub).await;
+    let (metadata, cover_image_path, cover_image, cover_image_file_type) =
+        read_book_entry(epub).await;
 
     Ok(BookEntry {
         name: String::from(name),
         path: String::from(path),
         metadata: metadata,
+        cover_image_path: cover_image_path,
         cover_image: cover_image,
         cover_image_file_type: cover_image_file_type,
     })
@@ -78,7 +99,8 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
         Err(e) => return Err(e.to_string()),
     };
 
-    let (metadata, cover_image, cover_image_file_type) = read_book_entry(epub).await;
+    let (metadata, cover_image_path, cover_image, cover_image_file_type) =
+        read_book_entry(epub).await;
 
     // write the book file to katalog folder
     let mut path = home_dir().unwrap();
