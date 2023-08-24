@@ -3,6 +3,7 @@ import {
   Container,
   Group,
   Image,
+  Input,
   NumberInput,
   TextInput,
   Textarea,
@@ -12,9 +13,11 @@ import { useKatalogStore } from "../stores/katalog";
 import { invoke } from "@tauri-apps/api/tauri";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { BookEntry } from "../types";
+import { useId } from "@mantine/hooks";
 
 export default function BookEditRoute() {
   const { name } = useParams();
+  const id = useId();
   const status = useKatalogStore((store) => store.status);
   const entries = useKatalogStore((store) => store.entries);
 
@@ -43,13 +46,16 @@ export default function BookEditRoute() {
         <Button variant="light">Back</Button>
       </Link>
 
-      <Dropzone
-        multiple={false}
-        accept={IMAGE_MIME_TYPE}
-        onDrop={(files) => replaceCoverImage(entry, files)}
-      >
-        Drop files here
-      </Dropzone>
+      <Input.Wrapper id={id} label="Cover image">
+        <Dropzone
+          id={id}
+          multiple={false}
+          accept={IMAGE_MIME_TYPE}
+          onDrop={(files) => replaceCoverImage(entry, files)}
+        >
+          Drop files here
+        </Dropzone>
+      </Input.Wrapper>
 
       <TextInput label="Title" />
       <TextInput label="Author" />
