@@ -22,7 +22,7 @@ export default function BookRoute() {
 
   return (
     <Container mb="md">
-      <Flex gap="md">
+      <Flex gap="md" direction={{ base: "column", sm: "row" }}>
         <div>
           <Image src={entry.coverImage} height={300} width={200} />
           <Group>
