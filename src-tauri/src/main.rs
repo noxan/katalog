@@ -180,7 +180,7 @@ async fn edit_epub_cover(
 }
 
 #[tauri::command]
-async fn edit_epub(path: &str, values: HashMap<&str, &str>) -> Result<(), String> {
+async fn edit_epub_metadata(path: &str, values: HashMap<&str, &str>) -> Result<(), String> {
     println!("Edit file at path {} with {:?}.", path, values.keys());
     Ok(())
 }
@@ -190,7 +190,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             greet,
             read_epub,
-            edit_epub,
+            edit_epub_metadata,
             edit_epub_cover,
             copy_book_to_katalog
         ])

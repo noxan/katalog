@@ -62,7 +62,7 @@ export default function BookEditRoute() {
     },
     _event: React.FormEvent<HTMLFormElement>
   ) => {
-    await invoke("edit_epub", {
+    await invoke("edit_epub_metadata", {
       path: entry.path,
       values: Object.fromEntries(
         Object.entries(values).map(([key, value]) => [key, unwrapArray(value)])
