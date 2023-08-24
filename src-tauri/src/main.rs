@@ -128,7 +128,7 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
     })
 }
 
-async fn edit_epub_cover_interal(
+fn edit_epub_cover_interal(
     zip_path: &str,
     target_file_name: &str,
     cover_image: Vec<u8>,
@@ -172,7 +172,7 @@ async fn edit_epub_cover(
     target_file_name: &str,
     cover_image: Vec<u8>,
 ) -> Result<(), String> {
-    match edit_epub_cover_interal(path, target_file_name, cover_image).await {
+    match edit_epub_cover_interal(path, target_file_name, cover_image) {
         Err(e) => return Err(e.to_string()),
         Ok(_) => (),
     }
