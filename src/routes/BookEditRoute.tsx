@@ -60,8 +60,9 @@ export default function BookEditRoute() {
         </Dropzone>
       </Input.Wrapper>
 
-      <TextInput label="Title" {...form.getInputProps("title")} />
-      {/* <TextInput label="Author" />
+      <form onSubmit={form.onSubmit((values) => console.log(values))}>
+        <TextInput label="Title" {...form.getInputProps("title")} />
+        {/* <TextInput label="Author" />
       <Group grow>
         <TextInput label="Series" />
         <NumberInput label="Position" />
@@ -70,17 +71,18 @@ export default function BookEditRoute() {
       <TextInput label="Tags" />
       <TextInput label="Ids" />
       <TextInput label="Date modified" /> */}
-      <TextInput label="Published" {...form.getInputProps("date")} />
-      {/* <TextInput label="Publisher" />
+        <TextInput label="Published" {...form.getInputProps("date")} />
+        {/* <TextInput label="Publisher" />
       <TextInput label="Languages" />
       <Textarea label="Comments" /> */}
 
-      <Group mt="md">
-        <Link to={`/books/${name}`}>
-          <Button variant="light">Back</Button>
-        </Link>
-        <Button>Save</Button>
-      </Group>
+        <Group mt="md">
+          <Link to={`/books/${name}`}>
+            <Button variant="light">Back</Button>
+          </Link>
+          <Button type="submit">Save</Button>
+        </Group>
+      </form>
     </Container>
   );
 }
