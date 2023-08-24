@@ -9,17 +9,25 @@ import {
 } from "@mantine/core";
 import { useParams, Link } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
+import { invoke } from "@tauri-apps/api/tauri";
 
 export default function BookEditRoute() {
   const { name } = useParams();
   const entries = useKatalogStore((store) => store.entries);
   const entry = entries.filter((value) => value.name === name)[0];
 
+  const editEpub = () => {
+    invoke("edit_epub", { path: entry.path });
+  };
+
   return (
     <Container mb="md">
       <Link to={`/books/${name}`}>
         <Button variant="light">Back</Button>
       </Link>
+
+      <Button onClick={() => editEpub()}>Edit</Button>
+
       <TextInput label="Title" />
       <TextInput label="Author" />
       <Group grow>

@@ -2,10 +2,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
-use std::io::{Read, Seek, Write};
+use std::fs::File;
+use std::io::{self, Read, Seek, Write};
 
 use epub::doc::EpubDoc;
 use tauri::api::path::home_dir;
+use zip::read::ZipArchive;
+use zip::write::FileOptions;
+use zip::{CompressionMethod, ZipWriter};
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -101,11 +105,61 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
     })
 }
 
+async fn edit_epub_interal(path: &str) -> Result<(), io::Error> {
+    let mut archive = ZipArchive::new(File::open(path)?)?;
+    let mut new_archive = File::create("temp.zip")?;
+    let mut zip = ZipWriter::new(&mut new_archive);
+
+    let target_file_name = "test.txt";
+    let new_content = "This is the new content for the file";
+
+    let mut file_exists = false;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let options = FileOptions::default()
+            .compression_method(CompressionMethod::Stored)
+            .unix_permissions(file.unix_mode().unwrap_or(0o755));
+        zip.start_file(file.name().to_string(), options)?;
+
+        if file.name() == target_file_name {
+            zip.write_all(new_content.as_bytes())?;
+            file_exists = true;
+        } else {
+            std::io::copy(&mut file, &mut zip)?;
+        }
+    }
+
+    if !file_exists {
+        zip.start_file(target_file_name, FileOptions::default())?;
+        zip.write_all(new_content.as_bytes())?;
+    }
+
+    zip.finish()?;
+
+    std::fs::rename("temp.zip", path)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn edit_epub(path: &str) -> Result<(), String> {
+    format!("Edit epub.");
+
+    match edit_epub_interal(path).await {
+        Err(e) => return Err(e.to_string()),
+        Ok(_) => (),
+    }
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
             read_epub,
+            edit_epub,
             copy_book_to_katalog
         ])
         .run(tauri::generate_context!())
