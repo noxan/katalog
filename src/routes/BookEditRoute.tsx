@@ -16,6 +16,13 @@ import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { BookEntry } from "../types";
 import { useId } from "@mantine/hooks";
 
+const unwrapArray = (value: string | Array<string>) => {
+  if (Array.isArray(value) && value.length === 1) {
+    return value[0];
+  }
+  return value;
+};
+
 export default function BookEditRoute() {
   const { name } = useParams();
   const id = useId();
@@ -55,7 +62,9 @@ export default function BookEditRoute() {
   ) =>
     await invoke("edit_epub", {
       path: entry.path,
-      values,
+      values: Object.fromEntries(
+        Object.entries(values).map(([key, value]) => [key, unwrapArray(value)])
+      ),
     });
 
   return (
