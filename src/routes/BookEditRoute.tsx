@@ -8,6 +8,7 @@ import {
   TextInput,
   Textarea,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useParams, Link } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
 import { invoke } from "@tauri-apps/api/tauri";
@@ -20,12 +21,17 @@ export default function BookEditRoute() {
   const id = useId();
   const status = useKatalogStore((store) => store.status);
   const entries = useKatalogStore((store) => store.entries);
+  const entry = entries.filter((value) => value.name === name)[0];
+  const form = useForm({
+    initialValues: {
+      title: entry?.metadata?.title ?? "",
+      date: entry?.metadata?.date ?? "",
+    },
+  });
 
   if (status !== "ready") {
     return <Container>Loading...</Container>;
   }
-
-  const entry = entries.filter((value) => value.name === name)[0];
 
   const replaceCoverImage = async (entry: BookEntry, files: FileWithPath[]) => {
     const file = files[0];
@@ -58,8 +64,8 @@ export default function BookEditRoute() {
         </Dropzone>
       </Input.Wrapper>
 
-      <TextInput label="Title" />
-      <TextInput label="Author" />
+      <TextInput label="Title" {...form.getInputProps("title")} />
+      {/* <TextInput label="Author" />
       <Group grow>
         <TextInput label="Series" />
         <NumberInput label="Position" />
@@ -67,11 +73,11 @@ export default function BookEditRoute() {
       <TextInput label="Rating" />
       <TextInput label="Tags" />
       <TextInput label="Ids" />
-      <TextInput label="Date modified" />
-      <TextInput label="Published" />
-      <TextInput label="Publisher" />
+      <TextInput label="Date modified" /> */}
+      <TextInput label="Published" {...form.getInputProps("date")} />
+      {/* <TextInput label="Publisher" />
       <TextInput label="Languages" />
-      <Textarea label="Comments" />
+      <Textarea label="Comments" /> */}
     </Container>
   );
 }
