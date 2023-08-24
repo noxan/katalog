@@ -53,7 +53,8 @@ export default function BookEditRoute() {
           accept={IMAGE_MIME_TYPE}
           onDrop={(files) => replaceCoverImage(entry, files)}
         >
-          Drop files here
+          <Image src={entry.coverImage} height={150} width={100} />
+          Drop new cover image here to replace the previous one.
         </Dropzone>
       </Input.Wrapper>
 
@@ -71,8 +72,6 @@ export default function BookEditRoute() {
       <TextInput label="Publisher" />
       <TextInput label="Languages" />
       <Textarea label="Comments" />
-
-      <Image src={entry.coverImage} height={300} width={200} />
     </Container>
   );
 }
