@@ -1,15 +1,19 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::{Rc, Weak},
     string::FromUtf8Error,
 };
 
-use fast_xml::{events::Event, Reader};
+use fast_xml::{
+    events::{attributes::Attributes, Event},
+    Reader,
+};
 
 #[derive(Debug)]
 pub struct XMLNode {
     name: String,
-    attributes: Vec<(String, String)>,
+    attributes: HashMap<String, String>,
     parent: Option<Weak<RefCell<XMLNode>>>,
     children: Vec<Rc<RefCell<XMLNode>>>,
 }
@@ -27,6 +31,13 @@ fn from_utf8(raw: &[u8]) -> Result<String, XMLError> {
     String::from_utf8(raw.to_vec()).map_err(XMLError::FromUtf8Error)
 }
 
+fn collect_attributes(attributes: Attributes) -> HashMap<String, String> {
+    HashMap::from_iter(attributes.map(|a| {
+        let a = a.unwrap();
+        (from_utf8(a.key).unwrap(), from_utf8(&a.value).unwrap())
+    }))
+}
+
 impl XMLReader {
     pub fn parse(content: &[u8]) -> Result<RefCell<XMLNode>, XMLError> {
         let mut reader = Reader::from_bytes(content);
@@ -39,9 +50,10 @@ impl XMLReader {
             match reader.read_event(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     println!("Start tag: {}", from_utf8(e.name())?);
+
                     let node = Rc::new(RefCell::new(XMLNode {
                         name: from_utf8(e.name())?,
-                        attributes: Vec::new(),
+                        attributes: collect_attributes(e.attributes()),
                         parent: None,
                         children: Vec::new(),
                     }));
@@ -63,7 +75,7 @@ impl XMLReader {
 
                     let node = Rc::new(RefCell::new(XMLNode {
                         name: from_utf8(e.name())?,
-                        attributes: Vec::new(),
+                        attributes: collect_attributes(e.attributes()),
                         parent: None,
                         children: Vec::new(),
                     }));
