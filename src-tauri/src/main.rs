@@ -6,7 +6,10 @@ use std::fs::File;
 use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
 
-use epub::doc::EpubDoc;
+use fast_xml::Reader;
+
+use epub::doc::{DocError, EpubDoc};
+use fast_xml::events::Event;
 use tauri::api::path::home_dir;
 use zip::read::ZipArchive;
 use zip::write::FileOptions;
@@ -184,35 +187,79 @@ fn edit_epub_metadata_internal(
     values: HashMap<&str, &str>,
 ) -> Result<(), io::Error> {
     let mut archive = ZipArchive::new(File::open(zip_path)?)?;
-    let mut new_archive = File::create("temp.zip")?;
-    let mut zip = ZipWriter::new(&mut new_archive);
+    // let mut new_archive = File::create("temp.zip")?;
+    // let mut zip = ZipWriter::new(&mut new_archive);
 
-    // Assume we have a valid container file in the epub
-    let target_file_name = "META-INF/container.xml";
+    // Find epub metadata file
+    let container_file_name = "META-INF/container.xml";
+    let mut container_file = archive.by_name(container_file_name)?;
 
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let options = FileOptions::default()
-            .compression_method(CompressionMethod::Stored)
-            .unix_permissions(file.unix_mode().unwrap_or(0o755));
-        zip.start_file(file.name().to_string(), options)?;
+    let mut xml_content = String::new();
+    container_file.read_to_string(&mut xml_content)?;
+    println!("{}", xml_content);
 
-        if file.name() == target_file_name {
-            let mut buffer = Vec::new();
-            file.read_to_end(&mut buffer)?;
+    // Parse the XML content using fast-xml
+    let mut reader = Reader::from_str(&xml_content);
+    let mut buf = Vec::new();
 
-            let content = String::from_utf8(buffer.clone()).unwrap();
-            println!("Content: {}", content);
-
-            zip.write_all(&buffer)?;
-        } else {
-            std::io::copy(&mut file, &mut zip)?;
+    loop {
+        match reader.read_event(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                println!("Start tag: {:?}", String::from_utf8(e.name().to_vec()));
+                for attr in e.attributes() {
+                    let attr = attr.unwrap();
+                    println!(
+                        "attributes: {:?} = {:?}",
+                        String::from_utf8(attr.key.to_vec()),
+                        String::from_utf8(attr.value.to_vec())
+                    );
+                }
+            }
+            Ok(Event::Empty(ref e)) => {
+                println!("Empty tag: {:?}", String::from_utf8(e.name().to_vec()));
+                for attr in e.attributes() {
+                    let attr = attr.unwrap();
+                    println!(
+                        "attributes: {:?} = {:?}",
+                        String::from_utf8(attr.key.to_vec()),
+                        String::from_utf8(attr.value.to_vec())
+                    );
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                println!("End tag: {:?}", String::from_utf8(e.name().to_vec()));
+            }
+            Ok(Event::Text(e)) => {
+                println!("Text: {:?}", e.unescape_and_decode(&reader).unwrap());
+            }
+            Ok(Event::Eof) => break,
+            _ => (),
         }
+        buf.clear();
     }
 
-    zip.finish()?;
+    // for i in 0..archive.len() {
+    //     let mut file = archive.by_index(i)?;
+    //     let options = FileOptions::default()
+    //         .compression_method(CompressionMethod::Stored)
+    //         .unix_permissions(file.unix_mode().unwrap_or(0o755));
+    //     zip.start_file(file.name().to_string(), options)?;
 
-    std::fs::rename("temp.zip", zip_path)?;
+    //     if file.name() == target_file_name {
+    //         let mut buffer = Vec::new();
+    //         file.read_to_end(&mut buffer)?;
+
+    //         // TODO: edit metadata in xml
+
+    //         zip.write_all(&buffer)?;
+    //     } else {
+    //         std::io::copy(&mut file, &mut zip)?;
+    //     }
+    // }
+
+    // zip.finish()?;
+
+    // std::fs::rename("temp.zip", zip_path)?;
 
     Ok(())
 }
