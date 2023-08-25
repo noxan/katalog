@@ -58,6 +58,18 @@ impl XMLReader {
                 }
                 Ok(Event::Empty(ref e)) => {
                     println!("Empty tag: {}", from_utf8(e.name())?);
+
+                    let node = Rc::new(RefCell::new(XMLNode {
+                        name: from_utf8(e.name())?,
+                        parent: None,
+                        children: Vec::new(),
+                    }));
+
+                    let current = parents.last();
+                    if let Some(c) = current {
+                        c.borrow_mut().children.push(node.clone());
+                        node.borrow_mut().parent = Some(Rc::downgrade(c));
+                    };
                 }
                 Ok(Event::End(ref e)) => {
                     println!("End tag: {}", from_utf8(e.name())?);
