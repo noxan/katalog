@@ -719,6 +719,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast-xml"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f7ffc2f9e1373cd82b4d4ce2f84f8162edd48e3932abeb19c06170b66dbbd6c"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1565,6 +1574,7 @@ name = "katalog"
 version = "0.0.0"
 dependencies = [
  "epub",
+ "fast-xml",
  "serde",
  "serde_json",
  "tauri",
