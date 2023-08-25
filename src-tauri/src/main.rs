@@ -6,10 +6,7 @@ use std::fs::File;
 use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
 
-use fast_xml::Reader;
-
 use epub::doc::EpubDoc;
-use fast_xml::events::Event;
 use tauri::api::path::home_dir;
 use zip::read::ZipArchive;
 use zip::write::FileOptions;
@@ -199,8 +196,8 @@ fn edit_epub_metadata_internal(
     let mut container_file_content = Vec::new();
     container_file.read_to_end(&mut container_file_content)?;
 
-    let xml = crate::xml::XMLReader::parse(&container_file_content);
-    println!("XML: {:?}", xml);
+    // let xml = crate::xml::XMLReader::parse(&container_file_content);
+    // println!("XML: {:?}", xml);
 
     // for i in 0..archive.len() {
     //     let mut file = archive.by_index(i)?;
