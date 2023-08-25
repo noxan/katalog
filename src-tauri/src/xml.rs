@@ -1,16 +1,12 @@
-use std::{
-    borrow::BorrowMut,
-    rc::{Rc, Weak},
-    string::FromUtf8Error,
-};
+use std::{cell::RefCell, rc::Rc, string::FromUtf8Error};
 
 use fast_xml::{events::Event, Reader};
 
 #[derive(Debug)]
 pub struct XMLNode {
     name: String,
-    parent: Option<Weak<XMLNode>>,
-    children: Vec<Rc<XMLNode>>,
+    parent: Option<Rc<RefCell<XMLNode>>>,
+    children: Vec<Rc<RefCell<XMLNode>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -27,23 +23,24 @@ impl XMLReader {
         let mut reader = Reader::from_bytes(content);
         let mut buf = Vec::new();
 
-        let mut root: Option<Rc<XMLNode>> = None;
-        let mut parents: Vec<Rc<XMLNode>> = Vec::new();
+        let mut root: Option<Rc<RefCell<XMLNode>>> = None;
+        let mut parents: Vec<Rc<RefCell<XMLNode>>> = Vec::new();
 
         loop {
             match reader.read_event(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    let node = Rc::new(XMLNode {
-                        name: String::from_utf8(e.name().to_vec())
-                            .map_err(XMLError::FromUtf8Error)?,
+                    let name =
+                        String::from_utf8(e.name().to_vec()).map_err(XMLError::FromUtf8Error)?;
+                    let node = Rc::new(RefCell::new(XMLNode {
+                        name,
                         parent: None,
                         children: Vec::new(),
-                    });
+                    }));
 
                     let current = parents.last();
                     if let Some(c) = current {
-                        c.children.push(node.clone());
-                        node.borrow_mut().parent = Some(Rc::downgrade(c));
+                        c.borrow_mut().children.push(node.clone());
+                        node.borrow_mut().parent = Some(c.clone());
                     };
 
                     parents.push(node.clone());
