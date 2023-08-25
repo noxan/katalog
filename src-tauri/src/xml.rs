@@ -129,5 +129,8 @@ mod tests {
         assert_eq!(xml.borrow().name, "tag1");
         assert_eq!(xml.borrow().children.len(), 2);
         assert!(xml.borrow().parent.is_none());
+
+        assert_eq!(xml.borrow().attributes.len(), 1);
+        assert_eq!(xml.borrow().attributes.get("att1").unwrap(), "test");
     }
 }
