@@ -53,7 +53,7 @@ impl XMLReader {
                 }
                 Ok(Event::Empty(ref e)) => {}
                 Ok(Event::End(ref e)) => {
-                    println!("End tag: {:?}", String::from_utf8(e.name().to_vec()));
+                    println!("End tag: {}", from_utf8(e.name())?);
                     if !parents.is_empty() {
                         parents.pop();
                     }
