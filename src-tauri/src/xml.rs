@@ -1,10 +1,16 @@
-use std::{rc::Rc, string::FromUtf8Error};
+use std::{
+    borrow::BorrowMut,
+    rc::{Rc, Weak},
+    string::FromUtf8Error,
+};
 
 use fast_xml::{events::Event, Reader};
 
 #[derive(Debug)]
 pub struct XMLNode {
     name: String,
+    parent: Option<Weak<XMLNode>>,
+    children: Vec<Rc<XMLNode>>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,23 +36,23 @@ impl XMLReader {
                     let node = Rc::new(XMLNode {
                         name: String::from_utf8(e.name().to_vec())
                             .map_err(XMLError::FromUtf8Error)?,
+                        parent: None,
+                        children: Vec::new(),
                     });
+
+                    let current = parents.last();
+                    if let Some(c) = current {
+                        c.children.push(node.clone());
+                        node.borrow_mut().parent = Some(Rc::downgrade(c));
+                    };
+
                     parents.push(node.clone());
+
                     if root.is_none() {
                         root = Some(node);
                     }
                 }
-                Ok(Event::Empty(ref e)) => {
-                    println!("Empty tag: {:?}", String::from_utf8(e.name().to_vec()));
-                    for attr in e.attributes() {
-                        let attr = attr.unwrap();
-                        println!(
-                            "attributes: {:?} = {:?}",
-                            String::from_utf8(attr.key.to_vec()),
-                            String::from_utf8(attr.value.to_vec())
-                        );
-                    }
-                }
+                Ok(Event::Empty(ref e)) => {}
                 Ok(Event::End(ref e)) => {
                     println!("End tag: {:?}", String::from_utf8(e.name().to_vec()));
                 }
