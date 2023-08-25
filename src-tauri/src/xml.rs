@@ -18,6 +18,10 @@ pub enum XMLError {
 
 pub struct XMLReader {}
 
+fn from_utf8(raw: &[u8]) -> Result<String, XMLError> {
+    String::from_utf8(raw.to_vec()).map_err(XMLError::FromUtf8Error)
+}
+
 impl XMLReader {
     pub fn parse(content: &[u8]) -> Result<XMLNode, XMLError> {
         let mut reader = Reader::from_bytes(content);
@@ -29,10 +33,8 @@ impl XMLReader {
         loop {
             match reader.read_event(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    let name =
-                        String::from_utf8(e.name().to_vec()).map_err(XMLError::FromUtf8Error)?;
                     let node = Rc::new(RefCell::new(XMLNode {
-                        name,
+                        name: from_utf8(e.name())?,
                         parent: None,
                         children: Vec::new(),
                     }));
