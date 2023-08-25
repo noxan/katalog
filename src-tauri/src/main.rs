@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use fast_xml::Reader;
 
-use epub::doc::{DocError, EpubDoc};
+use epub::doc::EpubDoc;
 use fast_xml::events::Event;
 use tauri::api::path::home_dir;
 use zip::read::ZipArchive;
@@ -186,7 +186,7 @@ async fn edit_epub_cover(
 
 fn edit_epub_metadata_internal(
     zip_path: &str,
-    values: HashMap<&str, &str>,
+    _values: HashMap<&str, &str>,
 ) -> Result<(), io::Error> {
     let mut archive = ZipArchive::new(File::open(zip_path)?)?;
     // let mut new_archive = File::create("temp.zip")?;
