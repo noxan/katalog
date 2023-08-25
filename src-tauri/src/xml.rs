@@ -1,11 +1,15 @@
-use std::{cell::RefCell, rc::Rc, string::FromUtf8Error};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+    string::FromUtf8Error,
+};
 
 use fast_xml::{events::Event, Reader};
 
 #[derive(Debug)]
 pub struct XMLNode {
     name: String,
-    parent: Option<Rc<RefCell<XMLNode>>>,
+    parent: Option<Weak<RefCell<XMLNode>>>,
     children: Vec<Rc<RefCell<XMLNode>>>,
 }
 
@@ -43,7 +47,7 @@ impl XMLReader {
                     let current = parents.last();
                     if let Some(c) = current {
                         c.borrow_mut().children.push(node.clone());
-                        node.borrow_mut().parent = Some(c.clone());
+                        node.borrow_mut().parent = Some(Rc::downgrade(c));
                     };
 
                     parents.push(node.clone());
