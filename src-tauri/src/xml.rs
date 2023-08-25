@@ -23,7 +23,7 @@ fn from_utf8(raw: &[u8]) -> Result<String, XMLError> {
 }
 
 impl XMLReader {
-    pub fn parse(content: &[u8]) -> Result<XMLNode, XMLError> {
+    pub fn parse(content: &[u8]) -> Result<RefCell<XMLNode>, XMLError> {
         let mut reader = Reader::from_bytes(content);
         let mut buf = Vec::new();
 
