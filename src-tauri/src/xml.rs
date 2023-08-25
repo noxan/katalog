@@ -9,6 +9,7 @@ use fast_xml::{events::Event, Reader};
 #[derive(Debug)]
 pub struct XMLNode {
     name: String,
+    attributes: Vec<(String, String)>,
     parent: Option<Weak<RefCell<XMLNode>>>,
     children: Vec<Rc<RefCell<XMLNode>>>,
 }
@@ -40,6 +41,7 @@ impl XMLReader {
                     println!("Start tag: {}", from_utf8(e.name())?);
                     let node = Rc::new(RefCell::new(XMLNode {
                         name: from_utf8(e.name())?,
+                        attributes: Vec::new(),
                         parent: None,
                         children: Vec::new(),
                     }));
@@ -61,6 +63,7 @@ impl XMLReader {
 
                     let node = Rc::new(RefCell::new(XMLNode {
                         name: from_utf8(e.name())?,
+                        attributes: Vec::new(),
                         parent: None,
                         children: Vec::new(),
                     }));
