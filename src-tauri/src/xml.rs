@@ -70,6 +70,10 @@ impl XMLReader {
                         c.borrow_mut().children.push(node.clone());
                         node.borrow_mut().parent = Some(Rc::downgrade(c));
                     };
+
+                    if root.is_none() {
+                        root = Some(node);
+                    }
                 }
                 Ok(Event::End(ref e)) => {
                     println!("End tag: {}", from_utf8(e.name())?);
