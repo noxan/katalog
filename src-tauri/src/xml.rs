@@ -11,6 +11,31 @@ impl XMLReader {
             match reader.read_event(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     println!("Start tag: {:?}", String::from_utf8(e.name().to_vec()));
+                    for attr in e.attributes() {
+                        let attr = attr.unwrap();
+                        println!(
+                            "attributes: {:?} = {:?}",
+                            String::from_utf8(attr.key.to_vec()),
+                            String::from_utf8(attr.value.to_vec())
+                        );
+                    }
+                }
+                Ok(Event::Empty(ref e)) => {
+                    println!("Empty tag: {:?}", String::from_utf8(e.name().to_vec()));
+                    for attr in e.attributes() {
+                        let attr = attr.unwrap();
+                        println!(
+                            "attributes: {:?} = {:?}",
+                            String::from_utf8(attr.key.to_vec()),
+                            String::from_utf8(attr.value.to_vec())
+                        );
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    println!("End tag: {:?}", String::from_utf8(e.name().to_vec()));
+                }
+                Ok(Event::Text(e)) => {
+                    println!("Text: {:?}", e.unescape_and_decode(&reader).unwrap());
                 }
                 Ok(Event::Eof) => break,
                 _ => (),

@@ -196,49 +196,10 @@ fn edit_epub_metadata_internal(
     let container_file_name = "META-INF/container.xml";
     let mut container_file = archive.by_name(container_file_name)?;
 
-    let mut xml_content = String::new();
-    container_file.read_to_string(&mut xml_content)?;
-    println!("{}", xml_content);
+    let mut container_file_content = Vec::new();
+    container_file.read_to_end(&mut container_file_content)?;
 
-    // Parse the XML content using fast-xml
-    let mut reader = Reader::from_str(&xml_content);
-    let mut buf = Vec::new();
-
-    loop {
-        match reader.read_event(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                println!("Start tag: {:?}", String::from_utf8(e.name().to_vec()));
-                for attr in e.attributes() {
-                    let attr = attr.unwrap();
-                    println!(
-                        "attributes: {:?} = {:?}",
-                        String::from_utf8(attr.key.to_vec()),
-                        String::from_utf8(attr.value.to_vec())
-                    );
-                }
-            }
-            Ok(Event::Empty(ref e)) => {
-                println!("Empty tag: {:?}", String::from_utf8(e.name().to_vec()));
-                for attr in e.attributes() {
-                    let attr = attr.unwrap();
-                    println!(
-                        "attributes: {:?} = {:?}",
-                        String::from_utf8(attr.key.to_vec()),
-                        String::from_utf8(attr.value.to_vec())
-                    );
-                }
-            }
-            Ok(Event::End(ref e)) => {
-                println!("End tag: {:?}", String::from_utf8(e.name().to_vec()));
-            }
-            Ok(Event::Text(e)) => {
-                println!("Text: {:?}", e.unescape_and_decode(&reader).unwrap());
-            }
-            Ok(Event::Eof) => break,
-            _ => (),
-        }
-        buf.clear();
-    }
+    let xml_reader = crate::xml::XMLReader::parse(&container_file_content);
 
     // for i in 0..archive.len() {
     //     let mut file = archive.by_index(i)?;
