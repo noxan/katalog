@@ -1,4 +1,4 @@
-use std::string::FromUtf8Error;
+use std::{rc::Rc, string::FromUtf8Error};
 
 use fast_xml::{events::Event, Reader};
 
@@ -11,6 +11,7 @@ pub struct XMLNode {
 pub enum XMLError {
     FromUtf8Error(FromUtf8Error),
     EmptyRoot,
+    InvalidState,
 }
 
 pub struct XMLReader {}
@@ -20,7 +21,8 @@ impl XMLReader {
         let mut reader = Reader::from_bytes(content);
         let mut buf = Vec::new();
 
-        let mut root: Option<XMLNode> = None;
+        let mut root: Option<Rc<XMLNode>> = None;
+        let mut parents: Vec<Rc<XMLNode>> = Vec::new();
 
         loop {
             match reader.read_event(&mut buf) {
@@ -29,8 +31,11 @@ impl XMLReader {
                         name: String::from_utf8(e.name().to_vec())
                             .map_err(XMLError::FromUtf8Error)?,
                     };
+                    let rc_node = Rc::new(node);
+                    parents.push(rc_node.clone());
+
                     if root.is_none() {
-                        root = Some(node);
+                        root = Some(rc_node);
                     }
                     println!("Start tag: {:?}", String::from_utf8(e.name().to_vec()));
                     for attr in e.attributes() {
@@ -67,7 +72,10 @@ impl XMLReader {
 
         match root {
             None => return Err(XMLError::EmptyRoot),
-            Some(root) => Ok(root),
+            Some(root) => match Rc::try_unwrap(root) {
+                Ok(node) => Ok(node),
+                Err(_) => Err(XMLError::InvalidState),
+            },
         }
     }
 }
