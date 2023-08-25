@@ -96,5 +96,7 @@ mod tests {
         println!("XML: {:?}", xml);
 
         assert_eq!(xml.borrow().name, "tag1");
+        assert_eq!(xml.borrow().children.len(), 2);
+        assert!(xml.borrow().parent.is_none());
     }
 }
