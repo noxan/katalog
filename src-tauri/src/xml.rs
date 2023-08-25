@@ -91,6 +91,6 @@ mod tests {
         let xml = XMLReader::parse(xml.as_bytes()).unwrap();
         println!("XML: {:?}", xml);
 
-        assert_eq!(xml.name, "tag1");
+        assert_eq!(xml.borrow().name, "tag1");
     }
 }
