@@ -27,24 +27,13 @@ impl XMLReader {
         loop {
             match reader.read_event(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    let node = XMLNode {
+                    let node = Rc::new(XMLNode {
                         name: String::from_utf8(e.name().to_vec())
                             .map_err(XMLError::FromUtf8Error)?,
-                    };
-                    let rc_node = Rc::new(node);
-                    parents.push(rc_node.clone());
-
+                    });
+                    parents.push(node.clone());
                     if root.is_none() {
-                        root = Some(rc_node);
-                    }
-                    println!("Start tag: {:?}", String::from_utf8(e.name().to_vec()));
-                    for attr in e.attributes() {
-                        let attr = attr.unwrap();
-                        println!(
-                            "attributes: {:?} = {:?}",
-                            String::from_utf8(attr.key.to_vec()),
-                            String::from_utf8(attr.value.to_vec())
-                        );
+                        root = Some(node);
                     }
                 }
                 Ok(Event::Empty(ref e)) => {
