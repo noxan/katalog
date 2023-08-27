@@ -140,12 +140,14 @@ mod tests {
         let xml = XMLReader::parse(xml.as_bytes()).unwrap();
         println!("XML: {:?}", xml);
 
-        assert_eq!(xml.borrow().name, "tag1");
-        assert_eq!(xml.borrow().children.len(), 2);
-        assert!(xml.borrow().parent.is_none());
+        let root = xml.borrow();
+        assert_eq!(root.name, "tag1");
+        assert_eq!(root.children.len(), 2);
+        assert!(root.parent.is_none());
 
-        assert_eq!(xml.borrow().attributes.len(), 1);
-        assert_eq!(xml.borrow().attributes.get("att1").unwrap(), "test");
+        let root_attributes = root.attributes.clone();
+        assert_eq!(root_attributes.len(), 1);
+        assert_eq!(root_attributes.get("att1").unwrap(), "test");
 
         let tag2 = xml.borrow().find("tag2").unwrap();
         assert_eq!(tag2.borrow().name, "tag2");
