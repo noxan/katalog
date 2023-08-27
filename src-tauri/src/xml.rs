@@ -25,7 +25,7 @@ pub enum XMLError {
     InvalidState,
 }
 
-pub struct XMLReader {}
+pub struct XMLReader;
 
 fn from_utf8(raw: &[u8]) -> Result<String, XMLError> {
     String::from_utf8(raw.to_vec()).map_err(XMLError::FromUtf8Error)
