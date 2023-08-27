@@ -18,6 +18,20 @@ pub struct XMLNode {
     children: Vec<Rc<RefCell<XMLNode>>>,
 }
 
+impl XMLNode {
+    pub fn find(&self, tag: &str) -> Option<Rc<RefCell<XMLNode>>> {
+        for child in &self.children {
+            let node = child.borrow();
+            if node.name == tag {
+                return Some(child.clone());
+            } else if let Some(next) = node.find(tag) {
+                return Some(next);
+            }
+        }
+        None
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum XMLError {
     FromUtf8Error(FromUtf8Error),
@@ -132,5 +146,8 @@ mod tests {
 
         assert_eq!(xml.borrow().attributes.len(), 1);
         assert_eq!(xml.borrow().attributes.get("att1").unwrap(), "test");
+
+        let tag2 = xml.borrow().find("tag2").unwrap();
+        assert_eq!(tag2.borrow().name, "tag2");
     }
 }
