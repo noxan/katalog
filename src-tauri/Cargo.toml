@@ -19,6 +19,7 @@ serde_json = "1.0"
 epub = "2.1.1"
 zip = "0.6.6"
 fast-xml = "0.23.1"
+thiserror = "1.0.47"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
