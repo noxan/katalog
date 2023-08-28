@@ -12,6 +12,7 @@ use zip::read::ZipArchive;
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
+mod book;
 pub mod xml;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
