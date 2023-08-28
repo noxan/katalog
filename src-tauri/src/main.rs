@@ -181,20 +181,47 @@ async fn edit_epub_cover(
     Ok(())
 }
 
+#[derive(Debug)]
+pub enum EpubEditError {
+    IOError(io::Error),
+    XMLError(xml::XMLError),
+    ZipError(zip::result::ZipError),
+}
+
 fn edit_epub_metadata_internal(
     zip_path: &str,
     _values: HashMap<&str, &str>,
-) -> Result<(), io::Error> {
-    let mut archive = ZipArchive::new(File::open(zip_path)?)?;
+) -> Result<(), EpubEditError> {
+    let mut archive = ZipArchive::new(File::open(zip_path).map_err(|e| EpubEditError::IOError(e))?)
+        .map_err(|e| EpubEditError::ZipError(e))?;
     // let mut new_archive = File::create("temp.zip")?;
     // let mut zip = ZipWriter::new(&mut new_archive);
 
     // Find epub metadata file
     let container_file_name = "META-INF/container.xml";
-    let mut container_file = archive.by_name(container_file_name)?;
+    let mut container_file = archive.by_name(container_file_name).map_err(|e| {
+        EpubEditError::IOError(io::Error::new(io::ErrorKind::NotFound, e.to_string()))
+    })?;
 
     let mut container_file_content = Vec::new();
-    container_file.read_to_end(&mut container_file_content)?;
+    container_file
+        .read_to_end(&mut container_file_content)
+        .map_err(|e| EpubEditError::IOError(e))?;
+
+    let xml =
+        xml::XMLReader::parse(&container_file_content).map_err(|e| EpubEditError::XMLError(e))?;
+    let rootfile = match xml.borrow().find("rootfile") {
+        None => return Err(EpubEditError::XMLError(xml::XMLError::EmptyRoot)),
+        Some(rootfile) => rootfile,
+    };
+    let content_file = rootfile
+        .borrow()
+        .attributes
+        .get("full-path")
+        .unwrap()
+        .clone();
+
+    println!("content_file {:?}", content_file);
 
     // let xml = crate::xml::XMLReader::parse(&container_file_content);
     // println!("XML: {:?}", xml);
@@ -230,7 +257,7 @@ async fn edit_epub_metadata(path: &str, values: HashMap<&str, &str>) -> Result<(
     println!("Edit file at path {} with {:?}.", path, values.keys());
 
     match edit_epub_metadata_internal(path, values) {
-        Err(e) => return Err(e.to_string()),
+        Err(e) => return Err(String::from("Something went wrong while editing the epub.")),
         Ok(_) => (),
     }
 

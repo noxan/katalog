@@ -12,8 +12,8 @@ use fast_xml::{
 
 #[derive(Debug)]
 pub struct XMLNode {
-    name: String,
-    attributes: HashMap<String, String>,
+    pub name: String,
+    pub attributes: HashMap<String, String>,
     parent: Option<Weak<RefCell<XMLNode>>>,
     children: Vec<Rc<RefCell<XMLNode>>>,
 }
