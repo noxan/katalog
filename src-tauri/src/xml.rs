@@ -63,7 +63,7 @@ impl XMLReader {
         loop {
             match reader.read_event(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    println!("Start tag: {}", from_utf8(e.name())?);
+                    // println!("Start tag: {}", from_utf8(e.name())?);
 
                     let node = Rc::new(RefCell::new(XMLNode {
                         name: from_utf8(e.name())?,
@@ -85,7 +85,7 @@ impl XMLReader {
                     }
                 }
                 Ok(Event::Empty(ref e)) => {
-                    println!("Empty tag: {}", from_utf8(e.name())?);
+                    // println!("Empty tag: {}", from_utf8(e.name())?);
 
                     let node = Rc::new(RefCell::new(XMLNode {
                         name: from_utf8(e.name())?,
@@ -105,13 +105,13 @@ impl XMLReader {
                     }
                 }
                 Ok(Event::End(ref e)) => {
-                    println!("End tag: {}", from_utf8(e.name())?);
+                    // println!("End tag: {}", from_utf8(e.name())?);
                     if !parents.is_empty() {
                         parents.pop();
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    println!("Text: {:?}", e.unescape_and_decode(&reader).unwrap());
+                    // println!("Text: {:?}", e.unescape_and_decode(&reader).unwrap());
                 }
                 Ok(Event::Eof) => break,
                 _ => (),
