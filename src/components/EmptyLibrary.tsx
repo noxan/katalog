@@ -1,11 +1,10 @@
-import { Container, Group, Text, rem, useMantineTheme } from "@mantine/core";
+import { Container, Group, Text, rem } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
 import { IconBooks, IconUpload, IconX } from "@tabler/icons-react";
 import { useKatalogStore } from "../stores/katalog";
 import { ACCEPTED_MIME_TYPES } from "../types";
 
 export function EmptyLibrary() {
-  const theme = useMantineTheme();
   const copyBooksToKatalog = useKatalogStore(
     (state) => state.copyBooksToKatalog
   );
@@ -19,22 +18,10 @@ export function EmptyLibrary() {
           style={{ minHeight: rem(220), pointerEvents: "none" }}
         >
           <Dropzone.Accept>
-            <IconUpload
-              size="3.2rem"
-              stroke={1.5}
-              color={
-                theme.colors[theme.primaryColor][
-                  theme.colorScheme === "dark" ? 4 : 6
-                ]
-              }
-            />
+            <IconUpload size="3.2rem" stroke={1.5} />
           </Dropzone.Accept>
           <Dropzone.Reject>
-            <IconX
-              size="3.2rem"
-              stroke={1.5}
-              color={theme.colors.red[theme.colorScheme === "dark" ? 4 : 6]}
-            />
+            <IconX size="3.2rem" stroke={1.5} />
           </Dropzone.Reject>
           <Dropzone.Idle>
             <IconBooks size="3.2rem" stroke={1.5} />
