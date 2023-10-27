@@ -58,7 +58,7 @@ export default function BookEditRoute() {
       title: any;
       date: any;
     },
-    _event: React.FormEvent<HTMLFormElement>
+    _event: React.FormEvent<HTMLFormElement> | undefined
   ) => {
     await invoke("edit_epub_metadata", {
       path: entry.path,
