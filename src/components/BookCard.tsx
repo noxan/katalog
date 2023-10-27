@@ -37,13 +37,8 @@ export const BookCard = ({ entry }: { entry: BookEntry }) => {
         <AspectRatio ratio={2 / 3}>
           <Image
             src={entry?.coverImage}
-            alt="Book cover image"
-            withPlaceholder
-            placeholder={
-              <Text align="center" m="xs">
-                {displayTitle(entry)}
-              </Text>
-            }
+            alt={displayTitle(entry)}
+            placeholder={displayTitle(entry)}
           />
         </AspectRatio>
       </Card.Section>
