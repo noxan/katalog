@@ -4,17 +4,15 @@ import {
   Group,
   Image,
   Input,
-  NumberInput,
   TextInput,
-  Textarea,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { useKatalogStore } from "../stores/katalog";
-import { invoke } from "@tauri-apps/api/tauri";
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
-import { BookEntry } from "../types";
+import { useForm } from "@mantine/form";
 import { useId } from "@mantine/hooks";
+import { invoke } from "@tauri-apps/api/tauri";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useKatalogStore } from "../stores/katalog";
+import { BookEntry } from "../types";
 
 const unwrapArray = (value: string | Array<string>) => {
   if (Array.isArray(value) && value.length === 1) {
