@@ -13,7 +13,7 @@ export default function KatalogRoute() {
   return (
     <Container fluid mb="md">
       <SimpleGrid
-        cols={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
+        cols={{ base: 1, xs: 2, sm: 3, md: 3, lg: 4, xl: 5 }}
         spacing={{ base: "sm", md: "md" }}
       >
         {entries.map((entry) => (
