@@ -48,7 +48,11 @@ export function KatalogHeader() {
           </Button>
           <FileButton
             accept={ACCEPTED_MIME_TYPES.join(",")}
-            onChange={(file: File) => copyBooksToKatalog([file])}
+            onChange={(file: File | null) => {
+              if (file) {
+                copyBooksToKatalog([file]);
+              }
+            }}
           >
             {(props) => (
               <Button disabled={status.startsWith("loading")} {...props}>
