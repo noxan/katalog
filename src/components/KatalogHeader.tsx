@@ -1,27 +1,8 @@
-import {
-  Button,
-  FileButton,
-  Group,
-  Header,
-  Text,
-  createStyles,
-  rem,
-} from "@mantine/core";
+import { AppShell, Button, FileButton, Group, Text } from "@mantine/core";
 import { useKatalogStore } from "../stores/katalog";
 import { ACCEPTED_MIME_TYPES } from "../types";
 
-const useStyles = createStyles((theme) => ({
-  header: {
-    paddingLeft: theme.spacing.md,
-    paddingRight: theme.spacing.md,
-  },
-  inner: {
-    height: rem(56),
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-}));
+import classes from "./KatalogHeader.module.css";
 
 export function KatalogHeader() {
   const copyBooksToKatalog = useKatalogStore(
@@ -29,10 +10,9 @@ export function KatalogHeader() {
   );
   const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
   const status = useKatalogStore((state) => state.status);
-  const { classes } = useStyles();
 
   return (
-    <Header height={56} className={classes.header} mb="md">
+    <AppShell.Header className={classes.header} mb="md">
       <div className={classes.inner}>
         <Group>
           <Text my="md">Welcome to Katalog!</Text>
@@ -48,7 +28,11 @@ export function KatalogHeader() {
           </Button>
           <FileButton
             accept={ACCEPTED_MIME_TYPES.join(",")}
-            onChange={(file: File) => copyBooksToKatalog([file])}
+            onChange={(file: File | null) => {
+              if (file) {
+                copyBooksToKatalog([file]);
+              }
+            }}
           >
             {(props) => (
               <Button disabled={status.startsWith("loading")} {...props}>
@@ -58,6 +42,6 @@ export function KatalogHeader() {
           </FileButton>
         </Group>
       </div>
-    </Header>
+    </AppShell.Header>
   );
 }

@@ -1,11 +1,13 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import ThemeProvider from "../providers/ThemeProvider";
-import RootRoute from "../routes/RootRoute";
-import KatalogRoute from "../routes/KatalogRoute";
-import BookRoute from "../routes/BookRoute";
-import BookEditRoute from "../routes/BookEditRoute";
 import { useEffect } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import BookEditRoute from "../routes/BookEditRoute";
+import BookRoute from "../routes/BookRoute";
+import KatalogRoute from "../routes/KatalogRoute";
+import RootRoute from "../routes/RootRoute";
 import { useKatalogStore } from "../stores/katalog";
+
+import { MantineProvider } from "@mantine/core";
+import "@mantine/core/styles.css";
 
 const router = createBrowserRouter([
   {
@@ -39,9 +41,9 @@ function App() {
     }
   }, []);
   return (
-    <ThemeProvider>
+    <MantineProvider defaultColorScheme="auto">
       <RouterProvider router={router} />
-    </ThemeProvider>
+    </MantineProvider>
   );
 }
 
