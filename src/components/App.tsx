@@ -7,6 +7,8 @@ import BookEditRoute from "../routes/BookEditRoute";
 import { useEffect } from "react";
 import { useKatalogStore } from "../stores/katalog";
 
+import "@mantine/core/styles.css";
+
 const router = createBrowserRouter([
   {
     path: "/",
