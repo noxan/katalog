@@ -14,8 +14,8 @@ export function EmptyLibrary() {
     <Container fluid mb="md">
       <Dropzone onDrop={copyBooksToKatalog} accept={ACCEPTED_MIME_TYPES}>
         <Group
-          position="center"
-          spacing="xl"
+          justify="center"
+          gap="xl"
           style={{ minHeight: rem(220), pointerEvents: "none" }}
         >
           <Dropzone.Accept>
