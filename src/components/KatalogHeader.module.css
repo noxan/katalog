@@ -1,0 +1,12 @@
+.header {
+  height: 56px;
+  padding-left: var(--mantine-spacing-md);
+  padding-right: var(--mantine-spacing-md);
+}
+
+.inner {
+  height: rem(56);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

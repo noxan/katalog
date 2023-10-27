@@ -1,27 +1,8 @@
-import {
-  AppShell,
-  Button,
-  FileButton,
-  Group,
-  Text,
-  createStyles,
-  rem,
-} from "@mantine/core";
+import { AppShell, Button, FileButton, Group, Text } from "@mantine/core";
 import { useKatalogStore } from "../stores/katalog";
 import { ACCEPTED_MIME_TYPES } from "../types";
 
-const useStyles = createStyles((theme) => ({
-  header: {
-    paddingLeft: theme.spacing.md,
-    paddingRight: theme.spacing.md,
-  },
-  inner: {
-    height: rem(56),
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-}));
+import classes from "./KatalogHeader.module.css";
 
 export function KatalogHeader() {
   const copyBooksToKatalog = useKatalogStore(
@@ -29,7 +10,6 @@ export function KatalogHeader() {
   );
   const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
   const status = useKatalogStore((state) => state.status);
-  const { classes } = useStyles();
 
   return (
     <AppShell.Header className={classes.header} mb="md">
