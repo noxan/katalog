@@ -1,8 +1,8 @@
 import {
+  AppShell,
   Button,
   FileButton,
   Group,
-  Header,
   Text,
   createStyles,
   rem,
@@ -32,7 +32,7 @@ export function KatalogHeader() {
   const { classes } = useStyles();
 
   return (
-    <Header height={56} className={classes.header} mb="md">
+    <AppShell.Header className={classes.header} mb="md">
       <div className={classes.inner}>
         <Group>
           <Text my="md">Welcome to Katalog!</Text>
@@ -58,6 +58,6 @@ export function KatalogHeader() {
           </FileButton>
         </Group>
       </div>
-    </Header>
+    </AppShell.Header>
   );
 }
