@@ -10,25 +10,25 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@emotion/react": "^11.11.1",
-    "@mantine/core": "^7.2.2",
-    "@mantine/dropzone": "^7.2.2",
-    "@mantine/form": "^7.2.2",
-    "@mantine/hooks": "^7.2.2",
-    "@tabler/icons-react": "^2.42.0",
-    "@tauri-apps/api": "^1.5.1",
+    "@emotion/react": "^11.11.3",
+    "@mantine/core": "^7.4.0",
+    "@mantine/dropzone": "^7.4.0",
+    "@mantine/form": "^7.4.0",
+    "@mantine/hooks": "^7.4.0",
+    "@tabler/icons-react": "^2.45.0",
+    "@tauri-apps/api": "^1.5.3",
     "byte-base64": "^1.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
+    "react-router-dom": "^6.21.1",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5.6",
-    "@types/react": "^18.2.39",
-    "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.0",
-    "typescript": "^5.3.2",
-    "vite": "^4.5.0"
+    "@tauri-apps/cli": "^1.5.9",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^4.5.1"
   }
 }
