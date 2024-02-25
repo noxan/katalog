@@ -5,7 +5,7 @@ import {
   readDir,
   BaseDirectory,
   FileEntry,
-} from "@tauri-apps/api/fs";
+} from "@tauri-apps/plugin-fs";
 import { bytesToBase64 } from "byte-base64";
 import { BookEntry } from "../types";
 
