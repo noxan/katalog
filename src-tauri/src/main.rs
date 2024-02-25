@@ -7,7 +7,7 @@ use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
 
 use epub::doc::EpubDoc;
-use tauri::api::path::home_dir;
+use tauri::Manager::path::home_dir;
 use zip::read::ZipArchive;
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipWriter};
