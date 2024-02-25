@@ -58,12 +58,12 @@ export default function BookEditRoute() {
       title: any;
       date: any;
     },
-    _event: React.FormEvent<HTMLFormElement> | undefined
+    _event: React.FormEvent<HTMLFormElement> | undefined,
   ) => {
     await invoke("edit_epub_metadata", {
       path: entry.path,
       values: Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, unwrapArray(value)])
+        Object.entries(values).map(([key, value]) => [key, unwrapArray(value)]),
       ),
     });
     navigate(`/books/${name}`);
