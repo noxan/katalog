@@ -1,56 +1,42 @@
-import { invoke } from "@tauri-apps/api";
-import {
-  createDir,
-  exists,
-  readDir,
-  BaseDirectory,
-  FileEntry,
-} from "@tauri-apps/api/fs";
+import { invoke } from "@tauri-apps/api/core";
+import { mkdir, exists, readDir, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { bytesToBase64 } from "byte-base64";
-import { BookEntry } from "../types";
+import { BookEntry, FileEntry } from "../types";
 
 export const BASE_DIRECTORY = BaseDirectory.Home;
 export const KATALOG_PATH = "Books";
 
 export const ensureKatalogDirectory = async () => {
-  if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
-    await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
+  if (!(await exists(KATALOG_PATH, { baseDir: BASE_DIRECTORY }))) {
+    await mkdir(KATALOG_PATH, { baseDir: BASE_DIRECTORY });
   }
 };
-
-const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
-  array.reduce<FileEntry[]>((acc, item) => {
-    if (item.children) {
-      return [...acc, ...flattenFileEntries(item.children)];
-    }
-    return [...acc, item];
-  }, []);
-
-const filterFileEntries = (entries: FileEntry[]) =>
-  entries.filter((entry) => entry.name?.endsWith(".epub"));
 
 export const initializeEntries = async (): Promise<BookEntry[]> => {
   await ensureKatalogDirectory();
 
-  const nestedEntries = await readDir(KATALOG_PATH, {
-    dir: BASE_DIRECTORY,
-    recursive: true,
-  });
-  const entries = flattenFileEntries(nestedEntries);
+  // TODO: recursive loading of files
+  const entries = await readDir(KATALOG_PATH, { baseDir: BASE_DIRECTORY });
 
-  return filterFileEntries(entries);
+  return entries
+    .filter((entry) => entry.isFile)
+    .filter((entry) => entry.name.endsWith(".epub"))
+    .map((entry) => ({
+      name: entry.name,
+      path: entry.name,
+    })) as FileEntry[];
 };
 
 const encodeCoverImage = async (bytes: Uint8Array) => {
   const coverImageBase64: string = await bytesToBase64(bytes);
-  return "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
+  return `data:image/jpg;charset=utf-8;base64,${coverImageBase64}`;
 };
 
 export const readEpub = async (entry: FileEntry): Promise<BookEntry> => {
   const epub = await invoke<BookEntry>("read_epub", { ...entry });
   if (epub.coverImage) {
     epub.coverImage = await encodeCoverImage(
-      epub.coverImage as unknown as Uint8Array
+      epub.coverImage as unknown as Uint8Array,
     );
   }
   return epub;

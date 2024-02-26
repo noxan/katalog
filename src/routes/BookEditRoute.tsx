@@ -9,7 +9,7 @@ import {
 import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useForm } from "@mantine/form";
 import { useId } from "@mantine/hooks";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
 import { BookEntry } from "../types";
@@ -58,12 +58,12 @@ export default function BookEditRoute() {
       title: any;
       date: any;
     },
-    _event: React.FormEvent<HTMLFormElement> | undefined
+    _event: React.FormEvent<HTMLFormElement> | undefined,
   ) => {
     await invoke("edit_epub_metadata", {
       path: entry.path,
       values: Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, unwrapArray(value)])
+        Object.entries(values).map(([key, value]) => [key, unwrapArray(value)]),
       ),
     });
     navigate(`/books/${name}`);
