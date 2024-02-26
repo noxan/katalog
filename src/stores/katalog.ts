@@ -12,7 +12,8 @@ interface KatalogStore {
 }
 
 const replaceEntryByPath = (entries: BookEntry[], newEntry: BookEntry) =>
-  entries.map((entry) => (entry.path === newEntry.path ? newEntry : entry));
+  entries.map((entry) => (entry.name === newEntry.name ? newEntry : entry));
+// TODO: add paths again, fallback to names for now
 
 export const useKatalogStore = create<KatalogStore>((set) => ({
   status: KatalogStatus.INITIALIZE,
