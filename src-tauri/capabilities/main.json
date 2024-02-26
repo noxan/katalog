@@ -3,9 +3,7 @@
   "description": "permissions that were migrated from v1",
   "remote": null,
   "local": true,
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "path:default",
     "event:default",
@@ -16,11 +14,5 @@
     "tray:default",
     "fs:default"
   ],
-  "platforms": [
-    "linux",
-    "macOS",
-    "windows",
-    "android",
-    "iOS"
-  ]
+  "platforms": ["linux", "macOS", "windows", "android", "iOS"]
 }
