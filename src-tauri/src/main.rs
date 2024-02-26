@@ -233,6 +233,7 @@ async fn edit_epub_metadata(path: &str, values: HashMap<&str, &str>) -> Result<(
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             read_epub,
