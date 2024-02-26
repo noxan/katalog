@@ -7,7 +7,8 @@ use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
 
 use epub::doc::EpubDoc;
-use tauri::Manager::path::home_dir;
+use tauri::path::BaseDirectory;
+use tauri::{AppHandle, Manager, Runtime};
 use zip::read::ZipArchive;
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipWriter};
@@ -89,7 +90,7 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
 }
 
 #[tauri::command]
-async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, String> {
+async fn copy_book_to_katalog<R: Runtime>(app: AppHandle<R>, name: &str, data: Vec<u8>) -> Result<BookEntry, String> {
     format!("Copy book with name {} to katalog.", name);
 
     let reader = std::io::Cursor::new(data.clone());
@@ -103,10 +104,11 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
         read_book_entry(epub).await;
 
     // write the book file to katalog folder
-    let mut path = home_dir().unwrap();
-    path.push("Books");
+    let mut path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
+    // path.push("Books");
     path.push(name);
     path.set_extension("epub");
+    println!("Path: {:?}", path);
 
     let mut file = match std::fs::File::create(&path) {
         Ok(file) => file,
