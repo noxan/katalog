@@ -1,10 +1,10 @@
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import {
-  createDir,
+  mkdir,
   exists,
   readDir,
   BaseDirectory,
-  FileEntry,
+  DirEntry as FileEntry,
 } from "@tauri-apps/plugin-fs";
 import { bytesToBase64 } from "byte-base64";
 import { BookEntry } from "../types";
@@ -13,8 +13,8 @@ export const BASE_DIRECTORY = BaseDirectory.Home;
 export const KATALOG_PATH = "Books";
 
 export const ensureKatalogDirectory = async () => {
-  if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
-    await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
+  if (!(await exists(KATALOG_PATH, { baseDir: BASE_DIRECTORY }))) {
+    await mkdir(KATALOG_PATH, { baseDir: BASE_DIRECTORY });
   }
 };
 
@@ -33,8 +33,7 @@ export const initializeEntries = async (): Promise<BookEntry[]> => {
   await ensureKatalogDirectory();
 
   const nestedEntries = await readDir(KATALOG_PATH, {
-    dir: BASE_DIRECTORY,
-    recursive: true,
+    baseDir: BASE_DIRECTORY,
   });
   const entries = flattenFileEntries(nestedEntries);
 
@@ -50,7 +49,7 @@ export const readEpub = async (entry: FileEntry): Promise<BookEntry> => {
   const epub = await invoke<BookEntry>("read_epub", { ...entry });
   if (epub.coverImage) {
     epub.coverImage = await encodeCoverImage(
-      epub.coverImage as unknown as Uint8Array
+      epub.coverImage as unknown as Uint8Array,
     );
   }
   return epub;
