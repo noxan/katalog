@@ -68,10 +68,14 @@ async fn read_book_entry<R: Read + Seek>(
 }
 
 #[tauri::command]
-async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
+async fn read_epub<R: Runtime>(app: AppHandle<R>, name: &str, path: &str) -> Result<BookEntry, String> {
     format!("Read file with name {} at path {}.", name, path);
 
-    let epub = match EpubDoc::new(path) {
+    let base_path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
+    let file_path = base_path.join(path);
+    let string_path = String::from(file_path.to_str().unwrap());
+
+    let epub = match EpubDoc::new(file_path) {
         Ok(epub) => epub,
         Err(e) => return Err(e.to_string()),
     };
@@ -81,7 +85,7 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
 
     Ok(BookEntry {
         name: String::from(name),
-        path: String::from(path),
+        path: string_path,
         metadata: metadata,
         cover_image_path: cover_image_path,
         cover_image: cover_image,
