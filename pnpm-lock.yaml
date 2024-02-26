@@ -9,17 +9,17 @@ dependencies:
     specifier: ^11.11.3
     version: 11.11.3(@types/react@18.2.58)(react@18.2.0)
   '@mantine/core':
-    specifier: ^7.5.3
-    version: 7.5.3(@mantine/hooks@7.5.3)(@types/react@18.2.58)(react-dom@18.2.0)(react@18.2.0)
+    specifier: ^7.6.0
+    version: 7.6.0(@mantine/hooks@7.6.0)(@types/react@18.2.58)(react-dom@18.2.0)(react@18.2.0)
   '@mantine/dropzone':
-    specifier: ^7.5.3
-    version: 7.5.3(@mantine/core@7.5.3)(@mantine/hooks@7.5.3)(react-dom@18.2.0)(react@18.2.0)
+    specifier: ^7.6.0
+    version: 7.6.0(@mantine/core@7.6.0)(@mantine/hooks@7.6.0)(react-dom@18.2.0)(react@18.2.0)
   '@mantine/form':
-    specifier: ^7.5.3
-    version: 7.5.3(react@18.2.0)
+    specifier: ^7.6.0
+    version: 7.6.0(react@18.2.0)
   '@mantine/hooks':
-    specifier: ^7.5.3
-    version: 7.5.3(react@18.2.0)
+    specifier: ^7.6.0
+    version: 7.6.0(react@18.2.0)
   '@tabler/icons-react':
     specifier: ^2.47.0
     version: 2.47.0(react@18.2.0)
@@ -609,14 +609,14 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /@floating-ui/react@0.24.8(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-AuYeDoaR8jtUlUXtZ1IJ/6jtBkGnSpJXbGNzokBL87VDJ8opMq1Bgrc0szhK482ReQY6KZsMoZCVSb4xwalkBA==}
+  /@floating-ui/react@0.26.9(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-p86wynZJVEkEq2BBjY/8p2g3biQ6TlgT4o/3KgFKyTWoJLU1GZ8wpctwRqtkEl2tseYA+kw7dBAIDFcednfI5w==}
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
     dependencies:
       '@floating-ui/react-dom': 2.0.8(react-dom@18.2.0)(react@18.2.0)
-      aria-hidden: 1.2.3
+      '@floating-ui/utils': 0.2.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       tabbable: 6.2.0
@@ -656,19 +656,19 @@ packages:
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
 
-  /@mantine/core@7.5.3(@mantine/hooks@7.5.3)(@types/react@18.2.58)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-Wvv6DJXI+GX9mmKG5HITTh/24sCZ0RoYQHdTHh0tOfGnEy+RleyhA82UjnMsp0n2NjfCISBwbiKgfya6b2iaFw==}
+  /@mantine/core@7.6.0(@mantine/hooks@7.6.0)(@types/react@18.2.58)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-TZNoOqk13r4KDO0MuvyKUqI9Z57QilEk+LAKO4bSWoCvIfvPijv+QuSVoUlqk8Y0aI1OBUbMAvUMkTOBDtA5Tw==}
     peerDependencies:
-      '@mantine/hooks': 7.5.3
+      '@mantine/hooks': 7.6.0
       react: ^18.2.0
       react-dom: ^18.2.0
     dependencies:
-      '@floating-ui/react': 0.24.8(react-dom@18.2.0)(react@18.2.0)
-      '@mantine/hooks': 7.5.3(react@18.2.0)
-      clsx: 2.0.0
+      '@floating-ui/react': 0.26.9(react-dom@18.2.0)(react@18.2.0)
+      '@mantine/hooks': 7.6.0(react@18.2.0)
+      clsx: 2.1.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-number-format: 5.3.1(react-dom@18.2.0)(react@18.2.0)
+      react-number-format: 5.3.3(react-dom@18.2.0)(react@18.2.0)
       react-remove-scroll: 2.5.7(@types/react@18.2.58)(react@18.2.0)
       react-textarea-autosize: 8.5.3(@types/react@18.2.58)(react@18.2.0)
       type-fest: 3.13.1
@@ -676,23 +676,23 @@ packages:
       - '@types/react'
     dev: false
 
-  /@mantine/dropzone@7.5.3(@mantine/core@7.5.3)(@mantine/hooks@7.5.3)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-NbMnLN9B07WHkdrpxNTC0k0vzR6prONF+/awFPidphsXGAgRSZhiZXv06l9Wp9wVp6xPhVMTqGphh0i4Ey+AYg==}
+  /@mantine/dropzone@7.6.0(@mantine/core@7.6.0)(@mantine/hooks@7.6.0)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-rY6IbfusOzcNZVVtLBzAXrs/ttbFBPaQLJx/HGPyt/drma1steCx8vUY/li8lbAm6BmaIYLA9GMXARF3cif6hA==}
     peerDependencies:
-      '@mantine/core': 7.5.3
-      '@mantine/hooks': 7.5.3
+      '@mantine/core': 7.6.0
+      '@mantine/hooks': 7.6.0
       react: ^18.2.0
       react-dom: ^18.2.0
     dependencies:
-      '@mantine/core': 7.5.3(@mantine/hooks@7.5.3)(@types/react@18.2.58)(react-dom@18.2.0)(react@18.2.0)
-      '@mantine/hooks': 7.5.3(react@18.2.0)
+      '@mantine/core': 7.6.0(@mantine/hooks@7.6.0)(@types/react@18.2.58)(react-dom@18.2.0)(react@18.2.0)
+      '@mantine/hooks': 7.6.0(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       react-dropzone-esm: 15.0.1(react@18.2.0)
     dev: false
 
-  /@mantine/form@7.5.3(react@18.2.0):
-    resolution: {integrity: sha512-CIsNcHNIw1tXS+UgOpFjJzPaINU2YmK8x+f8Ikn5YXpSdqLw78+9/bSvtaAIOg9EINhfqnV4xg8B4sqKk7pxYA==}
+  /@mantine/form@7.6.0(react@18.2.0):
+    resolution: {integrity: sha512-BXZyNFwHsg0gMKaI3pcf8WlFmQXe+uDjyp+fwRJTGINUrq7k4BPWWBbV+Xu9bOZ19gGP4W/YYLyHCq8R7govzQ==}
     peerDependencies:
       react: ^18.2.0
     dependencies:
@@ -701,8 +701,8 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@mantine/hooks@7.5.3(react@18.2.0):
-    resolution: {integrity: sha512-mFI448mAs12v8FrgSVhytqlhTVrEjIfd/PqPEfwJu5YcZIq4YZdqpzJIUbANnRrFSvmoQpDb1PssdKx7Ds35hw==}
+  /@mantine/hooks@7.6.0(react@18.2.0):
+    resolution: {integrity: sha512-TUYM1uC2bF2DkkOfL8/fQQuwrNPQufg5H2uYoV9WaPyWtR+MlZs8UgbucVpOD2dEdVJjkfPOcQfi8Wim0gktmw==}
     peerDependencies:
       react: ^18.2.0
     dependencies:
@@ -1022,13 +1022,6 @@ packages:
     dependencies:
       color-convert: 1.9.3
 
-  /aria-hidden@1.2.3:
-    resolution: {integrity: sha512-xcLxITLe2HYa1cnYnwCjkOO1PqUHQpozB8x9AR0OgWN2woOBi5kSDVxKfd0b7sb1hw5qFeJhXm9H1nu3xSfLeQ==}
-    engines: {node: '>=10'}
-    dependencies:
-      tslib: 2.6.2
-    dev: false
-
   /babel-plugin-macros@3.1.0:
     resolution: {integrity: sha512-Cg7TFGpIr01vOQNODXOOaGz2NpCU5gl8x1qJFbb6hbZxR7XrcE2vtbAsTAbJ7/xwJtUuJEw8K8Zr/AE0LHlesg==}
     engines: {node: '>=10', npm: '>=6'}
@@ -1070,8 +1063,8 @@ packages:
       escape-string-regexp: 1.0.5
       supports-color: 5.5.0
 
-  /clsx@2.0.0:
-    resolution: {integrity: sha512-rQ1+kcj+ttHG0MKVGBUXwayCCF1oh39BF5COIpRzuCEv8Mwjv0XucrI2ExNTOn9IlLifGClWQcU9BrZORvtw6Q==}
+  /clsx@2.1.0:
+    resolution: {integrity: sha512-m3iNNWpd9rl3jvvcBnu70ylMdrXt8Vlq4HYadnU5fwcOtvkSQWPmj7amUcDT2qYI7risszBjI5AUIUox9D16pg==}
     engines: {node: '>=6'}
     dev: false
 
@@ -1383,8 +1376,8 @@ packages:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
     dev: false
 
-  /react-number-format@5.3.1(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-qpYcQLauIeEhCZUZY9jXZnnroOtdy3jYaS1zQ3M1Sr6r/KMOBEIGNIb7eKT19g2N1wbYgFgvDzs19hw5TrB8XQ==}
+  /react-number-format@5.3.3(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-maGHWmOvwYzyeRIpL0YC6drWqYaX6iFqjisdJXpZ+HzEtSEJsL6nqw4azTpF5Sm6SAvwUeAr7JY924Ebqq8EdA==}
     peerDependencies:
       react: ^0.14 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
       react-dom: ^0.14 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
