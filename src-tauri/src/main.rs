@@ -69,11 +69,10 @@ async fn read_book_entry<R: Read + Seek>(
 
 #[tauri::command]
 async fn read_epub<R: Runtime>(app: AppHandle<R>, name: &str, path: &str) -> Result<BookEntry, String> {
-    format!("Read file with name {} at path {}.", name, path);
-
     let base_path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
     let file_path = base_path.join(path);
     let string_path = String::from(file_path.to_str().unwrap());
+    format!("Read file with name {} at path {}.", name, string_path);
 
     let epub = match EpubDoc::new(file_path) {
         Ok(epub) => epub,
