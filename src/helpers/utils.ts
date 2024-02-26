@@ -42,7 +42,7 @@ export const initializeEntries = async (): Promise<BookEntry[]> => {
 
 const encodeCoverImage = async (bytes: Uint8Array) => {
   const coverImageBase64: string = await bytesToBase64(bytes);
-  return "data:image/jpg;charset=utf-8;base64," + coverImageBase64;
+  return `data:image/jpg;charset=utf-8;base64,${coverImageBase64}`;
 };
 
 export const readEpub = async (entry: FileEntry): Promise<BookEntry> => {
