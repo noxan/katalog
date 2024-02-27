@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
-    "@mantine/core": "^7.5.3",
-    "@mantine/dropzone": "^7.5.3",
-    "@mantine/form": "^7.5.3",
-    "@mantine/hooks": "^7.5.3",
+    "@mantine/core": "^7.6.1",
+    "@mantine/dropzone": "^7.6.1",
+    "@mantine/form": "^7.6.1",
+    "@mantine/hooks": "^7.6.1",
     "@tabler/icons-react": "^2.47.0",
     "@tauri-apps/api": "^1.5.3",
     "byte-base64": "^1.1.0",
@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.10",
-    "@types/react": "^18.2.58",
+    "@types/react": "^18.2.60",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.3.3",
