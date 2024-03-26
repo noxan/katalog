@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { ACCEPTED_MIME_TYPES, BookEntry, KatalogStatus } from "../types";
-import { initializeEntries, readEpub } from "../helpers/utils";
 import { invoke } from "@tauri-apps/api";
+import { create } from "zustand";
+import { initializeEntries, readEpub } from "../helpers/utils";
+import { ACCEPTED_MIME_TYPES, type BookEntry, KatalogStatus } from "../types";
 
 interface KatalogStore {
   status: KatalogStatus;
@@ -24,7 +24,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
   copyBooksToKatalog: async (files: File[]) => {
     set({ status: KatalogStatus.LOADING_IMPORT });
     const epubFiles = files.filter((file) =>
-      ACCEPTED_MIME_TYPES.includes(file.type)
+      ACCEPTED_MIME_TYPES.includes(file.type),
     );
     await Promise.all(
       epubFiles.map(async (file) => {
@@ -34,7 +34,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
         const payload = { name: file.name, data };
         const book = await invoke<BookEntry>("copy_book_to_katalog", payload);
         set((state) => ({ entries: [...state.entries, book] }));
-      })
+      }),
     );
     set({ status: KatalogStatus.READY });
   },
@@ -46,7 +46,7 @@ export const useKatalogStore = create<KatalogStore>((set) => ({
       entries.map(async (entry) => {
         const epub = await readEpub(entry);
         set((state) => ({ entries: replaceEntryByPath(state.entries, epub) }));
-      })
+      }),
     );
     set({ status: KatalogStatus.READY });
   },

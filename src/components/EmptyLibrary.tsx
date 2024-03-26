@@ -6,7 +6,7 @@ import { ACCEPTED_MIME_TYPES } from "../types";
 
 export function EmptyLibrary() {
   const copyBooksToKatalog = useKatalogStore(
-    (state) => state.copyBooksToKatalog
+    (state) => state.copyBooksToKatalog,
   );
 
   return (
