@@ -8,6 +8,7 @@ import { useKatalogStore } from "../stores/katalog";
 
 import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/dropzone/styles.css";
 
 const router = createBrowserRouter([
   {
