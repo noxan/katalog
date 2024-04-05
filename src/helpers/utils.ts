@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mkdir, exists, readDir, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { bytesToBase64 } from "byte-base64";
-import { BookEntry, FileEntry } from "../types";
+import type { BookEntry, FileEntry } from "../types";
 
 export const BASE_DIRECTORY = BaseDirectory.Home;
 export const KATALOG_PATH = "Books";

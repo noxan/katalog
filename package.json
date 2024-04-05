@@ -14,7 +14,7 @@
     "@mantine/dropzone": "^7.7.1",
     "@mantine/form": "^7.7.1",
     "@mantine/hooks": "^7.7.1",
-    "@tabler/icons-react": "^2.47.0",
+    "@tabler/icons-react": "^3.1.0",
     "@tauri-apps/api": "2.0.0-beta.3",
     "@tauri-apps/plugin-fs": "2.0.0-beta.1",
     "byte-base64": "^1.1.0",
@@ -24,6 +24,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.6.3",
     "@tauri-apps/cli": "2.0.0-beta.4",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.24",

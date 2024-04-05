@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { ACCEPTED_MIME_TYPES, BookEntry, KatalogStatus } from "../types";
-import { initializeEntries, readEpub } from "../helpers/utils";
 import { invoke } from "@tauri-apps/api/core";
+import { create } from "zustand";
+import { initializeEntries, readEpub } from "../helpers/utils";
+import { ACCEPTED_MIME_TYPES, type BookEntry, KatalogStatus } from "../types";
 
 interface KatalogStore {
   status: KatalogStatus;

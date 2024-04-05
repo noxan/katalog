@@ -6,13 +6,17 @@ import {
   Input,
   TextInput,
 } from "@mantine/core";
-import { Dropzone, FileWithPath, IMAGE_MIME_TYPE } from "@mantine/dropzone";
+import {
+  Dropzone,
+  type FileWithPath,
+  IMAGE_MIME_TYPE,
+} from "@mantine/dropzone";
 import { useForm } from "@mantine/form";
 import { useId } from "@mantine/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
-import { BookEntry } from "../types";
+import type { BookEntry } from "../types";
 
 const unwrapArray = (value: string | Array<string>) => {
   if (Array.isArray(value) && value.length === 1) {

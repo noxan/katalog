@@ -1,6 +1,6 @@
 import { AspectRatio, Card, Image } from "@mantine/core";
 import { Link } from "react-router-dom";
-import { BookEntry } from "../types";
+import type { BookEntry } from "../types";
 import classes from "./BookCard.module.css";
 
 const displayTitle = (entry: BookEntry) => {

@@ -6,7 +6,7 @@ import classes from "./KatalogHeader.module.css";
 
 export function KatalogHeader() {
   const copyBooksToKatalog = useKatalogStore(
-    (state) => state.copyBooksToKatalog
+    (state) => state.copyBooksToKatalog,
   );
   const initializeKatalog = useKatalogStore((state) => state.initializeKatalog);
   const status = useKatalogStore((state) => state.status);
