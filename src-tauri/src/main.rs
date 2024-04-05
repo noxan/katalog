@@ -68,7 +68,11 @@ async fn read_book_entry<R: Read + Seek>(
 }
 
 #[tauri::command]
-async fn read_epub<R: Runtime>(app: AppHandle<R>, name: &str, path: &str) -> Result<BookEntry, String> {
+async fn read_epub<R: Runtime>(
+    app: AppHandle<R>,
+    name: &str,
+    path: &str,
+) -> Result<BookEntry, String> {
     let base_path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
     let file_path = base_path.join(path);
     let string_path = String::from(file_path.to_str().unwrap());
@@ -93,7 +97,11 @@ async fn read_epub<R: Runtime>(app: AppHandle<R>, name: &str, path: &str) -> Res
 }
 
 #[tauri::command]
-async fn copy_book_to_katalog<R: Runtime>(app: AppHandle<R>, name: &str, data: Vec<u8>) -> Result<BookEntry, String> {
+async fn copy_book_to_katalog<R: Runtime>(
+    app: AppHandle<R>,
+    name: &str,
+    data: Vec<u8>,
+) -> Result<BookEntry, String> {
     format!("Copy book with name {} to katalog.", name);
 
     let reader = std::io::Cursor::new(data.clone());
