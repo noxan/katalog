@@ -116,7 +116,6 @@ async fn copy_book_to_katalog<R: Runtime>(
 
     // write the book file to katalog folder
     let mut path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
-    // path.push("Books");
     path.push(name);
     path.set_extension("epub");
     println!("Path: {:?}", path);
