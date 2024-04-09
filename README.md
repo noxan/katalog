@@ -34,8 +34,7 @@
 3. Create a new git tag with the version number
 4. Commit and push changes
 5. Export environment variables for signing the app
-   `export TAURI_PRIVATE_KEY="content of the generated key"`
-   `export TAURI_KEY_PASSWORD="password"`
+   `export TAURI_SIGNING_PRIVATE_KEY="content of the generated key"`
 6. Build the app with `pnpm tauri build`
 7. Create a new release on GitHub
 8. Upload the generated binaries to the release on Github
