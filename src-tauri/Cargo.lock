@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "katalog"
-version = "0.0.0"
+version = "0.10.0"
 dependencies = [
  "epub",
  "serde",
