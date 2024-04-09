@@ -1,4 +1,7 @@
-import type { FileEntry } from "@tauri-apps/api/fs";
+export type FileEntry = {
+  name: string;
+  path: string;
+};
 
 export type BookEntry = FileEntry & {
   metadata?: any;

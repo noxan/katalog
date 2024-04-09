@@ -7,7 +7,8 @@ use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
 
 use epub::doc::EpubDoc;
-use tauri::api::path::home_dir;
+use tauri::path::BaseDirectory;
+use tauri::{AppHandle, Manager, Runtime};
 use zip::read::ZipArchive;
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipWriter};
@@ -67,10 +68,17 @@ async fn read_book_entry<R: Read + Seek>(
 }
 
 #[tauri::command]
-async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
-    format!("Read file with name {} at path {}.", name, path);
+async fn read_epub<R: Runtime>(
+    app: AppHandle<R>,
+    name: &str,
+    path: &str,
+) -> Result<BookEntry, String> {
+    let base_path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
+    let file_path = base_path.join(path);
+    let string_path = String::from(file_path.to_str().unwrap());
+    format!("Read file with name {} at path {}.", name, string_path);
 
-    let epub = match EpubDoc::new(path) {
+    let epub = match EpubDoc::new(file_path) {
         Ok(epub) => epub,
         Err(e) => return Err(e.to_string()),
     };
@@ -80,7 +88,7 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
 
     Ok(BookEntry {
         name: String::from(name),
-        path: String::from(path),
+        path: string_path,
         metadata: metadata,
         cover_image_path: cover_image_path,
         cover_image: cover_image,
@@ -89,7 +97,11 @@ async fn read_epub(name: &str, path: &str) -> Result<BookEntry, String> {
 }
 
 #[tauri::command]
-async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, String> {
+async fn copy_book_to_katalog<R: Runtime>(
+    app: AppHandle<R>,
+    name: &str,
+    data: Vec<u8>,
+) -> Result<BookEntry, String> {
     format!("Copy book with name {} to katalog.", name);
 
     let reader = std::io::Cursor::new(data.clone());
@@ -103,10 +115,10 @@ async fn copy_book_to_katalog(name: &str, data: Vec<u8>) -> Result<BookEntry, St
         read_book_entry(epub).await;
 
     // write the book file to katalog folder
-    let mut path = home_dir().unwrap();
-    path.push("Books");
+    let mut path = app.path().resolve("Books", BaseDirectory::Home).unwrap();
     path.push(name);
     path.set_extension("epub");
+    println!("Path: {:?}", path);
 
     let mut file = match std::fs::File::create(&path) {
         Ok(file) => file,
@@ -231,6 +243,7 @@ async fn edit_epub_metadata(path: &str, values: HashMap<&str, &str>) -> Result<(
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             read_epub,

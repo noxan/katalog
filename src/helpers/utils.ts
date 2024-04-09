@@ -1,44 +1,30 @@
-import { invoke } from "@tauri-apps/api";
-import {
-  BaseDirectory,
-  type FileEntry,
-  createDir,
-  exists,
-  readDir,
-} from "@tauri-apps/api/fs";
+import { invoke } from "@tauri-apps/api/core";
+import { mkdir, exists, readDir, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { bytesToBase64 } from "byte-base64";
-import type { BookEntry } from "../types";
+import type { BookEntry, FileEntry } from "../types";
 
 export const BASE_DIRECTORY = BaseDirectory.Home;
 export const KATALOG_PATH = "Books";
 
 export const ensureKatalogDirectory = async () => {
-  if (!(await exists(KATALOG_PATH, { dir: BASE_DIRECTORY }))) {
-    await createDir(KATALOG_PATH, { dir: BASE_DIRECTORY });
+  if (!(await exists(KATALOG_PATH, { baseDir: BASE_DIRECTORY }))) {
+    await mkdir(KATALOG_PATH, { baseDir: BASE_DIRECTORY });
   }
 };
-
-const flattenFileEntries = (array: FileEntry[]): FileEntry[] =>
-  array.reduce<FileEntry[]>((acc, item) => {
-    if (item.children) {
-      return [...acc, ...flattenFileEntries(item.children)];
-    }
-    return [...acc, item];
-  }, []);
-
-const filterFileEntries = (entries: FileEntry[]) =>
-  entries.filter((entry) => entry.name?.endsWith(".epub"));
 
 export const initializeEntries = async (): Promise<BookEntry[]> => {
   await ensureKatalogDirectory();
 
-  const nestedEntries = await readDir(KATALOG_PATH, {
-    dir: BASE_DIRECTORY,
-    recursive: true,
-  });
-  const entries = flattenFileEntries(nestedEntries);
+  // TODO: recursive loading of files
+  const entries = await readDir(KATALOG_PATH, { baseDir: BASE_DIRECTORY });
 
-  return filterFileEntries(entries);
+  return entries
+    .filter((entry) => entry.isFile)
+    .filter((entry) => entry.name.endsWith(".epub"))
+    .map((entry) => ({
+      name: entry.name,
+      path: entry.name,
+    })) as FileEntry[];
 };
 
 const encodeCoverImage = async (bytes: Uint8Array) => {

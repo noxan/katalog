@@ -1,62 +1,49 @@
 {
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
-  },
-  "package": {
-    "productName": "Katalog",
-    "version": "0.9.2"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "fs": {
-        "all": true,
-        "scope": ["$HOME/Books", "$HOME/Books/**"]
-      },
-      "path": {
-        "all": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "org.stromer.katalog",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ]
-    },
+  "app": {
     "security": {
       "csp": null
     },
     "windows": [
       {
+        "dragDropEnabled": false,
         "fullscreen": false,
+        "height": 600,
         "resizable": true,
         "title": "Katalog",
-        "width": 800,
-        "height": 600,
-        "fileDropEnabled": false
+        "width": 800
       }
     ],
+    "withGlobalTauri": false
+  },
+  "build": {
+    "beforeBuildCommand": "pnpm build",
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "targets": "all"
+  },
+  "identifier": "org.stromer.katalog",
+  "plugins": {
+    "shell": {
+      "open": true
+    },
     "updater": {
-      "active": true,
       "endpoints": [
         "https://raw.githubusercontent.com/noxan/katalog/main/assets/updater.json"
       ],
-      "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEzODBCRkNBREQzMDlDMkEKUldRcW5ERGR5citBRTNJL1RWaXdNUGtUdnltTjltZmRyWVprRitya21OazgvUGs2c21VNXIyRXUK"
     }
-  }
+  },
+  "productName": "Katalog",
+  "version": "0.9.2"
 }

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { initializeEntries, readEpub } from "../helpers/utils";
 import { ACCEPTED_MIME_TYPES, type BookEntry, KatalogStatus } from "../types";
@@ -12,7 +12,8 @@ interface KatalogStore {
 }
 
 const replaceEntryByPath = (entries: BookEntry[], newEntry: BookEntry) =>
-  entries.map((entry) => (entry.path === newEntry.path ? newEntry : entry));
+  entries.map((entry) => (entry.name === newEntry.name ? newEntry : entry));
+// TODO: add paths again, fallback to names for now
 
 export const useKatalogStore = create<KatalogStore>((set) => ({
   status: KatalogStatus.INITIALIZE,

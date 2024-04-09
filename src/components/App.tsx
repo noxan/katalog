@@ -40,7 +40,7 @@ function App() {
       firstRun = false;
       initializeKatalog();
     }
-  });
+  }, [initializeKatalog]);
   return (
     <MantineProvider defaultColorScheme="auto">
       <RouterProvider router={router} />
