@@ -44,7 +44,7 @@ dependencies:
 
 devDependencies:
   '@biomejs/biome':
-    specifier: 1.6.4
+    specifier: ^1.6.4
     version: 1.6.4
   '@tauri-apps/cli':
     specifier: 2.0.0-beta.12
