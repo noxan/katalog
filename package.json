@@ -14,7 +14,7 @@
     "@mantine/dropzone": "^7.7.1",
     "@mantine/form": "^7.7.1",
     "@mantine/hooks": "^7.7.1",
-    "@tabler/icons-react": "^3.1.0",
+    "@tabler/icons-react": "^3.2.0",
     "@tauri-apps/api": "2.0.0-beta.7",
     "@tauri-apps/plugin-fs": "2.0.0-beta.2",
     "byte-base64": "^1.1.0",
@@ -30,9 +30,9 @@
     "@types/react-dom": "^18.2.24",
     "@vitejs/plugin-react": "^4.2.1",
     "postcss": "^8.4.38",
-    "postcss-preset-mantine": "^1.14.0",
+    "postcss-preset-mantine": "^1.14.4",
     "postcss-simple-vars": "^7.0.1",
-    "typescript": "^5.4.4",
+    "typescript": "^5.4.5",
     "vite": "^5.2.8"
   }
 }
