@@ -10,7 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@mantine/core": "^7.8.0",
+    "@mantine/core": "^7.9.0",
     "@mantine/dropzone": "^7.8.0",
     "@mantine/form": "^7.8.0",
     "@mantine/hooks": "^7.8.0",
