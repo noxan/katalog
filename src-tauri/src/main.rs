@@ -10,7 +10,7 @@ use epub::doc::EpubDoc;
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager, Runtime};
 use zip::read::ZipArchive;
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -153,7 +153,7 @@ fn add_or_replace_file_in_epub(
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let options = FileOptions::default()
+        let options = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Stored)
             .unix_permissions(file.unix_mode().unwrap_or(0o755));
         zip.start_file(file.name().to_string(), options)?;
@@ -167,7 +167,7 @@ fn add_or_replace_file_in_epub(
     }
 
     if !file_exists {
-        zip.start_file(target_file_name, FileOptions::default())?;
+        zip.start_file(target_file_name, SimpleFileOptions::default())?;
         zip.write_all(&target_file_content)?;
     }
 
@@ -204,7 +204,7 @@ fn edit_epub_metadata_internal(
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let options = FileOptions::default()
+        let options = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Stored)
             .unix_permissions(file.unix_mode().unwrap_or(0o755));
         zip.start_file(file.name().to_string(), options)?;
