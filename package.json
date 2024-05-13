@@ -14,25 +14,25 @@
     "@mantine/dropzone": "^7.9.1",
     "@mantine/form": "^7.9.1",
     "@mantine/hooks": "^7.9.1",
-    "@tabler/icons-react": "^3.2.0",
+    "@tabler/icons-react": "^3.3.0",
     "@tauri-apps/api": "2.0.0-beta.11",
     "@tauri-apps/plugin-fs": "2.0.0-beta.3",
     "byte-base64": "^1.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.7.0",
+    "@biomejs/biome": "^1.7.3",
     "@tauri-apps/cli": "2.0.0-beta.17",
-    "@types/react": "^18.2.79",
-    "@types/react-dom": "^18.2.25",
+    "@types/react": "^18.3.2",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",
     "postcss": "^8.4.38",
-    "postcss-preset-mantine": "^1.14.4",
+    "postcss-preset-mantine": "^1.15.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.4.5",
-    "vite": "^5.2.9"
+    "vite": "^5.2.11"
   }
 }
