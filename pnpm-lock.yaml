@@ -21,8 +21,8 @@ dependencies:
     specifier: ^3.5.0
     version: 3.5.0(react@18.3.1)
   '@tauri-apps/api':
-    specifier: 2.0.0-beta.11
-    version: 2.0.0-beta.11
+    specifier: 2.0.0-beta.13
+    version: 2.0.0-beta.13
   '@tauri-apps/plugin-fs':
     specifier: 2.0.0-beta.5
     version: 2.0.0-beta.5
@@ -889,11 +889,6 @@ packages:
 
   /@tabler/icons@3.5.0:
     resolution: {integrity: sha512-I53dC3ZSHQ2MZFGvDYJelfXm91L2bTTixS4w5jTAulLhHbCZso5Bih4Rk/NYZxlngLQMKHvEYwZQ+6w/WluKiA==}
-    dev: false
-
-  /@tauri-apps/api@2.0.0-beta.11:
-    resolution: {integrity: sha512-wJRY+fBUm3KpqZDHMIz5HRv+1vlnvRJ/dFxiyY3NlINTx2qXqDou5qWYcP1CuZXsd39InWVPV3FAZvno/kGCkA==}
-    engines: {node: '>= 18', npm: '>= 6.6.0', yarn: '>= 1.19.1'}
     dev: false
 
   /@tauri-apps/api@2.0.0-beta.13:
