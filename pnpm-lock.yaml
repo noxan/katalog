@@ -18,8 +18,8 @@ dependencies:
     specifier: ^7.10.2
     version: 7.10.2(react@18.3.1)
   '@tabler/icons-react':
-    specifier: ^3.6.0
-    version: 3.6.0(react@18.3.1)
+    specifier: ^3.7.0
+    version: 3.7.0(react@18.3.1)
   '@tauri-apps/api':
     specifier: 2.0.0-beta.13
     version: 2.0.0-beta.13
@@ -39,8 +39,8 @@ dependencies:
     specifier: ^6.24.0
     version: 6.24.0(react-dom@18.3.1)(react@18.3.1)
   zustand:
-    specifier: ^4.5.2
-    version: 4.5.2(@types/react@18.3.3)(react@18.3.1)
+    specifier: ^4.5.3
+    version: 4.5.3(@types/react@18.3.3)(react@18.3.1)
 
 devDependencies:
   '@biomejs/biome':
@@ -888,17 +888,17 @@ packages:
     dev: true
     optional: true
 
-  /@tabler/icons-react@3.6.0(react@18.3.1):
-    resolution: {integrity: sha512-mkYGxlphNzvKq32teL+Z8wZW7I9zDftmNPX38UnZVCGjss2qbg0puqLhi1unfm5Y0CSefg+iAQrsjSL+DHx9YA==}
+  /@tabler/icons-react@3.7.0(react@18.3.1):
+    resolution: {integrity: sha512-8AU4oO9pgLhHLOSGAJIsRhsTy7w8D7uKBlR0DIFxaILFA1fe2rC4wrNGYUtIFei82y41OuXz9vMk0Oe+IWT3SA==}
     peerDependencies:
       react: '>= 16'
     dependencies:
-      '@tabler/icons': 3.6.0
+      '@tabler/icons': 3.7.0
       react: 18.3.1
     dev: false
 
-  /@tabler/icons@3.6.0:
-    resolution: {integrity: sha512-Zv0Ofc64RCMpZ2F8CvsWAphrSjerx5hEErt/RMmE+W8r4E5l5Lizi+My9KbbZQ4NyAtrtrOX80OY1oROZrRzEA==}
+  /@tabler/icons@3.7.0:
+    resolution: {integrity: sha512-lJGIZLSWrPO6VygRUbaVvQjWgL2EaiBMD8e6leCYUQ8ZPO4LIzKMq358C8KlhXJcyNiRz1Io3YWoc/DNTcWqSg==}
     dev: false
 
   /@tauri-apps/api@2.0.0-beta.13:
@@ -1828,8 +1828,8 @@ packages:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
     dev: true
 
-  /zustand@4.5.2(@types/react@18.3.3)(react@18.3.1):
-    resolution: {integrity: sha512-2cN1tPkDVkwCy5ickKrI7vijSjPksFRfqS6237NzT0vqSsztTNnQdHw9mmN7uBdk3gceVXU0a+21jFzFzAc9+g==}
+  /zustand@4.5.3(@types/react@18.3.3)(react@18.3.1):
+    resolution: {integrity: sha512-iH1gA/3uOMR0Gz260Fsklxo7wWEXJ008p1bO9O6gxwkbvBUaTDlcVChkDKGGSsvdbOyVce0nQfBitVH6sbYyew==}
     engines: {node: '>=12.7.0'}
     peerDependencies:
       '@types/react': '>=16.8'
