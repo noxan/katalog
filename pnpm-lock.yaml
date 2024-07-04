@@ -24,8 +24,8 @@ importers:
         specifier: ^3.8.0
         version: 3.8.0(react@18.3.1)
       '@tauri-apps/api':
-        specifier: 2.0.0-beta.13
-        version: 2.0.0-beta.13
+        specifier: 2.0.0-beta.14
+        version: 2.0.0-beta.14
       '@tauri-apps/plugin-fs':
         specifier: 2.0.0-beta.5
         version: 2.0.0-beta.5
@@ -551,6 +551,10 @@ packages:
   '@tauri-apps/api@2.0.0-beta.13':
     resolution: {integrity: sha512-Np1opKANzRMF3lgJ9gDquBCB9SxlE2lRmNpVx1+L6RyzAmigkuh0ZulT5jMnDA3JLsuSDU135r/s4t/Pmx4atg==}
     engines: {node: '>= 18', npm: '>= 6.6.0', yarn: '>= 1.19.1'}
+
+  '@tauri-apps/api@2.0.0-beta.14':
+    resolution: {integrity: sha512-YLYgHqdwWswr4Y70+hRzaLD6kLIUgHhE3shLXNquPiTaQ9+cX3Q2dB0AFfqsua6NXYFNe7LfkmMzaqEzqv3yQg==}
+    engines: {node: '>= 18.18', npm: '>= 6.6.0', yarn: '>= 1.19.1'}
 
   '@tauri-apps/cli-darwin-arm64@2.0.0-beta.20':
     resolution: {integrity: sha512-oCJOCib7GuYkwkBXx+ekamR8NZZU+2i3MLP+DHpDxK5gS2uhCE+CBkamJkNt6y1x6xdVnwyqZOm5RvN4SRtyIA==}
@@ -1520,6 +1524,8 @@ snapshots:
   '@tabler/icons@3.8.0': {}
 
   '@tauri-apps/api@2.0.0-beta.13': {}
+
+  '@tauri-apps/api@2.0.0-beta.14': {}
 
   '@tauri-apps/cli-darwin-arm64@2.0.0-beta.20':
     optional: true
