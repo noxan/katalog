@@ -39,8 +39,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
       react-router-dom:
-        specifier: ^6.24.1
-        version: 6.24.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^6.25.0
+        version: 6.25.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       zustand:
         specifier: ^4.5.4
         version: 4.5.4(@types/react@18.3.3)(react@18.3.1)
@@ -64,8 +64,8 @@ importers:
         specifier: ^8.4.39
         version: 8.4.39
       postcss-preset-mantine:
-        specifier: ^1.15.0
-        version: 1.15.0(postcss@8.4.39)
+        specifier: ^1.16.0
+        version: 1.16.0(postcss@8.4.39)
       postcss-simple-vars:
         specifier: ^7.0.1
         version: 7.0.1(postcss@8.4.39)
@@ -456,8 +456,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@remix-run/router@1.17.1':
-    resolution: {integrity: sha512-mCOMec4BKd6BRGBZeSnGiIgwsbLGp3yhVqAD8H+PxiRNEHgDpZb8J1TnrSDlg97t0ySKMQJTHCWBCmBpSmkF6Q==}
+  '@remix-run/router@1.18.0':
+    resolution: {integrity: sha512-L3jkqmqoSVBVKHfpGZmLrex0lxR5SucGA0sUfFzGctehw+S/ggL9L/0NnC5mw6P8HUWpFZ3nQw3cRApjjWx9Sw==}
     engines: {node: '>=14.0.0'}
 
   '@rollup/rollup-android-arm-eabi@4.18.1':
@@ -852,13 +852,13 @@ packages:
     peerDependencies:
       postcss: ^8.2.14
 
-  postcss-preset-mantine@1.15.0:
-    resolution: {integrity: sha512-OKPs6uoORSXlU/GFH1ZtFaslecHBPwuoSikdL5W3WKJm4ZPAQM0mw9x9m3toa/Mo1JhoBmYMM28i+zEdav5Edg==}
+  postcss-preset-mantine@1.16.0:
+    resolution: {integrity: sha512-KIxo2ysUDY2PaiE/n6iZFwKOxsF7K4t6RvxdtukENHGq/3B70fEty7Ws2FQOH+Yyuic6HWwcE4Mp3WOnolgBIQ==}
     peerDependencies:
       postcss: '>=8.0.0'
 
-  postcss-selector-parser@6.1.0:
-    resolution: {integrity: sha512-UMz42UD0UY0EApS0ZL9o1XnLhSTtvvvLe5Dc2H2O56fvRZi+KulDyf5ctDhhtYJBGKStV2FL1fy6253cmLgqVQ==}
+  postcss-selector-parser@6.1.1:
+    resolution: {integrity: sha512-b4dlw/9V8A71rLIDsSwVmak9z2DuBUB7CA1/wSdelNEzqsjoSPeADTWNO09lpH49Diy3/JIZ2bSPB1dI3LJCHg==}
     engines: {node: '>=4'}
 
   postcss-simple-vars@7.0.1:
@@ -921,15 +921,15 @@ packages:
       '@types/react':
         optional: true
 
-  react-router-dom@6.24.1:
-    resolution: {integrity: sha512-U19KtXqooqw967Vw0Qcn5cOvrX5Ejo9ORmOtJMzYWtCT4/WOfFLIZGGsVLxcd9UkBO0mSTZtXqhZBsWlHr7+Sg==}
+  react-router-dom@6.25.0:
+    resolution: {integrity: sha512-BhcczgDWWgvGZxjDDGuGHrA8HrsSudilqTaRSBYLWDayvo1ClchNIDVt5rldqp6e7Dro5dEFx9Mzc+r292lN0w==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
 
-  react-router@6.24.1:
-    resolution: {integrity: sha512-PTXFXGK2pyXpHzVo3rR9H7ip4lSPZZc0bHG5CARmj65fTT6qG7sTngmb6lcYu1gf3y/8KxORoy9yn59pGpCnpg==}
+  react-router@6.25.0:
+    resolution: {integrity: sha512-bziKjCcDbcxgWS9WlWFcQIVZ2vJHnCP6DGpQDT0l+0PFDasfJKgzf9CM22eTyhFsZkjk8ApCdKjJwKtzqH80jQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
@@ -1462,7 +1462,7 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
 
-  '@remix-run/router@1.17.1': {}
+  '@remix-run/router@1.18.0': {}
 
   '@rollup/rollup-android-arm-eabi@4.18.1':
     optional: true
@@ -1788,15 +1788,15 @@ snapshots:
   postcss-nested@6.0.1(postcss@8.4.39):
     dependencies:
       postcss: 8.4.39
-      postcss-selector-parser: 6.1.0
+      postcss-selector-parser: 6.1.1
 
-  postcss-preset-mantine@1.15.0(postcss@8.4.39):
+  postcss-preset-mantine@1.16.0(postcss@8.4.39):
     dependencies:
       postcss: 8.4.39
       postcss-mixins: 9.0.4(postcss@8.4.39)
       postcss-nested: 6.0.1(postcss@8.4.39)
 
-  postcss-selector-parser@6.1.0:
+  postcss-selector-parser@6.1.1:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -1859,16 +1859,16 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  react-router-dom@6.24.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  react-router-dom@6.25.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@remix-run/router': 1.17.1
+      '@remix-run/router': 1.18.0
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-router: 6.24.1(react@18.3.1)
+      react-router: 6.25.0(react@18.3.1)
 
-  react-router@6.24.1(react@18.3.1):
+  react-router@6.25.0(react@18.3.1):
     dependencies:
-      '@remix-run/router': 1.17.1
+      '@remix-run/router': 1.18.0
       react: 18.3.1
 
   react-style-singleton@2.2.1(@types/react@18.3.3)(react@18.3.1):
