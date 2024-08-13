@@ -10,10 +10,10 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@mantine/core": "^7.12.0",
-    "@mantine/dropzone": "^7.12.0",
-    "@mantine/form": "^7.12.0",
-    "@mantine/hooks": "^7.12.0",
+    "@mantine/core": "^7.12.1",
+    "@mantine/dropzone": "^7.12.1",
+    "@mantine/form": "^7.12.1",
+    "@mantine/hooks": "^7.12.1",
     "@tabler/icons-react": "^3.12.0",
     "@tauri-apps/api": "2.0.0-rc.0",
     "@tauri-apps/plugin-fs": "2.0.0-rc.0",
