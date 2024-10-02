@@ -24,8 +24,8 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.2",
-    "@tauri-apps/cli": "2.0.0-rc.17",
+    "@biomejs/biome": "^1.9.3",
+    "@tauri-apps/cli": "2.0.0-rc.18",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.2",
