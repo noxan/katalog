@@ -34,4 +34,4 @@ jobs:
         with:
           cache: 'pnpm'
       - run: pnpm install
-      - run: biome ci src/**/*
+      - run: pnpm biome ci src/**/*
