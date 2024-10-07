@@ -18,6 +18,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useKatalogStore } from "../stores/katalog";
 import type { BookEntry } from "../types";
 
+interface FormValues {
+  title: string;
+  date: string;
+}
+
 const unwrapArray = (value: string | Array<string>) => {
   if (Array.isArray(value) && value.length === 1) {
     return value[0];
@@ -37,7 +42,7 @@ export default function BookEditRoute() {
     initialValues: {
       title: entry?.metadata?.title ?? "",
       date: entry?.metadata?.date ?? "",
-    },
+    } as FormValues,
   });
 
   if (status !== "ready") {
@@ -58,10 +63,7 @@ export default function BookEditRoute() {
   };
 
   const handleSubmit = async (
-    values: {
-      title: any;
-      date: any;
-    },
+    values: FormValues,
     _event: React.FormEvent<HTMLFormElement> | undefined,
   ) => {
     await invoke("edit_epub_metadata", {
