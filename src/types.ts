@@ -4,7 +4,7 @@ export type FileEntry = {
 };
 
 export type BookEntry = FileEntry & {
-  metadata?: any;
+  metadata?: Record<string, string | undefined>;
   coverImagePath?: string;
   coverImage?: string;
 };

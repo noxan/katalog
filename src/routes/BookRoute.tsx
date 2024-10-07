@@ -43,10 +43,10 @@ export default function BookRoute() {
           </Group>
         </div>
         <div>
-          <Title>{entry.metadata.title}</Title>
-          {Object.keys(entry.metadata).map((key) => (
+          <Title>{entry.metadata?.title}</Title>
+          {Object.keys(entry.metadata ?? []).map((key) => (
             <Text key={key}>
-              <b>{key}</b>: {entry.metadata[key]}
+              <b>{key}</b>: {entry.metadata?.[key]}
             </Text>
           ))}
         </div>

@@ -40,8 +40,8 @@ export default function BookEditRoute() {
 
   const form = useForm({
     initialValues: {
-      title: entry?.metadata?.title ?? "",
-      date: entry?.metadata?.date ?? "",
+      title: entry.metadata?.title ?? "",
+      date: entry.metadata?.date ?? "",
     } as FormValues,
   });
 
