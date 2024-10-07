@@ -15,7 +15,14 @@
     "fs:default",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$HOME/Books" }, { "path": "$HOME/Books/**" }]
+      "allow": [
+        {
+          "path": "$HOME/Books"
+        },
+        {
+          "path": "$HOME/Books/**"
+        }
+      ]
     }
   ],
   "platforms": ["linux", "macOS", "windows", "android", "iOS"]

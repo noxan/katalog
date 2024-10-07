@@ -1,10 +1,10 @@
 import { Container, SimpleGrid } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
 import { BookCard } from "../components/BookCard";
+import DropzoneContent from "../components/DropzoneContent";
 import { EmptyLibrary } from "../components/EmptyLibrary";
 import { useKatalogStore } from "../stores/katalog";
 import { ACCEPTED_MIME_TYPES } from "../types";
-import DropzoneContent from "../components/DropzoneContent";
 
 export default function KatalogRoute() {
   const entries = useKatalogStore((state) => state.entries);
