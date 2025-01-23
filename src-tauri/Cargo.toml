@@ -19,6 +19,7 @@ serde_json = "1.0"
 epub = "2.1.2"
 zip = "2.2.2"
 tauri-plugin-fs = "2.2.0"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

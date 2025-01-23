@@ -3,7 +3,9 @@
   "description": "permissions that were migrated from v1",
   "remote": null,
   "local": true,
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:path:default",
     "core:event:default",
@@ -23,7 +25,14 @@
           "path": "$HOME/Books/**"
         }
       ]
-    }
+    },
+    "sql:default"
   ],
-  "platforms": ["linux", "macOS", "windows", "android", "iOS"]
+  "platforms": [
+    "linux",
+    "macOS",
+    "windows",
+    "android",
+    "iOS"
+  ]
 }
