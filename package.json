@@ -23,7 +23,7 @@
     "byte-base64": "^1.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.4",
+    "react-router-dom": "^7.1.5",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
