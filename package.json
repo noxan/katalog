@@ -17,7 +17,7 @@
     "@mantine/dropzone": "^7.17.1",
     "@mantine/form": "^7.17.1",
     "@mantine/hooks": "^7.17.1",
-    "@tabler/icons-react": "^3.30.0",
+    "@tabler/icons-react": "^3.31.0",
     "@tauri-apps/api": "^2.3.0",
     "@tauri-apps/plugin-fs": "^2.2.0",
     "byte-base64": "^1.1.0",
