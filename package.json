@@ -23,7 +23,7 @@
     "byte-base64": "^1.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.2.0",
+    "react-router-dom": "^7.3.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -36,6 +36,6 @@
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.1"
   }
 }
