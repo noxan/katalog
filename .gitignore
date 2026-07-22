@@ -1,0 +1,14 @@
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# macOS / Xcode
+.DS_Store
+macos/build/
+macos/.build/
+*.xcuserstate
+xcuserdata/
+
+# Generated Swift bindings + framework
+/macos/Generated/
+/dist/

@@ -1,0 +1,22 @@
+[package]
+name = "katalog-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "katalog"
+# staticlib/cdylib for the Swift framework; lib so `cargo test` and bindgen work.
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[dependencies]
+rbook = "0.7"
+rusqlite = { version = "0.37", features = ["bundled"] }
+uniffi = { version = "0.32", features = ["cli"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[[bin]]
+# uniffi-bindgen CLI, invoked by build-core.sh to emit Swift bindings.
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
