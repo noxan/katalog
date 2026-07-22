@@ -345,6 +345,7 @@ dependencies = [
  "rbook",
  "rusqlite",
  "tempfile",
+ "thiserror",
  "uniffi",
 ]
 
