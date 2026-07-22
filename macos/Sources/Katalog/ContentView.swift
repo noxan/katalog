@@ -27,6 +27,11 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
+        .dropDestination(for: URL.self) { urls, _ in
+            let epubs = urls.filter { $0.pathExtension.lowercased() == "epub" }
+            for url in epubs { try? store.importBook(url) }
+            return !epubs.isEmpty
+        }
         .navigationTitle("Katalog")
         .toolbar {
             ToolbarItem {
