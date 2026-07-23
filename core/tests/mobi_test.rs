@@ -21,16 +21,12 @@ fn converts_epub_to_readable_mobi() {
     assert_eq!(m.author().as_deref(), Some("Ada Lovelace"));
     assert_eq!(m.isbn().as_deref(), Some("urn:isbn:9781234567897"));
 
-    // The chapter text must survive into the MOBI text records. (We scan raw
-    // records rather than content_as_string: the crate's range() drops the last
-    // record, which empties a single-record book — our layout matches real
-    // Kindle mobis, verified against a device file.)
-    let text: String = m
-        .raw_records()
-        .records()
-        .iter()
-        .map(|r| String::from_utf8_lossy(r.content))
-        .collect();
-    assert!(text.contains("Hello"), "chapter body text present");
+    // The chapter text must survive into the (PalmDOC-compressed) first text
+    // record. We decompress it ourselves: the crate's content_as_string works
+    // but its range() drops the last record, emptying a single-record book.
+    let recs = m.raw_records();
+    let record1 = recs.records()[1].content;
+    let text = String::from_utf8_lossy(&katalog::mobi::palmdoc_decompress(record1)).into_owned();
+    assert!(text.contains("Hello"), "chapter body text present: {text:?}");
     assert!(text.contains("Chapter 1"), "chapter heading present");
 }
