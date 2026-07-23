@@ -2,8 +2,10 @@ import SwiftUI
 import KatalogCore
 
 struct DetailView: View {
-    let book: Book
+    @State private var book: Book
     @EnvironmentObject var store: LibraryStore
+
+    init(book: Book) { _book = State(initialValue: book) }
     @EnvironmentObject var kindle: KindleWatcher
     @Environment(\.dismiss) private var dismiss
     @State private var status: String?
@@ -27,6 +29,7 @@ struct DetailView: View {
         .frame(width: 560, height: 560)
         .overlay(alignment: .topTrailing) { chrome }
         .contextMenu { removeButton }
+        .onChange(of: book.id) { status = nil }
     }
 
     private var content: some View {
@@ -118,8 +121,32 @@ struct DetailView: View {
 
     // MARK: Chrome — close + overflow menu
 
+    /// Position of the shown book in the library grid's order.
+    private var index: Int? { store.books.firstIndex { $0.id == book.id } }
+
+    private func step(_ delta: Int) {
+        guard let i = index, store.books.indices.contains(i + delta) else { return }
+        book = store.books[i + delta]
+    }
+
     private var chrome: some View {
         HStack(spacing: 12) {
+            Button { step(-1) } label: {
+                Image(systemName: "chevron.backward.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.leftArrow, modifiers: [])
+            .disabled((index ?? 0) <= 0)
+            .help("Previous book")
+
+            Button { step(1) } label: {
+                Image(systemName: "chevron.forward.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.rightArrow, modifiers: [])
+            .disabled(index.map { $0 >= store.books.count - 1 } ?? true)
+            .help("Next book")
+
             Menu {
                 removeButton
             } label: {
