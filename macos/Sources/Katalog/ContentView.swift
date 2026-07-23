@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var importing = false
     @State private var selected: Book?
     @State private var prompts: [DuplicatePrompt] = []
+    @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
 
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
@@ -20,7 +21,7 @@ struct ContentView: View {
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
                     ForEach(store.books) { book in
-                        BookCell(book: book, onDevice: kindle.onDevice(book))
+                        BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
                             .onTapGesture { selected = book }
                     }
                 }
@@ -39,6 +40,14 @@ struct ContentView: View {
         }
         .navigationTitle("Katalog")
         .toolbar {
+            ToolbarItem {
+                Picker("View", selection: $gridStyle) {
+                    Label("Compact", systemImage: "text.below.photo").tag(GridStyle.compact)
+                    Label("Covers only", systemImage: "square.grid.2x2").tag(GridStyle.covers)
+                }
+                .pickerStyle(.menu)
+                .help("Grid style")
+            }
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .help("Import epub")
@@ -115,15 +124,28 @@ struct StatusBar: View {
     }
 }
 
+/// How grid cells present a book's title/author.
+enum GridStyle: String, CaseIterable {
+    case compact  // single-line title + author beneath the cover
+    case covers   // covers only; caption fades in on hover
+}
+
 struct BookCell: View {
     let book: Book
     var onDevice: Bool = false
+    var style: GridStyle = .compact
+    @State private var hover = false
+
+    private var authors: String { book.authors.joined(separator: ", ") }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             CoverImage(path: book.coverPath)
                 .frame(width: Theme.coverWidth, height: Theme.coverWidth * 1.5)
                 .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+                .overlay(alignment: .bottom) {
+                    if style == .covers && hover { hoverCaption }
+                }
                 .overlay(alignment: .topTrailing) {
                     if onDevice {
                         Image(systemName: "checkmark.circle.fill")
@@ -132,20 +154,42 @@ struct BookCell: View {
                             .help("On your reader")
                     }
                 }
-            // Reserve a fixed caption footprint (2 title lines + 1 author line)
-            // so every cell is the same height regardless of text length.
-            Text(book.title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.text)
-                .lineLimit(2, reservesSpace: true)
-                .truncationMode(.tail)
-            Text(book.authors.joined(separator: ", "))
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.subtle)
-                .lineLimit(1)
-                .truncationMode(.tail)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+                .animation(.easeInOut(duration: 0.15), value: hover)
+
+            if style == .compact {
+                // One line each — no reserved gap, uniform cell height.
+                Text(book.title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1).truncationMode(.tail)
+                Text(authors)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.subtle)
+                    .lineLimit(1).truncationMode(.tail)
+            }
         }
         .frame(width: Theme.coverWidth, alignment: .leading)
+        .onHover { hover = $0 }
+    }
+
+    private var hoverCaption: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(book.title)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(2)
+            Text(authors)
+                .font(.system(size: 10))
+                .foregroundStyle(.white.opacity(0.75))
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white)
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(colors: [.black.opacity(0.9), .black.opacity(0)],
+                           startPoint: .bottom, endPoint: .top)
+        )
     }
 }
 
