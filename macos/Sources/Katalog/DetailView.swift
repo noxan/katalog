@@ -33,7 +33,10 @@ struct DetailView: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: Theme.spacing) {
+        #if DEBUG
+        _ = DescriptionHTMLCheck.run
+        #endif
+        return VStack(alignment: .leading, spacing: Theme.spacing) {
             HStack(alignment: .top, spacing: Theme.spacing) {
                 leftColumn
                 rightColumn
@@ -42,7 +45,7 @@ struct DetailView: View {
             if let desc = book.description, !desc.isEmpty {
                 Divider().overlay(Theme.subtle.opacity(0.12))
                 ScrollView {
-                    Text(desc).font(.callout).lineSpacing(2).foregroundStyle(Theme.text)
+                    Text(renderedDescription(desc)).font(.callout).lineSpacing(2).foregroundStyle(Theme.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: 160)
