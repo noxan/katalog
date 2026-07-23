@@ -8,6 +8,8 @@
 	<string>Katalog</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.stromer.katalog</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

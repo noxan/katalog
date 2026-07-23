@@ -17,9 +17,10 @@ run: app
 # Then: right-click any .epub → Open With → Katalog → Change All… to default it.
 bundle: app
 	rm -rf dist/Katalog.app
-	mkdir -p dist/Katalog.app/Contents/MacOS
+	mkdir -p dist/Katalog.app/Contents/MacOS dist/Katalog.app/Contents/Resources
 	cp macos/Info.plist dist/Katalog.app/Contents/Info.plist
 	cp macos/.build/debug/Katalog dist/Katalog.app/Contents/MacOS/Katalog
+	macos/build-icon.sh macos/icon.svg dist/Katalog.app/Contents/Resources/AppIcon.icns
 	codesign --force --sign - dist/Katalog.app
 	/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(PWD)/dist/Katalog.app"
 	@echo "Built dist/Katalog.app — set default via Finder Get Info → Open With → Change All."
