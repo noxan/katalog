@@ -28,6 +28,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
+        .safeAreaInset(edge: .bottom) {
+            StatusBar(bookCount: store.books.count, devices: kindle.devices)
+        }
         .dropDestination(for: URL.self) { urls, _ in
             let epubs = urls.filter { $0.pathExtension.lowercased() == "epub" }
             for url in epubs { try? store.importBook(url) }
@@ -35,12 +38,6 @@ struct ContentView: View {
         }
         .navigationTitle("Katalog")
         .toolbar {
-            ToolbarItem {
-                DeviceIndicator(devices: kindle.devices)
-            }
-            if #available(macOS 26.0, *) {
-                ToolbarSpacer(.fixed)
-            }
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .help("Import epub")
@@ -68,20 +65,27 @@ struct ContentView: View {
     }
 }
 
-/// Persistent status pill: dim when no reader is mounted, frost when one is.
-struct DeviceIndicator: View {
+/// Bottom status bar: book count on the left, reader status on the right.
+struct StatusBar: View {
+    let bookCount: Int
     let devices: [Device]
+
     var body: some View {
         let connected = !devices.isEmpty
-        Label {
-            Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
-                .font(.system(size: 12))
-        } icon: {
+        HStack(spacing: 6) {
+            Text("\(bookCount) book\(bookCount == 1 ? "" : "s")")
+                .foregroundStyle(Theme.subtle)
+            Spacer()
             Image(systemName: connected ? "externaldrive.fill.badge.checkmark" : "externaldrive")
+            Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
         }
-        .labelStyle(.titleAndIcon)
+        .font(.system(size: 12))
         .foregroundStyle(connected ? Theme.accent : Theme.subtle)
-        .fixedSize()
+        .padding(.horizontal, Theme.spacing)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity)
+        .background(Theme.surface)
+        .overlay(alignment: .top) { Divider().overlay(Theme.subtle.opacity(0.2)) }
         .help(connected ? "Reader connected" : "No reader mounted — unlock your Kindle and choose file transfer")
     }
 }
