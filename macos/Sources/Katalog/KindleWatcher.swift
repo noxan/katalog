@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import KatalogCore
 
 /// A mounted removable reader (Kindle) exposed as a copy target.
 struct Device: Identifiable, Hashable {
@@ -9,11 +10,30 @@ struct Device: Identifiable, Hashable {
     var documents: URL { volume.appendingPathComponent("documents", isDirectory: true) }
 }
 
+extension Book {
+    /// Stable, unique filename this book gets on a device. Deterministic so we
+    /// can both write it and detect it — the basis of duplicate detection.
+    var deviceFilename: String {
+        let author = authors.first ?? "Unknown"
+        let base = deviceSanitize("\(title) - \(author)")
+        return "\(base).epub"  // becomes .azw3 once conversion lands
+    }
+}
+
+private func deviceSanitize(_ s: String) -> String {
+    let bad = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters)
+    let cleaned = String(s.unicodeScalars.map { bad.contains($0) ? "_" : Character($0) })
+    let trimmed = cleaned.trimmingCharacters(in: .whitespaces)
+    return trimmed.isEmpty ? "_" : String(trimmed.prefix(120))
+}
+
 /// Watches mounted volumes for Kindles (a volume with a `documents/` folder).
 /// Detection + copy live here — inherently platform-specific, so Foundation
 /// owns them; the core just hands us the validated source path.
 final class KindleWatcher: NSObject, ObservableObject {
     @Published private(set) var devices: [Device] = []
+    /// Filenames present in the connected devices' documents/ folders (union).
+    @Published private(set) var deviceFiles: Set<String> = []
 
     override init() {
         super.init()
@@ -33,6 +53,14 @@ final class KindleWatcher: NSObject, ObservableObject {
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
         devices = vols.filter(isKindle).map(Device.init)
+        deviceFiles = Set(devices.flatMap { dev in
+            (try? fm.contentsOfDirectory(atPath: dev.documents.path)) ?? []
+        })
+    }
+
+    /// True if this book's file already exists on a connected device.
+    func onDevice(_ book: Book) -> Bool {
+        deviceFiles.contains(book.deviceFilename)
     }
 
     private func isKindle(_ vol: URL) -> Bool {
@@ -42,12 +70,15 @@ final class KindleWatcher: NSObject, ObservableObject {
         return hasDocs && vol.lastPathComponent.lowercased().contains("kindle")
     }
 
-    /// Copy the epub at `srcPath` into the device's documents folder.
-    func transfer(from srcPath: String, to device: Device) throws {
+    /// Copy the epub at `srcPath` into the device's documents folder under the
+    /// book's stable `deviceFilename`. Overwrites an existing copy of the same
+    /// book; refresh the scan so the "on device" state updates.
+    func transfer(_ book: Book, from srcPath: String, to device: Device) throws {
         let fm = FileManager.default
         let src = URL(fileURLWithPath: srcPath)
-        let dest = device.documents.appendingPathComponent(src.lastPathComponent)
+        let dest = device.documents.appendingPathComponent(book.deviceFilename)
         if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
         try fm.copyItem(at: src, to: dest)
+        rescan()
     }
 }

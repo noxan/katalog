@@ -67,10 +67,15 @@ struct DetailView: View {
                 .foregroundStyle(Theme.subtle)
         } else {
             ForEach(kindle.devices) { dev in
-                Button { send(to: dev) } label: {
-                    Label("Send to \(dev.name)", systemImage: "arrow.right.circle.fill")
+                if kindle.onDevice(book) {
+                    Label("On \(dev.name)", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(Theme.accent)
+                } else {
+                    Button { send(to: dev) } label: {
+                        Label("Send to \(dev.name)", systemImage: "arrow.right.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent).tint(Theme.accent)
                 }
-                .buttonStyle(.borderedProminent).tint(Theme.accent)
             }
         }
     }
@@ -78,7 +83,7 @@ struct DetailView: View {
     private func send(to device: Device) {
         do {
             let path = try store.transferPath(book)
-            try kindle.transfer(from: path, to: device)
+            try kindle.transfer(book, from: path, to: device)
             status = "Sent to \(device.name) ✓"
         } catch {
             status = "Failed: \(error.localizedDescription)"

@@ -19,7 +19,7 @@ struct ContentView: View {
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
                     ForEach(store.books) { book in
-                        BookCell(book: book)
+                        BookCell(book: book, onDevice: kindle.onDevice(book))
                             .onTapGesture { selected = book }
                     }
                 }
@@ -92,12 +92,21 @@ struct StatusBar: View {
 
 struct BookCell: View {
     let book: Book
+    var onDevice: Bool = false
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             CoverImage(path: book.coverPath)
                 .frame(width: Theme.coverWidth, height: Theme.coverWidth * 1.5)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+                .overlay(alignment: .topTrailing) {
+                    if onDevice {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Theme.accent)
+                            .padding(6)
+                            .help("On your reader")
+                    }
+                }
             Text(book.title)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Theme.text).lineLimit(2)
