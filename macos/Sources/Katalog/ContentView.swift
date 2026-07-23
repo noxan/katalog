@@ -117,7 +117,6 @@ struct StatusBar: View {
             : (scanning ? "externaldrive.fill" : "externaldrive.fill.badge.checkmark")
         HStack(spacing: 6) {
             Text("\(bookCount) book\(bookCount == 1 ? "" : "s")")
-                .foregroundStyle(Theme.subtle)
             Spacer()
             Image(systemName: icon)
             Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
@@ -125,13 +124,13 @@ struct StatusBar: View {
                 ProgressView().controlSize(.small)
             }
         }
-        .font(.system(size: 12))
-        .foregroundStyle(connected ? Theme.accent : Theme.subtle)
-        .padding(.horizontal, Theme.spacing)
+        .font(.system(size: 11))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity)
-        .background(Theme.surface)
-        .overlay(alignment: .top) { Divider().overlay(Theme.subtle.opacity(0.2)) }
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
         .help(!connected ? "No reader mounted — unlock your Kindle and choose file transfer"
               : (scanning ? "Reading books on the reader…" : "Reader connected"))
     }
