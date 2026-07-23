@@ -19,14 +19,12 @@ struct KatalogApp: App {
                     .environmentObject(kindle)
             }
             .frame(minWidth: 720, minHeight: 480)
-            .preferredColorScheme(.dark)
         }
 
         // Native Settings scene: adds the "Settings…" menu item and ⌘,.
         Settings {
             SettingsView()
                 .environmentObject(store)
-                .preferredColorScheme(.dark)
         }
     }
 }
