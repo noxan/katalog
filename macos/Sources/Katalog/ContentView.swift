@@ -132,14 +132,20 @@ struct BookCell: View {
                             .help("On your reader")
                     }
                 }
+            // Reserve a fixed caption footprint (2 title lines + 1 author line)
+            // so every cell is the same height regardless of text length.
             Text(book.title)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.text).lineLimit(2)
+                .foregroundStyle(Theme.text)
+                .lineLimit(2, reservesSpace: true)
+                .truncationMode(.tail)
             Text(book.authors.joined(separator: ", "))
                 .font(.system(size: 11))
-                .foregroundStyle(Theme.subtle).lineLimit(1)
+                .foregroundStyle(Theme.subtle)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
-        .frame(width: Theme.coverWidth)
+        .frame(width: Theme.coverWidth, alignment: .leading)
     }
 }
 
