@@ -20,6 +20,14 @@ fn import_list_get_remove_roundtrip() {
     assert_eq!(book.title, "The Zen of Katalog");
     assert_eq!(book.authors, vec!["Ada Lovelace", "Alan Turing"]);
     assert!(Path::new(&book.file_path).exists(), "epub copied into library");
+    // Flat "Author/Title - Author.ext" layout: file sits directly under the
+    // author folder, no per-title subfolder, and is self-named.
+    let fp = Path::new(&book.file_path);
+    assert_eq!(
+        fp.file_name().unwrap().to_str().unwrap(),
+        "The Zen of Katalog - Ada Lovelace.epub"
+    );
+    assert_eq!(fp.parent().unwrap().file_name().unwrap().to_str().unwrap(), "Ada Lovelace");
     let cover = book.cover_path.clone().expect("cover cached");
     assert!(Path::new(&cover).exists(), "cover written");
 

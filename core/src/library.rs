@@ -120,14 +120,17 @@ impl Library {
 
         let file_path = if copy {
             let dir = if organize {
-                self.books_dir.join(sanitize(author)).join(sanitize(&meta.title))
+                self.books_dir.join(sanitize(author))
             } else {
                 self.books_dir.clone()
             };
             fs::create_dir_all(&dir)?;
             // ponytail: flat mode keeps the original filename; identical names collide.
             let name = if organize {
-                "book.epub".to_string()
+                // "Title - Author.ext" — self-describing, and different formats of
+                // one book coexist as same basename + different extension.
+                let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("epub");
+                format!("{}.{}", sanitize(&format!("{} - {}", meta.title, author)), ext)
             } else {
                 src.file_name()
                     .map(|n| n.to_string_lossy().into_owned())
