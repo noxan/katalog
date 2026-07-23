@@ -41,18 +41,14 @@ struct ContentView: View {
         .navigationTitle("Katalog")
         .toolbar {
             ToolbarItem {
-                Menu {
-                    Picker("View", selection: $gridStyle) {
-                        Label("Compact", systemImage: "text.below.photo").tag(GridStyle.compact)
-                        Label("Covers only", systemImage: "square.grid.2x2").tag(GridStyle.covers)
-                    }
-                    .pickerStyle(.inline)
-                } label: {
-                    Image(systemName: gridStyle == .compact ? "text.below.photo" : "square.grid.2x2")
+                Picker("View", selection: $gridStyle) {
+                    Image(systemName: "text.below.photo").tag(GridStyle.compact)
+                    Image(systemName: "square.grid.2x2").tag(GridStyle.covers)
                 }
-                .menuIndicator(.hidden)
+                .pickerStyle(.segmented)
                 .help("Grid style")
             }
+            ToolbarSpacer(.fixed)
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .help("Import epub")

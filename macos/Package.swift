@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.2
 import PackageDescription
 
 // Run ../build-core.sh first — it produces dist/Katalog.xcframework and
@@ -6,7 +6,7 @@ import PackageDescription
 // Xcode (or `swift run Katalog`) to launch the app.
 let package = Package(
     name: "Katalog",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v26)],  // ToolbarSpacer + Liquid Glass toolbar
     targets: [
         .binaryTarget(name: "katalogFFI", path: "../dist/Katalog.xcframework"),
         .target(
@@ -20,5 +20,7 @@ let package = Package(
             dependencies: ["KatalogCore"],
             path: "Sources/Katalog"
         ),
-    ]
+    ],
+    // Stay on Swift 5 semantics — no strict-concurrency churn for this MVP.
+    swiftLanguageModes: [.v5]
 )
