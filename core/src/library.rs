@@ -270,22 +270,38 @@ pub fn book_keys(title: String, isbn: Option<String>) -> Vec<String> {
     matching::keys_for(&title, isbn.as_deref())
 }
 
-/// Match keys for a file on disk. Epubs are parsed for real metadata; other
-/// formats fall back to their filename as the title.
+/// Match keys for a file on disk. Epub and MOBI/AZW3 are parsed for real
+/// metadata; anything else falls back to its filename as the title.
 #[uniffi::export]
 pub fn file_keys(path: String) -> Result<Vec<String>, KatalogError> {
     let p = PathBuf::from(&path);
-    let is_epub = p
+    let ext = p
         .extension()
         .and_then(|e| e.to_str())
-        .map_or(false, |e| e.eq_ignore_ascii_case("epub"));
-    if is_epub {
-        let meta = epub::parse(&p)?;
-        Ok(matching::keys_for(&meta.title, meta.isbn.as_deref()))
-    } else {
-        let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
-        Ok(matching::keys_for(stem, None))
+        .map(str::to_ascii_lowercase)
+        .unwrap_or_default();
+    match ext.as_str() {
+        "epub" => {
+            let meta = epub::parse(&p)?;
+            Ok(matching::keys_for(&meta.title, meta.isbn.as_deref()))
+        }
+        // AZW3/KF8 still carry the MOBI EXTH metadata block. Reading files off a
+        // device is untrusted, so guard against a parser panic and fall back.
+        "mobi" | "azw" | "azw3" | "prc" => {
+            let parsed = std::panic::catch_unwind(|| {
+                let m = mobi::Mobi::from_path(&p).ok()?;
+                Some(matching::keys_for(&m.title(), m.isbn().as_deref()))
+            })
+            .ok()
+            .flatten();
+            Ok(parsed.unwrap_or_else(|| matching::keys_for(filestem(&p), None)))
+        }
+        _ => Ok(matching::keys_for(filestem(&p), None)),
     }
+}
+
+fn filestem(p: &Path) -> &str {
+    p.file_stem().and_then(|s| s.to_str()).unwrap_or_default()
 }
 
 impl Library {

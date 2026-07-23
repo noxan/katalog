@@ -58,6 +58,20 @@ fn find_duplicate_matches_existing_and_carries_preview() {
 }
 
 #[test]
+fn file_keys_reads_epub_and_falls_back_for_unparseable_mobi() {
+    // Real epub → keys derived from parsed metadata.
+    let keys = katalog::library::file_keys(fixture()).unwrap();
+    assert!(keys.contains(&"title:thezenofkatalog".to_string()));
+
+    // Garbage .azw3 must not panic; it falls back to the filename as title.
+    let tmp = tempfile::tempdir().unwrap();
+    let f = tmp.path().join("Some Great Book.azw3");
+    std::fs::write(&f, b"not a real mobi file").unwrap();
+    let keys = katalog::library::file_keys(f.to_string_lossy().into_owned()).unwrap();
+    assert!(keys.contains(&"title:somegreatbook".to_string()));
+}
+
+#[test]
 fn import_in_place_does_not_copy_or_delete_source() {
     let tmp = tempfile::tempdir().unwrap();
     let db = tmp.path().join("library.db").to_string_lossy().into_owned();
