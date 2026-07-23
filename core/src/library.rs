@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use rusqlite::Connection;
 
 use crate::epub;
+use crate::matching;
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum KatalogError {
@@ -192,11 +193,16 @@ impl Library {
     }
 
     /// If an epub matches a book already in the library — same ISBN, or same
-    /// title + authors (case-insensitive) — return the match plus the incoming
-    /// book's preview so the UI can compare them. `None` means no duplicate.
+    /// title (or a shared ISBN) — return the match plus the incoming book's
+    /// preview so the UI can compare them. `None` means no duplicate.
     pub fn find_duplicate(&self, epub_path: String) -> Result<Option<DuplicateHit>, KatalogError> {
         let meta = epub::parse(&PathBuf::from(&epub_path))?;
-        match self.match_existing(&meta)? {
+        let incoming = matching::keys_for(&meta.title, meta.isbn.as_deref());
+        // ponytail: linear scan; index a normalized key column if libraries grow huge.
+        let existing = self.list()?.into_iter().find(|b| {
+            matching::shares_key(&incoming, &matching::keys_for(&b.title, b.isbn.as_deref()))
+        });
+        match existing {
             Some(existing) => Ok(Some(DuplicateHit {
                 existing,
                 incoming_title: meta.title,
@@ -257,29 +263,32 @@ impl Library {
     }
 }
 
-impl Library {
-    /// Find an existing row matching the parsed metadata, or None.
-    fn match_existing(&self, meta: &epub::ParsedEpub) -> Result<Option<Book>, KatalogError> {
-        let conn = self.lock();
-        // Strongest signal: a shared ISBN/identifier.
-        if let Some(isbn) = meta.isbn.as_deref().filter(|s| !s.is_empty()) {
-            let mut stmt = conn.prepare(&format!("{SELECT} WHERE isbn = ?1 LIMIT 1"))?;
-            let mut rows = stmt.query_map([isbn], row_to_book)?;
-            if let Some(r) = rows.next() {
-                return Ok(Some(r?));
-            }
-        }
-        // Fallback: identical title + authors, ignoring case.
-        let authors = meta.authors.join("\n");
-        let mut stmt = conn.prepare(&format!(
-            "{SELECT} WHERE title = ?1 COLLATE NOCASE AND authors = ?2 COLLATE NOCASE LIMIT 1"
-        ))?;
-        let mut rows = stmt.query_map(rusqlite::params![meta.title, authors], row_to_book)?;
-        match rows.next() {
-            Some(r) => Ok(Some(r?)),
-            None => Ok(None),
-        }
+/// Match keys for a book's metadata (ISBN + normalized title). Same primitive
+/// the device layer uses, so import dedup and "on device" agree.
+#[uniffi::export]
+pub fn book_keys(title: String, isbn: Option<String>) -> Vec<String> {
+    matching::keys_for(&title, isbn.as_deref())
+}
+
+/// Match keys for a file on disk. Epubs are parsed for real metadata; other
+/// formats fall back to their filename as the title.
+#[uniffi::export]
+pub fn file_keys(path: String) -> Result<Vec<String>, KatalogError> {
+    let p = PathBuf::from(&path);
+    let is_epub = p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map_or(false, |e| e.eq_ignore_ascii_case("epub"));
+    if is_epub {
+        let meta = epub::parse(&p)?;
+        Ok(matching::keys_for(&meta.title, meta.isbn.as_deref()))
+    } else {
+        let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+        Ok(matching::keys_for(stem, None))
     }
+}
+
+impl Library {
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Connection> {
         // ponytail: poisoned only if a holder panicked; recover and continue.
