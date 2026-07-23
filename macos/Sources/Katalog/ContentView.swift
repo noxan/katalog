@@ -184,7 +184,7 @@ struct BookCell: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CoverImage(path: book.coverPath)
+            CoverImage(path: book.coverPath, title: book.title, authors: authors)
                 .frame(width: Theme.coverWidth, height: Theme.coverHeight)
                 .background(Theme.surface)
                 .overlay(alignment: .bottom) {
@@ -244,12 +244,28 @@ struct BookCell: View {
 
 struct CoverImage: View {
     let path: String?
+    var title: String = ""
+    var authors: String = ""
     var body: some View {
         if let path, let img = NSImage(contentsOfFile: path) {
             Image(nsImage: img).resizable().aspectRatio(contentMode: .fill).clipped()
         } else {
-            Image(systemName: "book.closed")
-                .font(.largeTitle).foregroundStyle(Theme.subtle)
+            VStack(spacing: 8) {
+                Image(systemName: "book.closed")
+                    .font(.largeTitle).foregroundStyle(Theme.subtle)
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(3)
+                    Text(authors)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.subtle)
+                        .lineLimit(2)
+                }
+            }
+            .multilineTextAlignment(.center)
+            .padding(10)
         }
     }
 }

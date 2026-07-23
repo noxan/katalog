@@ -65,7 +65,8 @@ struct DetailView: View {
 
     private var leftColumn: some View {
         VStack(spacing: 14) {
-            CoverImage(path: book.coverPath)
+            CoverImage(path: book.coverPath, title: book.title,
+                       authors: book.authors.joined(separator: ", "))
                 .frame(width: Theme.coverWidth, height: Theme.coverHeight)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
