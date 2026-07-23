@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import KatalogCore
 
 struct DetailView: View {
@@ -28,7 +29,7 @@ struct DetailView: View {
         }
         .frame(width: 560, height: 560)
         .overlay(alignment: .topTrailing) { chrome }
-        .contextMenu { removeButton }
+        .contextMenu { menuItems }
         .onChange(of: book.id) { status = nil }
     }
 
@@ -151,7 +152,7 @@ struct DetailView: View {
             .help("Next book")
 
             Menu {
-                removeButton
+                menuItems
             } label: {
                 Image(systemName: "ellipsis.circle.fill")
             }
@@ -171,7 +172,13 @@ struct DetailView: View {
         .padding(Theme.spacing)
     }
 
-    @ViewBuilder private var removeButton: some View {
+    @ViewBuilder private var menuItems: some View {
+        Button {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
+        } label: {
+            Label("Open in Finder", systemImage: "folder")
+        }
+        Divider()
         Button(role: .destructive) {
             store.remove(book); dismiss()
         } label: {
