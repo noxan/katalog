@@ -9,6 +9,7 @@ struct ContentView: View {
     @EnvironmentObject var kindle: KindleWatcher
     @State private var importing = false
     @State private var selected: Book?
+    @State private var prompts: [DuplicatePrompt] = []
 
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
@@ -33,7 +34,7 @@ struct ContentView: View {
         }
         .dropDestination(for: URL.self) { urls, _ in
             let epubs = urls.filter { $0.pathExtension.lowercased() == "epub" }
-            for url in epubs { try? store.importBook(url) }
+            prompts = store.importBatch(epubs)
             return !epubs.isEmpty
         }
         .navigationTitle("Katalog")
@@ -46,10 +47,34 @@ struct ContentView: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [epubType],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result {
-                for url in urls { try? store.importBook(url) }
+                prompts = store.importBatch(urls)
             }
         }
         .sheet(item: $selected) { DetailView(book: $0) }
+        .sheet(isPresented: Binding(get: { !prompts.isEmpty },
+                                    set: { if !$0 { prompts = [] } })) {
+            if let current = prompts.first {
+                DuplicateDialog(
+                    prompt: current, remaining: prompts.count,
+                    onResolve: { importAnyway, applyToAll in
+                        resolve(importAnyway: importAnyway, applyToAll: applyToAll)
+                    },
+                    onCancel: { prompts = [] }
+                )
+            }
+        }
+    }
+
+    /// Apply the user's decision to the current duplicate — or, with
+    /// "apply to all", to every remaining one — then advance the queue.
+    private func resolve(importAnyway: Bool, applyToAll: Bool) {
+        if applyToAll {
+            if importAnyway { for p in prompts { try? store.importBook(p.url) } }
+            prompts = []
+        } else {
+            let p = prompts.removeFirst()
+            if importAnyway { try? store.importBook(p.url) }
+        }
     }
 
     private var emptyState: some View {

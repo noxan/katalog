@@ -49,6 +49,16 @@ pub struct Book {
     pub added_at: String,
 }
 
+/// A pending import that matches a book already in the library. Carries the
+/// incoming book's preview so the UI can show it next to the existing one.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct DuplicateHit {
+    pub existing: Book,
+    pub incoming_title: String,
+    pub incoming_authors: Vec<String>,
+    pub incoming_cover: Option<Vec<u8>>,
+}
+
 #[derive(uniffi::Object)]
 pub struct Library {
     conn: Mutex<Connection>,
@@ -181,6 +191,22 @@ impl Library {
         }
     }
 
+    /// If an epub matches a book already in the library — same ISBN, or same
+    /// title + authors (case-insensitive) — return the match plus the incoming
+    /// book's preview so the UI can compare them. `None` means no duplicate.
+    pub fn find_duplicate(&self, epub_path: String) -> Result<Option<DuplicateHit>, KatalogError> {
+        let meta = epub::parse(&PathBuf::from(&epub_path))?;
+        match self.match_existing(&meta)? {
+            Some(existing) => Ok(Some(DuplicateHit {
+                existing,
+                incoming_title: meta.title,
+                incoming_authors: meta.authors,
+                incoming_cover: meta.cover,
+            })),
+            None => Ok(None),
+        }
+    }
+
     /// Remove a book from the index. Deletes managed files (the cached cover,
     /// and the epub only if it lives inside the library folder); files
     /// referenced in place are left untouched.
@@ -232,6 +258,29 @@ impl Library {
 }
 
 impl Library {
+    /// Find an existing row matching the parsed metadata, or None.
+    fn match_existing(&self, meta: &epub::ParsedEpub) -> Result<Option<Book>, KatalogError> {
+        let conn = self.lock();
+        // Strongest signal: a shared ISBN/identifier.
+        if let Some(isbn) = meta.isbn.as_deref().filter(|s| !s.is_empty()) {
+            let mut stmt = conn.prepare(&format!("{SELECT} WHERE isbn = ?1 LIMIT 1"))?;
+            let mut rows = stmt.query_map([isbn], row_to_book)?;
+            if let Some(r) = rows.next() {
+                return Ok(Some(r?));
+            }
+        }
+        // Fallback: identical title + authors, ignoring case.
+        let authors = meta.authors.join("\n");
+        let mut stmt = conn.prepare(&format!(
+            "{SELECT} WHERE title = ?1 COLLATE NOCASE AND authors = ?2 COLLATE NOCASE LIMIT 1"
+        ))?;
+        let mut rows = stmt.query_map(rusqlite::params![meta.title, authors], row_to_book)?;
+        match rows.next() {
+            Some(r) => Ok(Some(r?)),
+            None => Ok(None),
+        }
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Connection> {
         // ponytail: poisoned only if a holder panicked; recover and continue.
         self.conn.lock().unwrap_or_else(|e| e.into_inner())

@@ -72,6 +72,26 @@ final class LibraryStore: ObservableObject {
         refresh()
     }
 
+    /// Import a batch: files with no match are imported immediately; files that
+    /// match an existing book are returned as prompts for the user to resolve.
+    func importBatch(_ urls: [URL]) -> [DuplicatePrompt] {
+        var prompts: [DuplicatePrompt] = []
+        for url in urls {
+            if let hit = duplicateOf(url) {
+                prompts.append(DuplicatePrompt(url: url, hit: hit))
+            } else {
+                try? importBook(url)
+            }
+        }
+        return prompts
+    }
+
+    private func duplicateOf(_ url: URL) -> DuplicateHit? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        return try? lib.findDuplicate(epubPath: url.path)
+    }
+
     func remove(_ book: Book) {
         try? lib.remove(id: book.id)
         refresh()
