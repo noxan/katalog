@@ -35,7 +35,7 @@ struct ContentView: View {
         }
         .navigationTitle("Katalog")
         .toolbar {
-            ToolbarItem(placement: .navigation) {
+            ToolbarItem {
                 DeviceIndicator(devices: kindle.devices)
             }
             ToolbarItem {
@@ -77,6 +77,7 @@ struct DeviceIndicator: View {
             Image(systemName: connected ? "externaldrive.fill.badge.checkmark" : "externaldrive")
         }
         .foregroundStyle(connected ? Theme.accent : Theme.subtle)
+        .fixedSize()
         .help(connected ? "Reader connected" : "No reader mounted — unlock your Kindle and choose file transfer")
     }
 }
