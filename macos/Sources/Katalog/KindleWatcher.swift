@@ -35,6 +35,8 @@ final class KindleWatcher: NSObject, ObservableObject {
     /// Match keys for every book on the connected devices (union). Built from
     /// real epub metadata where possible, else the filename — see core file_keys.
     @Published private(set) var deviceKeys: Set<String> = []
+    /// True while the background key-scan of a connected device is in flight.
+    @Published private(set) var scanning = false
 
     override init() {
         super.init()
@@ -48,15 +50,31 @@ final class KindleWatcher: NSObject, ObservableObject {
 
     @objc private func volumesChanged() { rescan() }
 
+    /// Detecting a device is cheap (volume list + a stat), so do it synchronously
+    /// — the reader shows as mounted immediately. Reading every MOBI/AZW file for
+    /// its match keys is the slow part, so scan contents in the background (else
+    /// init() and the mount notifications would stall the window / freeze the UI)
+    /// and flag `scanning` so the UI can show a spinner until keys are ready.
     func rescan() {
         let fm = FileManager.default
         let vols = fm.mountedVolumeURLs(
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
         devices = vols.filter(isKindle).map(Device.init)
-        deviceKeys = Set(devices.flatMap { dev in
-            bookFiles(in: dev.documents).flatMap { (try? fileKeys(path: $0.path)) ?? [] }
-        })
+        guard !devices.isEmpty else { deviceKeys = []; scanning = false; return }
+
+        scanning = true
+        let devices = self.devices
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let keys = Set(devices.flatMap { dev in
+                self.bookFiles(in: dev.documents).flatMap { (try? fileKeys(path: $0.path)) ?? [] }
+            })
+            DispatchQueue.main.async {
+                self.deviceKeys = keys
+                self.scanning = false
+            }
+        }
     }
 
     private static let ebookExts: Set<String> = ["epub", "mobi", "azw", "azw3", "prc", "kfx"]

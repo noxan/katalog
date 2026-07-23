@@ -31,7 +31,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
         .safeAreaInset(edge: .bottom) {
-            StatusBar(bookCount: store.books.count, devices: kindle.devices)
+            StatusBar(bookCount: store.books.count, devices: kindle.devices, scanning: kindle.scanning)
         }
         .dropDestination(for: URL.self) { urls, _ in
             let epubs = store.epubURLs(from: urls)
@@ -109,15 +109,21 @@ struct ContentView: View {
 struct StatusBar: View {
     let bookCount: Int
     let devices: [Device]
+    var scanning: Bool = false
 
     var body: some View {
         let connected = !devices.isEmpty
+        let icon = !connected ? "externaldrive"
+            : (scanning ? "externaldrive.fill" : "externaldrive.fill.badge.checkmark")
         HStack(spacing: 6) {
             Text("\(bookCount) book\(bookCount == 1 ? "" : "s")")
                 .foregroundStyle(Theme.subtle)
             Spacer()
-            Image(systemName: connected ? "externaldrive.fill.badge.checkmark" : "externaldrive")
+            Image(systemName: icon)
             Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
+            if connected && scanning {
+                ProgressView().controlSize(.small)
+            }
         }
         .font(.system(size: 12))
         .foregroundStyle(connected ? Theme.accent : Theme.subtle)
@@ -126,7 +132,8 @@ struct StatusBar: View {
         .frame(maxWidth: .infinity)
         .background(Theme.surface)
         .overlay(alignment: .top) { Divider().overlay(Theme.subtle.opacity(0.2)) }
-        .help(connected ? "Reader connected" : "No reader mounted — unlock your Kindle and choose file transfer")
+        .help(!connected ? "No reader mounted — unlock your Kindle and choose file transfer"
+              : (scanning ? "Reading books on the reader…" : "Reader connected"))
     }
 }
 
