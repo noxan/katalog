@@ -8,10 +8,8 @@ struct SettingsView: View {
         Form {
             Section {
                 LabeledContent("Library Location") {
-                    Text(store.booksDir)
-                        .lineLimit(1).truncationMode(.head)
-                        .foregroundStyle(.secondary)
-                        .help(store.booksDir)
+                    PathControl(path: store.booksDir)
+                        .help("Click to open in Finder")
                 }
                 HStack {
                     Button("Change…") { chooseFolder() }
