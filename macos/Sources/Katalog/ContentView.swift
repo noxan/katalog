@@ -41,11 +41,16 @@ struct ContentView: View {
         .navigationTitle("Katalog")
         .toolbar {
             ToolbarItem {
-                Picker("View", selection: $gridStyle) {
-                    Label("Compact", systemImage: "text.below.photo").tag(GridStyle.compact)
-                    Label("Covers only", systemImage: "square.grid.2x2").tag(GridStyle.covers)
+                Menu {
+                    Picker("View", selection: $gridStyle) {
+                        Label("Compact", systemImage: "text.below.photo").tag(GridStyle.compact)
+                        Label("Covers only", systemImage: "square.grid.2x2").tag(GridStyle.covers)
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Image(systemName: gridStyle == .compact ? "text.below.photo" : "square.grid.2x2")
                 }
-                .pickerStyle(.menu)
+                .menuIndicator(.hidden)
                 .help("Grid style")
             }
             ToolbarItem {
