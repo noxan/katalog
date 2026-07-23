@@ -54,15 +54,25 @@ final class KindleWatcher: NSObject, ObservableObject {
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
         devices = vols.filter(isKindle).map(Device.init)
-        // ponytail: top-level only; Kindles keep books in documents/ directly.
-        deviceKeys = Set(devices.flatMap { dev -> [String] in
-            let names = (try? fm.contentsOfDirectory(atPath: dev.documents.path)) ?? []
-            return names.flatMap { name -> [String] in
-                // Skip .sdr sidecar folders — the book file itself carries the metadata.
-                guard !name.hasSuffix(".sdr") else { return [] }
-                return (try? fileKeys(path: dev.documents.appendingPathComponent(name).path)) ?? []
-            }
+        deviceKeys = Set(devices.flatMap { dev in
+            bookFiles(in: dev.documents).flatMap { (try? fileKeys(path: $0.path)) ?? [] }
         })
+    }
+
+    private static let ebookExts: Set<String> = ["epub", "mobi", "azw", "azw3", "prc", "kfx"]
+
+    /// Recursively find ebook files under a device — Kindles organize books in
+    /// Author/ subfolders. Skips hidden/AppleDouble files and .sdr sidecars.
+    private func bookFiles(in root: URL) -> [URL] {
+        guard let en = FileManager.default.enumerator(
+            at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        ) else { return [] }
+        var files: [URL] = []
+        for case let url as URL in en {
+            if url.pathComponents.contains(where: { $0.hasSuffix(".sdr") }) { continue }
+            if Self.ebookExts.contains(url.pathExtension.lowercased()) { files.append(url) }
+        }
+        return files
     }
 
     /// Whether this book is on a connected device — same match-key primitive the
