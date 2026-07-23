@@ -34,9 +34,14 @@ struct ContentView: View {
             StatusBar(bookCount: store.books.count, devices: kindle.devices)
         }
         .dropDestination(for: URL.self) { urls, _ in
-            let epubs = urls.filter { $0.pathExtension.lowercased() == "epub" }
+            let epubs = store.epubURLs(from: urls)
             prompts = store.importBatch(epubs)
             return !epubs.isEmpty
+        }
+        // Files opened via Finder "Open With" (default-app handler). onOpenURL
+        // fires once per URL; append so a multi-file open keeps every prompt.
+        .onOpenURL { url in
+            prompts += store.importBatch(store.epubURLs(from: [url]))
         }
         .navigationTitle("Katalog")
         .toolbar {
@@ -51,13 +56,13 @@ struct ContentView: View {
             ToolbarSpacer(.fixed)
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
-                    .help("Import epub")
+                    .help("Import epubs or a folder")
             }
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [epubType],
+        .fileImporter(isPresented: $importing, allowedContentTypes: [epubType, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result {
-                prompts = store.importBatch(urls)
+                prompts = store.importBatch(store.epubURLs(from: urls))
             }
         }
         .sheet(item: $selected) { DetailView(book: $0) }

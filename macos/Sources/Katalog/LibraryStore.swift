@@ -72,6 +72,23 @@ final class LibraryStore: ObservableObject {
         refresh()
     }
 
+    /// Flatten a drop/pick selection into epub files, recursing into any
+    /// folders. ponytail: app is unsandboxed, so no security-scoped access is
+    /// needed to enumerate a dropped/picked directory.
+    func epubURLs(from urls: [URL]) -> [URL] {
+        let fm = FileManager.default
+        return urls.flatMap { url -> [URL] in
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { return [] }
+            if isDir.boolValue {
+                let children = fm.enumerator(at: url, includingPropertiesForKeys: nil)?
+                    .allObjects as? [URL] ?? []
+                return children.filter { $0.pathExtension.lowercased() == "epub" }
+            }
+            return url.pathExtension.lowercased() == "epub" ? [url] : []
+        }
+    }
+
     /// Import a batch: files with no match are imported immediately; files that
     /// match an existing book are returned as prompts for the user to resolve.
     func importBatch(_ urls: [URL]) -> [DuplicatePrompt] {
