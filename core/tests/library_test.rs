@@ -15,8 +15,8 @@ fn import_list_get_remove_roundtrip() {
 
     let lib = katalog::Library::open(db, books).unwrap();
 
-    // import
-    let book = lib.import(fixture()).unwrap();
+    // import (copy + organize)
+    let book = lib.import(fixture(), true, true).unwrap();
     assert_eq!(book.title, "The Zen of Katalog");
     assert_eq!(book.authors, vec!["Ada Lovelace", "Alan Turing"]);
     assert!(Path::new(&book.file_path).exists(), "epub copied into library");
@@ -35,4 +35,27 @@ fn import_list_get_remove_roundtrip() {
     assert!(lib.list().unwrap().is_empty());
     assert!(lib.get(book.id).unwrap().is_none());
     assert!(!Path::new(&book.file_path).exists(), "managed file removed");
+}
+
+#[test]
+fn import_in_place_does_not_copy_or_delete_source() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db = tmp.path().join("library.db").to_string_lossy().into_owned();
+    let books = tmp.path().join("books").to_string_lossy().into_owned();
+
+    // A source epub living OUTSIDE the library folder.
+    let external = tmp.path().join("external.epub");
+    std::fs::copy(fixture(), &external).unwrap();
+    let external = external.to_string_lossy().into_owned();
+
+    let lib = katalog::Library::open(db, books).unwrap();
+    let book = lib.import(external.clone(), false, false).unwrap();
+
+    // Referenced in place: file_path is the original, still there.
+    assert_eq!(book.file_path, external);
+    assert!(book.cover_path.is_some(), "cover cached even without copy");
+
+    // Removing must NOT delete the user's original file.
+    lib.remove(book.id).unwrap();
+    assert!(Path::new(&external).exists(), "external source preserved on remove");
 }
