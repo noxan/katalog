@@ -273,6 +273,12 @@ pub fn book_keys(title: String, isbn: Option<String>) -> Vec<String> {
     matching::keys_for(&title, isbn.as_deref())
 }
 
+/// Convert an epub to a Kindle-native MOBI file at `out_path`.
+#[uniffi::export]
+pub fn convert_epub_to_mobi(epub_path: String, out_path: String) -> Result<(), KatalogError> {
+    crate::mobi::epub_to_mobi(&epub_path, &out_path).map_err(KatalogError::from)
+}
+
 /// Match keys for a file on disk. Epub and MOBI/AZW3 are parsed for real
 /// metadata; anything else falls back to its filename as the title.
 #[uniffi::export]

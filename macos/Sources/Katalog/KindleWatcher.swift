@@ -16,7 +16,7 @@ extension Book {
     var deviceFilename: String {
         let author = authors.first ?? "Unknown"
         let base = deviceSanitize("\(title) - \(author)")
-        return "\(base).epub"  // becomes .azw3 once conversion lands
+        return "\(base).mobi"  // we convert epub → MOBI before transfer
     }
 }
 

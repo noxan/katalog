@@ -7,6 +7,7 @@ struct DetailView: View {
     @EnvironmentObject var kindle: KindleWatcher
     @Environment(\.dismiss) private var dismiss
     @State private var status: String?
+    @State private var working = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacing) {
@@ -72,21 +73,37 @@ struct DetailView: View {
                         .foregroundStyle(Theme.accent)
                 } else {
                     Button { send(to: dev) } label: {
-                        Label("Send to \(dev.name)", systemImage: "arrow.right.circle.fill")
+                        Label(working ? "Converting…" : "Send to \(dev.name)",
+                              systemImage: "arrow.right.circle.fill")
                     }
                     .buttonStyle(.borderedProminent).tint(Theme.accent)
+                    .disabled(working)
                 }
             }
         }
     }
 
+    /// Convert the epub to MOBI (off the main thread — it's CPU work) and copy
+    /// the result to the reader.
     private func send(to device: Device) {
-        do {
-            let path = try store.transferPath(book)
-            try kindle.transfer(book, from: path, to: device)
-            status = "Sent to \(device.name) ✓"
-        } catch {
-            status = "Failed: \(error.localizedDescription)"
+        let epubPath: String
+        do { epubPath = try store.transferPath(book) }
+        catch { status = "Failed: \(error.localizedDescription)"; return }
+
+        working = true
+        status = "Converting…"
+        Task.detached {
+            do {
+                let tmp = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString)
+                    .appendingPathExtension("mobi")
+                try convertEpubToMobi(epubPath: epubPath, outPath: tmp.path)
+                try await MainActor.run { try kindle.transfer(book, from: tmp.path, to: device) }
+                try? FileManager.default.removeItem(at: tmp)
+                await MainActor.run { status = "Sent to \(device.name) ✓"; working = false }
+            } catch {
+                await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }
+            }
         }
     }
 }
