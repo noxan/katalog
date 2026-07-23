@@ -111,6 +111,7 @@ struct StatusBar: View {
     let bookCount: Int
     let devices: [Device]
     var scanning: Bool = false
+    @State private var hoverReader = false
 
     var body: some View {
         let connected = !devices.isEmpty
@@ -119,20 +120,29 @@ struct StatusBar: View {
         HStack(spacing: 6) {
             Text("\(bookCount) book\(bookCount == 1 ? "" : "s")")
             Spacer()
-            Image(systemName: icon)
-            Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
-            if connected && scanning {
-                ProgressView().controlSize(.small)
-            }
-        }
-        .contextMenu {
-            ForEach(devices) { device in
-                Button("Open \(device.name) in Finder") {
-                    NSWorkspace.shared.open(device.volume)
+            if connected {
+                Menu {
+                    deviceActions
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: icon)
+                        Text(devices.map(\.name).joined(separator: ", "))
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 5)
+                        .fill(hoverReader ? Color.primary.opacity(0.1) : .clear))
+                    .contentShape(Rectangle())
                 }
-                Button("Eject \(device.name)") {
-                    try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
-                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .onHover { hoverReader = $0 }
+                .contextMenu { deviceActions }
+                if scanning { ProgressView().controlSize(.small) }
+            } else {
+                Image(systemName: icon)
+                Text("No reader")
             }
         }
         .font(.system(size: 11))
@@ -144,6 +154,17 @@ struct StatusBar: View {
         .overlay(alignment: .top) { Divider() }
         .help(!connected ? "No reader mounted — unlock your Kindle and choose file transfer"
               : (scanning ? "Reading books on the reader…" : "Reader connected"))
+    }
+
+    @ViewBuilder private var deviceActions: some View {
+        ForEach(devices) { device in
+            Button("Open \(device.name) in Finder") {
+                NSWorkspace.shared.open(device.volume)
+            }
+            Button("Eject \(device.name)") {
+                try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
+            }
+        }
     }
 }
 
