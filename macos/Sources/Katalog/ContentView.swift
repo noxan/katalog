@@ -185,14 +185,16 @@ struct BookCell: View {
 
             if style == .compact {
                 // One line each — no reserved gap, uniform cell height.
-                Text(book.title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1).truncationMode(.tail)
-                Text(authors)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.subtle)
-                    .lineLimit(1).truncationMode(.tail)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(book.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1).truncationMode(.tail)
+                    Text(authors)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.subtle)
+                        .lineLimit(1).truncationMode(.tail)
+                }
             }
         }
         .frame(width: Theme.coverWidth, alignment: .leading)

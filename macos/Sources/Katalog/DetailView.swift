@@ -18,8 +18,10 @@ struct DetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(book.title).font(.title2.bold()).foregroundStyle(Theme.text)
-                    Text(book.authors.joined(separator: ", ")).foregroundStyle(Theme.subtle)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(book.title).font(.title2.bold()).foregroundStyle(Theme.text)
+                        Text(book.authors.joined(separator: ", ")).foregroundStyle(Theme.subtle)
+                    }
                     if let lang = book.language {
                         Label(lang, systemImage: "globe").font(.caption).foregroundStyle(Theme.subtle)
                     }
