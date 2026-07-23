@@ -38,6 +38,9 @@ struct ContentView: View {
             ToolbarItem {
                 DeviceIndicator(devices: kindle.devices)
             }
+            if #available(macOS 26.0, *) {
+                ToolbarSpacer(.fixed)
+            }
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .help("Import epub")
