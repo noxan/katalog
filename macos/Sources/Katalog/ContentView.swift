@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import UniformTypeIdentifiers
 import KatalogCore
 
@@ -122,6 +123,16 @@ struct StatusBar: View {
             Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
             if connected && scanning {
                 ProgressView().controlSize(.small)
+            }
+        }
+        .contextMenu {
+            ForEach(devices) { device in
+                Button("Open \(device.name) in Finder") {
+                    NSWorkspace.shared.open(device.volume)
+                }
+                Button("Eject \(device.name)") {
+                    try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
+                }
             }
         }
         .font(.system(size: 11))
