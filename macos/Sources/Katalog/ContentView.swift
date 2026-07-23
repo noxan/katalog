@@ -6,6 +6,7 @@ private let epubType = UTType(filenameExtension: "epub") ?? .data
 
 struct ContentView: View {
     @EnvironmentObject var store: LibraryStore
+    @EnvironmentObject var kindle: KindleWatcher
     @State private var importing = false
     @State private var selected: Book?
 
@@ -34,6 +35,9 @@ struct ContentView: View {
         }
         .navigationTitle("Katalog")
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                DeviceIndicator(devices: kindle.devices)
+            }
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .help("Import epub")
@@ -58,6 +62,22 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent).tint(Theme.accent)
         }
         .frame(maxWidth: .infinity, minHeight: 400)
+    }
+}
+
+/// Persistent status pill: dim when no reader is mounted, frost when one is.
+struct DeviceIndicator: View {
+    let devices: [Device]
+    var body: some View {
+        let connected = !devices.isEmpty
+        Label {
+            Text(connected ? devices.map(\.name).joined(separator: ", ") : "No reader")
+                .font(.system(size: 12))
+        } icon: {
+            Image(systemName: connected ? "externaldrive.fill.badge.checkmark" : "externaldrive")
+        }
+        .foregroundStyle(connected ? Theme.accent : Theme.subtle)
+        .help(connected ? "Reader connected" : "No reader mounted — unlock your Kindle and choose file transfer")
     }
 }
 
