@@ -76,6 +76,7 @@ struct DeviceIndicator: View {
         } icon: {
             Image(systemName: connected ? "externaldrive.fill.badge.checkmark" : "externaldrive")
         }
+        .labelStyle(.titleAndIcon)
         .foregroundStyle(connected ? Theme.accent : Theme.subtle)
         .fixedSize()
         .help(connected ? "Reader connected" : "No reader mounted — unlock your Kindle and choose file transfer")
