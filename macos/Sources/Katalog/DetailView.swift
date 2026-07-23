@@ -119,26 +119,25 @@ struct DetailView: View {
     // MARK: Chrome — close + overflow menu
 
     private var chrome: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                Menu {
-                    removeButton
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .menuStyle(.button)
-                .menuIndicator(.hidden)
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .keyboardShortcut(.cancelAction)
+        HStack(spacing: 12) {
+            Menu {
+                removeButton
+            } label: {
+                Image(systemName: "ellipsis.circle.fill")
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
         }
+        .font(.title2)
+        .symbolRenderingMode(.hierarchical)
+        .foregroundStyle(.secondary)
         .padding(Theme.spacing)
     }
 
