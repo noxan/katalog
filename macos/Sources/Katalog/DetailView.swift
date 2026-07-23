@@ -10,75 +10,165 @@ struct DetailView: View {
     @State private var working = false
 
     var body: some View {
+        ZStack {
+            // Ambient backdrop: the book's own cover, blurred — the only color in the room.
+            CoverImage(path: book.coverPath)
+                .frame(width: 560, height: 560)
+                .clipped()
+                .blur(radius: 70)
+                .opacity(0.9)
+            // ponytail: a nil cover just blurs the neutral placeholder — a soft wash, no branch needed.
+
+            // One calm frosted surface the content sits directly on. Replaces per-section boxes.
+            Rectangle().fill(.regularMaterial)
+
+            content
+        }
+        .frame(width: 560, height: 560)
+        .overlay(alignment: .topTrailing) { chrome }
+        .contextMenu { removeButton }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: Theme.spacing) {
             HStack(alignment: .top, spacing: Theme.spacing) {
-                CoverImage(path: book.coverPath)
-                    .frame(width: 150, height: 225)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
-
-                VStack(alignment: .leading, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(book.title).font(.title2.bold()).foregroundStyle(Theme.text)
-                        Text(book.authors.joined(separator: ", ")).foregroundStyle(Theme.subtle)
-                    }
-                    if let lang = book.language {
-                        Label(lang, systemImage: "globe").font(.caption).foregroundStyle(Theme.subtle)
-                    }
-                    if let isbn = book.isbn {
-                        Text(isbn).font(.caption).foregroundStyle(Theme.subtle).textSelection(.enabled)
-                    }
-                    Spacer()
-                }
-                Spacer()
+                leftColumn
+                rightColumn
             }
 
             if let desc = book.description, !desc.isEmpty {
+                Divider().overlay(Theme.subtle.opacity(0.12))
                 ScrollView {
-                    Text(desc).foregroundStyle(Theme.text)
+                    Text(desc).font(.callout).lineSpacing(2).foregroundStyle(Theme.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxHeight: 100)
+                .frame(maxHeight: 160)
             }
-
-            Divider().overlay(Theme.subtle.opacity(0.3))
-
-            transferSection
 
             if let status {
                 Text(status).font(.caption).foregroundStyle(Theme.subtle)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
+        }
+        .padding(Theme.spacing * 1.6)
+    }
 
-            HStack {
-                Button(role: .destructive) {
-                    store.remove(book); dismiss()
-                } label: { Label("Remove", systemImage: "trash") }
-                Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+    // MARK: Left — cover + primary action
+
+    private var leftColumn: some View {
+        VStack(spacing: 14) {
+            CoverImage(path: book.coverPath)
+                .frame(width: Theme.coverWidth, height: Theme.coverHeight)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+                .shadow(color: .black.opacity(0.5), radius: 18, y: 12)
+
+            transferSection.frame(width: Theme.coverWidth)
+        }
+    }
+
+    // MARK: Right — title + aligned metadata
+
+    private var rightColumn: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(book.title)
+                .font(.title2).fontWeight(.semibold).tracking(-0.3)
+                .foregroundStyle(Theme.text)
+            Text(book.authors.joined(separator: ", "))
+                .font(.body).foregroundStyle(Theme.subtle)
+
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 10) {
+                ForEach(metadataRows, id: \.0) { label, value in
+                    GridRow {
+                        Text(label).foregroundStyle(Theme.subtle)
+                        Text(value).foregroundStyle(Theme.text).textSelection(.enabled)
+                    }
+                }
+            }
+            .font(.subheadline)
+            .padding(.top, 16)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Present metadata fields, skipping any that are absent — nil-filtering lives here only.
+    private var metadataRows: [(String, String)] {
+        var rows: [(String, String)] = []
+        if let s = book.series, !s.isEmpty { rows.append(("Series", s)) }
+        if let p = book.publisher, !p.isEmpty { rows.append(("Publisher", p)) }
+        rows.append(("Format", book.format.uppercased()))
+        if let l = book.language, !l.isEmpty { rows.append(("Language", l)) }
+        if let i = book.isbn, !i.isEmpty { rows.append(("ISBN", i)) }
+        rows.append(("Added", formattedAdded))
+        return rows
+    }
+
+    private static let isoParser = ISO8601DateFormatter()
+    private static let dateDisplay: DateFormatter = {
+        let f = DateFormatter(); f.dateStyle = .medium; return f
+    }()
+    private var formattedAdded: String {
+        // ponytail: unknown ISO variant → show the raw string rather than hide the row.
+        if let d = Self.isoParser.date(from: book.addedAt) { return Self.dateDisplay.string(from: d) }
+        return book.addedAt
+    }
+
+    // MARK: Chrome — close + overflow menu
+
+    private var chrome: some View {
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                Menu {
+                    removeButton
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .keyboardShortcut(.cancelAction)
             }
         }
-        .padding(Theme.spacing * 1.5)
-        .frame(width: 520, height: 480)
-        .background(Theme.bg)
+        .padding(Theme.spacing)
     }
+
+    @ViewBuilder private var removeButton: some View {
+        Button(role: .destructive) {
+            store.remove(book); dismiss()
+        } label: {
+            Label("Remove from Library", systemImage: "trash")
+        }
+    }
+
+    // MARK: Transfer
 
     @ViewBuilder private var transferSection: some View {
         if kindle.devices.isEmpty {
             Label("Connect a Kindle to transfer", systemImage: "cable.connector.horizontal")
-                .foregroundStyle(Theme.subtle)
+                .font(.caption).foregroundStyle(Theme.subtle)
+                .multilineTextAlignment(.center)
         } else {
             ForEach(kindle.devices) { dev in
                 if kindle.onDevice(book) {
                     Label("On \(dev.name)", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(Theme.accent)
+                        .font(.subheadline).foregroundStyle(Theme.accent)
                 } else {
                     Button { send(to: dev) } label: {
                         Label(working ? "Converting…" : "Send to \(dev.name)",
                               systemImage: "arrow.right.circle.fill")
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent).tint(Theme.accent)
+                    .buttonStyle(.glassProminent).tint(Theme.accent)
                     .disabled(working)
                 }
             }

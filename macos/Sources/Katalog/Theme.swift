@@ -11,4 +11,5 @@ enum Theme {
     static let spacing: CGFloat = 20
     static let radius: CGFloat = 10
     static let coverWidth: CGFloat = 150
+    static let coverHeight: CGFloat = coverWidth * 1.5
 }

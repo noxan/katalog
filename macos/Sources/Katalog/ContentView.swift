@@ -185,7 +185,7 @@ struct BookCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             CoverImage(path: book.coverPath)
-                .frame(width: Theme.coverWidth, height: Theme.coverWidth * 1.5)
+                .frame(width: Theme.coverWidth, height: Theme.coverHeight)
                 .background(Theme.surface)
                 .overlay(alignment: .bottom) {
                     if style == .covers && hover { hoverCaption }
