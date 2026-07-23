@@ -8,6 +8,7 @@
 //! index. Produces a readable linear book on any Kindle. AZW3/KF8, PalmDOC
 //! compression, and NCX indexes are follow-ups.
 
+use std::collections::HashMap;
 use std::path::Path;
 
 const TEXT_RECORD_SIZE: usize = 4096;
@@ -27,14 +28,44 @@ struct Source {
     isbn: Option<String>,
     description: Option<String>,
     html: Vec<u8>,
-    cover: Option<Vec<u8>>,
+    /// Image records in recindex order (image N is at index N-1).
+    images: Vec<Vec<u8>>,
+    /// 0-based index into `images` of the cover, for EXTH 201.
+    cover_recindex: Option<usize>,
 }
 
 fn read_epub(path: &Path) -> Result<Source, String> {
     let meta = crate::epub::parse(path)?;
     let epub = rbook::Epub::open(path).map_err(|e| format!("open epub: {e}"))?;
 
-    // Flatten the spine into one HTML stream, page-break between documents.
+    // Collect every image once, keyed by filename → 1-based recindex, so the
+    // MOBI's `<img recindex>` can point at the right record.
+    // ponytail: match by basename; epubs with same-named images in different
+    // folders would collide (rare) — resolve full relative paths if it bites.
+    let mut images: Vec<Vec<u8>> = Vec::new();
+    let mut recindex: HashMap<String, usize> = HashMap::new();
+    for entry in epub.manifest().images() {
+        let href = entry
+            .resource()
+            .key()
+            .value()
+            .map(str::to_string)
+            .unwrap_or_default();
+        let Ok(bytes) = entry.read_bytes() else { continue };
+        recindex.entry(basename(&href).to_string()).or_insert(images.len() + 1);
+        images.push(bytes);
+    }
+
+    // The cover's position among the images (for EXTH 201).
+    let cover_recindex = epub
+        .manifest()
+        .cover_image()
+        .and_then(|c| c.resource().key().value().map(basename).map(str::to_string))
+        .and_then(|b| recindex.get(&b).copied())
+        .map(|rec| rec - 1);
+
+    // Flatten the spine into one HTML stream, rewriting <img src> → recindex,
+    // page-break between documents.
     let mut body = String::new();
     let mut first = true;
     let mut reader = epub.reader();
@@ -45,7 +76,7 @@ fn read_epub(path: &Path) -> Result<Source, String> {
             body.push_str("<mbp:pagebreak/>");
         }
         first = false;
-        body.push_str(body_inner(content.as_ref()));
+        body.push_str(&rewrite_images(body_inner(content.as_ref()), &recindex));
     }
     let html = format!("<html><head></head><body>{body}</body></html>");
 
@@ -55,8 +86,44 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         description: meta.description,
         title: meta.title,
         html: html.into_bytes(),
-        cover: meta.cover,
+        images,
+        cover_recindex,
     })
+}
+
+/// Last path component of a resource href.
+fn basename(href: &str) -> &str {
+    href.rsplit(['/', '\\']).next().unwrap_or(href)
+}
+
+/// Rewrite each `<img src="…">` to `<img recindex="000NN">` using the image's
+/// filename. Unmatched images keep their src (harmless — MOBI ignores it).
+fn rewrite_images(html: &str, recindex: &HashMap<String, usize>) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(pos) = rest.find("src=") {
+        out.push_str(&rest[..pos]);
+        let after = &rest[pos + 4..];
+        let quote = after.as_bytes().first().copied();
+        if quote == Some(b'"') || quote == Some(b'\'') {
+            let q = quote.unwrap() as char;
+            if let Some(end) = after[1..].find(q) {
+                let value = &after[1..1 + end];
+                if let Some(&rec) = recindex.get(basename(value)) {
+                    out.push_str(&format!("recindex=\"{rec:05}\""));
+                } else {
+                    out.push_str(&rest[pos..pos + 4 + 2 + end]); // keep src="value"
+                }
+                rest = &after[1 + end + 1..];
+                continue;
+            }
+        }
+        // Not a normal src attribute — emit "src=" verbatim and move on.
+        out.push_str("src=");
+        rest = after;
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Inner HTML of the first `<body>…</body>`, else the whole document.
@@ -82,30 +149,28 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     };
     let n_text = text_records.len();
 
-    // Record numbering: 0 = header, 1..=n_text = text, then cover, FLIS, FCIS, EOF.
+    // Record numbering: 0 = header, 1..=n_text = text, then images, FLIS, FCIS, EOF.
     let last_text = n_text; // 1-based record index of the last text record
-    let has_cover = src.cover.is_some();
-    let first_image_record = if has_cover { last_text + 1 } else { 0 };
-    let flis_index = last_text + if has_cover { 1 } else { 0 } + 1;
+    let n_images = src.images.len();
+    let first_image_record = last_text + 1; // record index of image #1 (recindex 1)
+    let flis_index = last_text + n_images + 1;
     let fcis_index = flis_index + 1;
 
     let record0 = build_record0(
         src,
         text_len,
         n_text,
-        /* first_image_index */ if has_cover { first_image_record as u32 } else { NONE },
+        /* first_image_index */ if n_images > 0 { first_image_record as u32 } else { NONE },
         /* first_non_book_index */ (last_text + 1) as u32,
         /* last_content_record */ last_text as u16,
         fcis_index as u32,
         flis_index as u32,
     );
 
-    let mut records: Vec<Vec<u8>> = Vec::with_capacity(n_text + 4);
+    let mut records: Vec<Vec<u8>> = Vec::with_capacity(n_text + n_images + 4);
     records.push(record0);
     records.extend(text_records);
-    if let Some(cover) = &src.cover {
-        records.push(cover.clone());
-    }
+    records.extend(src.images.iter().cloned());
     records.push(flis_record());
     records.push(fcis_record(text_len));
     records.push(vec![0xE9, 0x8E, 0x0D, 0x0A]); // EOF record
@@ -239,9 +304,9 @@ fn build_exth(src: &Source) -> Vec<u8> {
     if let Some(i) = &src.isbn {
         recs.push((104, i.clone().into_bytes()));
     }
-    if src.cover.is_some() {
-        recs.push((201, 0u32.to_be_bytes().to_vec())); // cover offset (image index 0)
-        recs.push((202, 0u32.to_be_bytes().to_vec())); // thumbnail offset
+    if let Some(cover) = src.cover_recindex {
+        recs.push((201, (cover as u32).to_be_bytes().to_vec())); // cover image offset
+        recs.push((202, (cover as u32).to_be_bytes().to_vec())); // thumbnail offset
     }
 
     let mut body = Vec::new();
