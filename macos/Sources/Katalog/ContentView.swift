@@ -150,7 +150,10 @@ struct BookCell: View {
                 .overlay(alignment: .topTrailing) {
                     if onDevice {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Theme.accent)
+                            .font(.system(size: 17))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Theme.accent)
+                            .shadow(color: .black.opacity(0.5), radius: 2)
                             .padding(6)
                             .help("On your reader")
                     }

@@ -20,6 +20,14 @@ extension Book {
     }
 }
 
+/// Lowercase, keep only alphanumerics — a loose key for matching titles to
+/// device filenames regardless of punctuation, spacing, or format.
+private func normalizeKey(_ s: String) -> String {
+    String(String.UnicodeScalarView(
+        s.lowercased().unicodeScalars.filter(CharacterSet.alphanumerics.contains)
+    ))
+}
+
 private func deviceSanitize(_ s: String) -> String {
     let bad = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters)
     let cleaned = String(s.unicodeScalars.map { bad.contains($0) ? "_" : Character($0) })
@@ -34,6 +42,8 @@ final class KindleWatcher: NSObject, ObservableObject {
     @Published private(set) var devices: [Device] = []
     /// Filenames present in the connected devices' documents/ folders (union).
     @Published private(set) var deviceFiles: Set<String> = []
+    /// Normalized filename stems on the device, for fuzzy title matching.
+    @Published private(set) var deviceStems: Set<String> = []
 
     override init() {
         super.init()
@@ -53,14 +63,27 @@ final class KindleWatcher: NSObject, ObservableObject {
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
         devices = vols.filter(isKindle).map(Device.init)
-        deviceFiles = Set(devices.flatMap { dev in
+        // ponytail: top-level only; Kindles keep books in documents/ directly.
+        let names = devices.flatMap { dev in
             (try? fm.contentsOfDirectory(atPath: dev.documents.path)) ?? []
-        })
+        }
+        deviceFiles = Set(names)
+        deviceStems = Set(names
+            .map { normalizeKey(($0 as NSString).deletingPathExtension) }
+            .filter { !$0.isEmpty })
     }
 
-    /// True if this book's file already exists on a connected device.
+    /// Whether this book appears to be on a connected device. Matches our exact
+    /// transfer name, else the book's title against the device's filenames
+    /// (works for books sideloaded any way, in any format).
     func onDevice(_ book: Book) -> Bool {
-        deviceFiles.contains(book.deviceFilename)
+        if deviceFiles.contains(book.deviceFilename) { return true }
+        let title = normalizeKey(book.title)
+        guard !title.isEmpty else { return false }
+        // Short titles must match a whole stem; longer ones can be a substring.
+        return title.count >= 4
+            ? deviceStems.contains { $0.contains(title) }
+            : deviceStems.contains(title)
     }
 
     private func isKindle(_ vol: URL) -> Bool {
