@@ -10,11 +10,20 @@ struct FetchedMetadata: Identifiable {
     var publishedDate: String?   // "2016" — for disambiguation
     var isbn: String?
     var description: String?
-    var coverURL: URL?
+    var coverID: Int?            // Open Library cover id; URLs built per size below
     var workKey: String?         // "/works/OL…W" — used to fetch the description on pick
 
     var authorLine: String { authors.joined(separator: ", ") }
     var year: String? { publishedDate.map { String($0.prefix(4)) } }
+
+    /// Full-size cover to store on the book.
+    var coverURL: URL? { coverURL(size: "L") }
+    /// Small cover for the results list (avoids pulling ~12 large images).
+    var thumbnailURL: URL? { coverURL(size: "M") }
+
+    private func coverURL(size: String) -> URL? {
+        coverID.flatMap { URL(string: "https://covers.openlibrary.org/b/id/\($0)-\(size).jpg") }
+    }
 }
 
 /// Online metadata lookup via the Open Library search API (free, no key, no quota).
@@ -104,7 +113,7 @@ private struct Doc: Decodable {
             publishedDate: first_publish_year.map(String.init),
             isbn: bestISBN,
             description: nil,   // filled on pick via description(forWork:)
-            coverURL: cover_i.flatMap { URL(string: "https://covers.openlibrary.org/b/id/\($0)-L.jpg") },
+            coverID: cover_i,
             workKey: key
         )
     }

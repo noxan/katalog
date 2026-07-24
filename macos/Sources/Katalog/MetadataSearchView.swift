@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Online metadata search sheet: an editable query, a list of Google Books
+/// Online metadata search sheet: an editable query, a list of Open Library
 /// results with covers, and a pick that hands the chosen result back to the
 /// editor. Opens pre-filled and auto-runs the first search.
 struct MetadataSearchView: View {
@@ -12,7 +12,6 @@ struct MetadataSearchView: View {
     @State private var results: [FetchedMetadata] = []
     @State private var searching = false
     @State private var error: String?
-    @State private var didInitialSearch = false
 
     init(query: String, onPick: @escaping (FetchedMetadata) -> Void) {
         _query = State(initialValue: query)
@@ -41,12 +40,7 @@ struct MetadataSearchView: View {
         }
         .padding(Theme.spacing * 1.4)
         .frame(width: 560, height: 520)
-        .task {
-            // Auto-run once on open with the pre-filled query.
-            guard !didInitialSearch else { return }
-            didInitialSearch = true
-            await runSearch()
-        }
+        .task { await runSearch() }   // auto-run once on open with the pre-filled query
     }
 
     @ViewBuilder
@@ -71,7 +65,7 @@ struct MetadataSearchView: View {
 
     private func resultRow(_ r: FetchedMetadata) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            AsyncImage(url: r.coverURL) { image in
+            AsyncImage(url: r.thumbnailURL) { image in
                 image.resizable().aspectRatio(contentMode: .fit)
             } placeholder: {
                 RoundedRectangle(cornerRadius: 3).fill(Theme.surface)
@@ -98,7 +92,7 @@ struct MetadataSearchView: View {
         defer { searching = false }
         do {
             results = try await MetadataFetch.search(query: query)
-            if results.isEmpty { error = "No results." }
+            // Empty is shown by the results.isEmpty branch (gray), not as an error.
         } catch {
             self.error = "Search failed: \(error.localizedDescription)"
         }
