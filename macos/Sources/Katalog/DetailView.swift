@@ -266,7 +266,7 @@ struct DetailView: View {
                     .appendingPathComponent(UUID().uuidString)
                     .appendingPathExtension("mobi")
                 try convertEpubToMobi(epubPath: epubPath, outPath: tmp.path)
-                try await MainActor.run { try kindle.transfer(book, from: tmp.path, to: device) }
+                try kindle.transfer(book, from: tmp.path, to: device)
                 try? FileManager.default.removeItem(at: tmp)
                 await MainActor.run { working = false }
             } catch {

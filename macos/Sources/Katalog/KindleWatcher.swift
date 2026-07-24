@@ -117,8 +117,10 @@ final class KindleWatcher: NSObject, ObservableObject {
         try fm.copyItem(at: src, to: dest)
         // We know exactly what we added — update the "on device" state directly
         // rather than kicking off a full background rescan (which lands late and
-        // briefly flips the button back to its pre-send state).
-        deviceKeys.formUnion(bookKeys(title: book.title, isbn: book.isbn))
+        // briefly flips the button back to its pre-send state). Callers run this
+        // off-main, so hop back to touch the @Published set.
+        let added = bookKeys(title: book.title, isbn: book.isbn)
+        DispatchQueue.main.async { self.deviceKeys.formUnion(added) }
     }
 
     /// Delete every copy of this book from the device — matched by the same keys
