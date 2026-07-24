@@ -26,7 +26,8 @@ struct ContentView: View {
     @State private var prompts: [DuplicatePrompt] = []
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
-    // ponytail: gridStyle/sortOrder pickers live in Settings; read here to render.
+    @AppStorage("grouping") private var grouping: Grouping = .none
+    // ponytail: display preferences live in Settings; read here to render.
 
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
@@ -36,7 +37,7 @@ struct ContentView: View {
                 emptyState
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
-                    ForEach(sortOrder.sorted(store.books)) { book in
+                    ForEach(grouping.sorted(store.books, by: sortOrder)) { book in
                         BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
                             .onTapGesture { sheet = .detail(book) }
                             .contextMenu { bookMenu(book) }
@@ -238,13 +239,39 @@ enum SortOrder: String, CaseIterable {
     }
 
     // ponytail: added_at is an ISO string, so reverse-lexicographic = newest first.
-    func sorted(_ books: [Book]) -> [Book] {
+    func comesBefore(_ lhs: Book, _ rhs: Book) -> Bool {
         switch self {
-        case .dateAdded: return books  // core already returns added_at DESC
-        case .title: return books.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-        case .author: return books.sorted {
-            ($0.authors.first ?? "").localizedStandardCompare($1.authors.first ?? "") == .orderedAscending
+        case .dateAdded: return false  // core already returns added_at DESC
+        case .title: return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+        case .author: return (lhs.authors.first ?? "").localizedStandardCompare(rhs.authors.first ?? "") == .orderedAscending
         }
+    }
+
+    func sorted(_ books: [Book]) -> [Book] {
+        self == .dateAdded ? books : books.sorted(by: comesBefore)
+    }
+}
+
+enum Grouping: String, CaseIterable {
+    case none, series
+
+    var label: String { self == .none ? "None" : "Series" }
+
+    func sorted(_ books: [Book], by sortOrder: SortOrder) -> [Book] {
+        guard self == .series else { return sortOrder.sorted(books) }
+        return books.sorted {
+            let lhs = $0.series?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let rhs = $1.series?.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch (lhs?.isEmpty == false ? lhs : nil, rhs?.isEmpty == false ? rhs : nil) {
+            case let (lhs?, rhs?):
+                let comparison = lhs.localizedStandardCompare(rhs)
+                if comparison != .orderedSame { return comparison == .orderedAscending }
+                if $0.seriesIndex != $1.seriesIndex { return ($0.seriesIndex ?? .greatestFiniteMagnitude) < ($1.seriesIndex ?? .greatestFiniteMagnitude) }
+            case (.some, nil): return true
+            case (nil, .some): return false
+            case (nil, nil): break
+            }
+            return sortOrder.comesBefore($0, $1)
         }
     }
 }

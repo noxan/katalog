@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject var store: LibraryStore
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
+    @AppStorage("grouping") private var grouping: Grouping = .none
 
     var body: some View {
         Form {
@@ -15,6 +16,9 @@ struct SettingsView: View {
                 }
                 Picker("Sort by", selection: $sortOrder) {
                     ForEach(SortOrder.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                Picker("Grouping", selection: $grouping) {
+                    ForEach(Grouping.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
             }
 
