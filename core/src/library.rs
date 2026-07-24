@@ -177,8 +177,8 @@ impl Library {
         };
 
         if let Some(bytes) = &meta.cover {
-            // NSImage sniffs content, so the extension is cosmetic.
-            let p = self.covers_dir.join(id.to_string());
+            // Content-versioned name (see cover_name) — one scheme shared with edits.
+            let p = self.covers_dir.join(cover_name(id, bytes));
             fs::write(&p, bytes)?;
             let conn = self.lock();
             conn.execute(
@@ -239,8 +239,8 @@ impl Library {
             conn.execute("DELETE FROM books WHERE id = ?1", [id])?;
         }
 
-        // Cover may be named by id (import) or content-versioned (after an edit),
-        // so delete whatever cover_path points at, plus the legacy id name.
+        // cover_path is authoritative; the id-named delete is a shim for rows
+        // imported before covers were content-versioned.
         if let Some(cp) = book.as_ref().and_then(|b| b.cover_path.as_ref()) {
             let _ = fs::remove_file(cp);
         }
@@ -268,7 +268,15 @@ impl Library {
         // 1. Write metadata (and any new cover) back into the epub itself.
         let mut file_path = PathBuf::from(&book.file_path);
         if book.format == "epub" && file_path.exists() {
-            epub::write_metadata(&file_path, &edit)?;
+            epub::write_metadata(&file_path, &epub::EpubEdit {
+                title: &edit.title,
+                authors: &edit.authors,
+                publisher: nonempty(&edit.publisher),
+                language: nonempty(&edit.language),
+                description: nonempty(&edit.description),
+                cover: edit.cover.as_deref(),
+                remove_cover: edit.remove_cover,
+            })?;
         }
 
         // 2. Reorganize the managed file to match a changed title/author.
@@ -465,9 +473,14 @@ fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
     })
 }
 
-/// Cache filename for an edited cover: `<id>-<content hash>`. The hash makes the
-/// path change whenever the image changes, so the UI reloads it (a fixed name
-/// would keep the same path and show a stale image).
+/// A trimmed-nonempty view of an optional string, else `None`.
+fn nonempty(opt: &Option<String>) -> Option<&str> {
+    opt.as_deref().filter(|s| !s.is_empty())
+}
+
+/// Cache filename for a cover: `<id>-<content hash>`. The hash makes the path
+/// change whenever the image changes, so the UI reloads it (a fixed name would
+/// keep the same path and show a stale image).
 fn cover_name(id: i64, bytes: &[u8]) -> String {
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();

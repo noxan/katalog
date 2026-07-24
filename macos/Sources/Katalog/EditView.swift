@@ -22,6 +22,7 @@ struct EditView: View {
     @State private var language: String
     @State private var descriptionText: String
     @State private var coverData: Data?     // set when a new cover is chosen/dropped/pasted
+    @State private var coverImage: NSImage? // decoded once per set, so keystrokes don't re-decode
     @State private var removeCover = false  // set when the cover is removed
     @State private var dropTargeted = false
     @State private var error: String?
@@ -69,8 +70,8 @@ struct EditView: View {
 
     private var coverWell: some View {
         ZStack {
-            if let coverData, let img = NSImage(data: coverData) {
-                Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
+            if let coverImage {
+                Image(nsImage: coverImage).resizable().aspectRatio(contentMode: .fill)
             } else {
                 // removeCover forces the placeholder by hiding the current cover.
                 CoverImage(path: removeCover ? nil : book.coverPath, title: book.title,
@@ -96,8 +97,7 @@ struct EditView: View {
         .focusEffectDisabled()   // our accent drop border is the focus cue; hide the square system ring
         .onPasteCommand(of: [.image, .fileURL]) { _ in pasteCover() }
         .dropDestination(for: URL.self) { urls, _ in
-            guard let url = urls.first, let data = try? Data(contentsOf: url),
-                  NSImage(data: data) != nil else { return false }
+            guard let url = urls.first, let data = imageData(from: url) else { return false }
             setCover(data)
             return true
         } isTargeted: { dropTargeted = $0 }
@@ -113,12 +113,20 @@ struct EditView: View {
 
     private func setCover(_ data: Data) {
         coverData = data
+        coverImage = NSImage(data: data)
         removeCover = false
     }
 
     private func clearCover() {
         coverData = nil
+        coverImage = nil
         removeCover = true
+    }
+
+    /// Validated image bytes from a file URL, or nil if it doesn't decode.
+    private func imageData(from url: URL) -> Data? {
+        guard let data = try? Data(contentsOf: url), NSImage(data: data) != nil else { return nil }
+        return data
     }
 
     private func chooseCover() {
@@ -126,7 +134,7 @@ struct EditView: View {
         panel.allowedContentTypes = [.image]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        if panel.runModal() == .OK, let url = panel.url, let data = try? Data(contentsOf: url) {
+        if panel.runModal() == .OK, let url = panel.url, let data = imageData(from: url) {
             setCover(data)
         }
     }
@@ -142,7 +150,7 @@ struct EditView: View {
         if let img = NSImage(pasteboard: pb), let png = pngData(img) {
             setCover(png)
         } else if let url = pb.readObjects(forClasses: [NSURL.self], options: nil)?.first as? URL,
-                  let data = try? Data(contentsOf: url), NSImage(data: data) != nil {
+                  let data = imageData(from: url) {
             setCover(data)
         }
     }

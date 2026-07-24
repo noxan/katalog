@@ -51,14 +51,25 @@ fn fallback_title(path: &Path) -> String {
 }
 
 /// Write edited metadata back into an epub's package document (OPF), in place.
+/// The metadata `write_metadata` writes into an epub. Deliberately narrower than
+/// the library's `BookEdit`: ISBN and series are omitted because they are NOT
+/// written to the file (the DB is authoritative). ISBN lives in `dc:identifier`,
+/// often the package `unique-identifier` — rewriting it risks breaking that link;
+/// series has no standard `dc:` slot. Optional fields are `None` when cleared.
+pub struct EpubEdit<'a> {
+    pub title: &'a str,
+    pub authors: &'a [String],
+    pub publisher: Option<&'a str>,
+    pub language: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub cover: Option<&'a [u8]>,
+    pub remove_cover: bool,
+}
+
+/// Write edited metadata back into an epub's package document (OPF), in place.
 /// rbook's editor preserves every other resource and keeps the OCF invariants
 /// valid for EPUB 2 and 3 (mimetype-first/stored, refreshed dcterms:modified).
-///
-/// ISBN and series are deliberately NOT written to the file: the library DB is
-/// authoritative for both. ISBN lives in `dc:identifier`, often the package's
-/// `unique-identifier` — rewriting it risks breaking that link; series has no
-/// standard `dc:` slot. ponytail: add file-embedded isbn/series only if needed.
-pub fn write_metadata(path: &Path, edit: &crate::library::BookEdit) -> Result<(), String> {
+pub fn write_metadata(path: &Path, edit: &EpubEdit) -> Result<(), String> {
     let mut epub = rbook::Epub::open(path).map_err(|e| format!("open epub: {e}"))?;
 
     // Cover: remove takes precedence; otherwise replace an existing cover's bytes
@@ -69,40 +80,44 @@ pub fn write_metadata(path: &Path, edit: &crate::library::BookEdit) -> Result<()
         if let Some(cover_id) = epub.manifest().cover_image().map(|c| c.id().to_string()) {
             epub.manifest_mut().remove_by_id(&cover_id);
         }
-    } else if let (Some(bytes), true) = (&edit.cover, has_cover) {
-        if let Some(mut entry) = epub.manifest_mut().cover_image_mut() {
-            entry.set_content(bytes.clone());
+    } else if let Some(bytes) = edit.cover {
+        if has_cover {
+            if let Some(mut entry) = epub.manifest_mut().cover_image_mut() {
+                entry.set_content(bytes.to_vec());
+            }
         }
     }
 
     // Editor setters append, so clear the field before setting to get replace
     // semantics (see rbook `clear_meta` docs).
-    let mut editor = epub.edit().clear_meta("dc:title").title(edit.title.as_str());
+    let mut editor = epub.edit().clear_meta("dc:title").title(edit.title);
     editor = editor.clear_meta("dc:creator");
-    for author in &edit.authors {
+    for author in edit.authors {
         editor = editor.author(author.as_str());
     }
     // Optional text fields: replace when provided, remove when cleared.
     editor = editor.clear_meta("dc:description");
-    if let Some(d) = nonempty(&edit.description) {
+    if let Some(d) = edit.description {
         editor = editor.description(d);
     }
     editor = editor.clear_meta("dc:publisher");
-    if let Some(p) = nonempty(&edit.publisher) {
+    if let Some(p) = edit.publisher {
         editor = editor.publisher(p);
     }
     // dc:language is required for a valid epub, so only replace it when a value
     // is given — never clear it to nothing.
-    if let Some(l) = nonempty(&edit.language) {
+    if let Some(l) = edit.language {
         editor = editor.clear_meta("dc:language").language(l);
     }
     if edit.remove_cover {
         // Drop the legacy EPUB2 `<meta name="cover">` pointer too.
         editor = editor.clear_meta("cover");
-    } else if let (Some(bytes), false) = (&edit.cover, has_cover) {
-        // No existing cover — add a fresh one.
-        let name = format!("cover.{}", cover_ext(bytes));
-        editor = editor.cover_image((name.as_str(), bytes.clone()));
+    } else if let Some(bytes) = edit.cover {
+        if !has_cover {
+            // No existing cover — add a fresh one.
+            let name = format!("cover.{}", cover_ext(bytes));
+            editor = editor.cover_image((name.as_str(), bytes.to_vec()));
+        }
     }
 
     // Atomic: write to a sibling temp file, then rename over the original.
@@ -114,10 +129,6 @@ pub fn write_metadata(path: &Path, edit: &crate::library::BookEdit) -> Result<()
         .map_err(|e| format!("save epub: {e}"))?;
     std::fs::rename(&tmp, path).map_err(|e| format!("replace epub: {e}"))?;
     Ok(())
-}
-
-fn nonempty(opt: &Option<String>) -> Option<&str> {
-    opt.as_deref().filter(|s| !s.is_empty())
 }
 
 /// Extension for a cover image, sniffed from its bytes so the epub manifest's
