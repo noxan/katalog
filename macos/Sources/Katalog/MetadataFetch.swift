@@ -7,24 +7,24 @@ struct FetchedMetadata: Identifiable {
     var title: String?
     var authors: [String]
     var publisher: String?
-    var publishedDate: String?   // "2016" or "2016-05-01" — for disambiguation
+    var publishedDate: String?   // "2016" — for disambiguation
     var isbn: String?
     var description: String?
     var coverURL: URL?
+    var workKey: String?         // "/works/OL…W" — used to fetch the description on pick
 
     var authorLine: String { authors.joined(separator: ", ") }
     var year: String? { publishedDate.map { String($0.prefix(4)) } }
 }
 
-/// Online metadata lookup via the Google Books volumes API (no key required).
+/// Online metadata lookup via the Open Library search API (free, no key, no quota).
 enum MetadataFetch {
-    /// Build the search query for a book: ISBN when the field is a real ISBN
-    /// (not a uuid/urn), else title + author.
+    /// Build the starting search query: ISBN when the field is a real ISBN
+    /// (not a uuid/urn), else plain title + author words.
     static func initialQuery(isbn: String?, title: String, author: String) -> String {
         if let isbn, let clean = validISBN(isbn) { return "isbn:" + clean }
-        var q = "intitle:" + title
-        if !author.trimmingCharacters(in: .whitespaces).isEmpty { q += "+inauthor:" + author }
-        return q
+        return [title, author].map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     /// Normalized ISBN if `raw` is shaped like an ISBN-10/13, else nil.
@@ -39,74 +39,100 @@ enum MetadataFetch {
         }
     }
 
-    /// Run a Google Books query and map up to `limit` results for the picker.
+    /// Run an Open Library search and map up to `limit` results for the picker.
     static func search(query: String, limit: Int = 12) async throws -> [FetchedMetadata] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }
-        var comps = URLComponents(string: "https://www.googleapis.com/books/v1/volumes")!
-        comps.queryItems = [URLQueryItem(name: "q", value: trimmed),
-                            URLQueryItem(name: "maxResults", value: String(limit))]
-        guard let url = comps.url else { return [] }
-
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let resp = try JSONDecoder().decode(VolumesResponse.self, from: data)
-        return (resp.items ?? []).map { item in
-            let info = item.volumeInfo
-            return FetchedMetadata(
-                title: info.title,
-                authors: info.authors ?? [],
-                publisher: info.publisher,
-                publishedDate: info.publishedDate,
-                isbn: info.bestISBN,
-                description: info.description,
-                coverURL: info.imageLinks?.bestCoverURL
-            )
-        }
+        var comps = URLComponents(string: "https://openlibrary.org/search.json")!
+        comps.queryItems = [
+            URLQueryItem(name: "q", value: trimmed),
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "fields", value: "title,author_name,first_publish_year,isbn,cover_i,publisher,key"),
+        ]
+        let (data, resp) = try await URLSession.shared.data(from: comps.url!)
+        try check(resp, data)
+        let decoded = try JSONDecoder().decode(SearchResponse.self, from: data)
+        return decoded.docs.map { $0.asMetadata }
     }
 
-    /// Download cover image bytes from a thumbnail URL.
+    /// Fetch a work's description (not present in search results). Best-effort:
+    /// returns nil on any failure so a picked result still applies.
+    static func description(forWork key: String) async -> String? {
+        guard let url = URL(string: "https://openlibrary.org\(key).json") else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let work = try? JSONDecoder().decode(Work.self, from: data) else { return nil }
+        return work.description?.text
+    }
+
+    /// Download cover image bytes from a URL.
     static func coverData(from url: URL) async throws -> Data? {
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, resp) = try await URLSession.shared.data(from: url)
+        try check(resp, data)
         return data.isEmpty ? nil : data
     }
-}
 
-// MARK: - Google Books JSON (only the fields we use; the rest is ignored)
-
-private struct VolumesResponse: Decodable {
-    let items: [Item]?
-    struct Item: Decodable { let volumeInfo: VolumeInfo }
-}
-
-private struct VolumeInfo: Decodable {
-    let title: String?
-    let authors: [String]?
-    let publisher: String?
-    let publishedDate: String?
-    let description: String?
-    let industryIdentifiers: [Identifier]?
-    let imageLinks: ImageLinks?
-
-    struct Identifier: Decodable { let type: String; let identifier: String }
-
-    /// Prefer ISBN_13, fall back to ISBN_10.
-    var bestISBN: String? {
-        let ids = industryIdentifiers ?? []
-        return ids.first { $0.type == "ISBN_13" }?.identifier
-            ?? ids.first { $0.type == "ISBN_10" }?.identifier
+    /// Turn a non-2xx HTTP response into a thrown error instead of silently
+    /// decoding it as "no results" (the bug that hid Google Books' 429 quota).
+    private static func check(_ resp: URLResponse, _ data: Data) throws {
+        guard let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) else { return }
+        let body = String(data: data.prefix(200), encoding: .utf8) ?? ""
+        throw NSError(domain: "MetadataFetch", code: http.statusCode,
+                      userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode). \(body)"])
     }
 }
 
-private struct ImageLinks: Decodable {
-    let thumbnail: String?
-    let smallThumbnail: String?
+// MARK: - Open Library JSON (only the fields we use; the rest is ignored)
 
-    /// Upgrade to https and drop the page-curl overlay for a clean cover.
-    var bestCoverURL: URL? {
-        guard let raw = thumbnail ?? smallThumbnail else { return nil }
-        let cleaned = raw
-            .replacingOccurrences(of: "http://", with: "https://")
-            .replacingOccurrences(of: "&edge=curl", with: "")
-        return URL(string: cleaned)
+private struct SearchResponse: Decodable {
+    let docs: [Doc]
+}
+
+private struct Doc: Decodable {
+    let title: String?
+    let author_name: [String]?
+    let first_publish_year: Int?
+    let isbn: [String]?
+    let cover_i: Int?
+    let publisher: [String]?
+    let key: String?
+
+    var asMetadata: FetchedMetadata {
+        FetchedMetadata(
+            title: title,
+            authors: author_name ?? [],
+            publisher: publisher?.first,
+            publishedDate: first_publish_year.map(String.init),
+            isbn: bestISBN,
+            description: nil,   // filled on pick via description(forWork:)
+            coverURL: cover_i.flatMap { URL(string: "https://covers.openlibrary.org/b/id/\($0)-L.jpg") },
+            workKey: key
+        )
+    }
+
+    /// Prefer a 13-digit ISBN, else the first listed.
+    private var bestISBN: String? {
+        let all = isbn ?? []
+        return all.first { $0.count == 13 } ?? all.first
+    }
+}
+
+private struct Work: Decodable {
+    let description: Description?
+    /// Open Library descriptions are sometimes a bare string, sometimes {value: …}.
+    enum Description: Decodable {
+        case text(String)
+        case object(value: String)
+        init(from decoder: Decoder) throws {
+            if let s = try? decoder.singleValueContainer().decode(String.self) {
+                self = .text(s)
+            } else {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                self = .object(value: try c.decode(String.self, forKey: .value))
+            }
+        }
+        enum CodingKeys: String, CodingKey { case value }
+        var text: String {
+            switch self { case .text(let s), .object(let s): return s }
+        }
     }
 }
