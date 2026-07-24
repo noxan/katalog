@@ -12,7 +12,8 @@ struct ContentView: View {
     @State private var selected: Book?
     @State private var prompts: [DuplicatePrompt] = []
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
-    // ponytail: gridStyle picker lives in Settings now; read here to render.
+    @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
+    // ponytail: gridStyle/sortOrder pickers live in Settings; read here to render.
 
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
@@ -22,7 +23,7 @@ struct ContentView: View {
                 emptyState
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
-                    ForEach(store.books) { book in
+                    ForEach(sortOrder.sorted(store.books)) { book in
                         BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
                             .onTapGesture { selected = book }
                     }
@@ -184,6 +185,31 @@ struct StatusBar: View {
 enum GridStyle: String, CaseIterable {
     case compact  // single-line title + author beneath the cover
     case covers   // covers only; caption fades in on hover
+}
+
+/// How the catalog is ordered. `dateAdded` (newest first) is the default and
+/// matches the core's SQL ordering; the rest sort in memory.
+enum SortOrder: String, CaseIterable {
+    case dateAdded, title, author
+
+    var label: String {
+        switch self {
+        case .dateAdded: return "Date added"
+        case .title: return "Title"
+        case .author: return "Author"
+        }
+    }
+
+    // ponytail: added_at is an ISO string, so reverse-lexicographic = newest first.
+    func sorted(_ books: [Book]) -> [Book] {
+        switch self {
+        case .dateAdded: return books  // core already returns added_at DESC
+        case .title: return books.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        case .author: return books.sorted {
+            ($0.authors.first ?? "").localizedStandardCompare($1.authors.first ?? "") == .orderedAscending
+        }
+        }
+    }
 }
 
 struct BookCell: View {

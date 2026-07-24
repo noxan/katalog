@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var store: LibraryStore
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
+    @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
 
     var body: some View {
         Form {
@@ -11,6 +12,9 @@ struct SettingsView: View {
                 Picker("Grid style", selection: $gridStyle) {
                     Text("Compact").tag(GridStyle.compact)
                     Text("Covers").tag(GridStyle.covers)
+                }
+                Picker("Sort by", selection: $sortOrder) {
+                    ForEach(SortOrder.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
             }
 
