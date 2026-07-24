@@ -26,6 +26,14 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
     let authors: Vec<String> = md.creators().map(|c| c.value().to_string()).collect();
     let publisher = md.by_property("dc:publisher").next().map(|p| p.value().to_string());
 
+    // Prefer a real ISBN from any dc:identifier; the package's unique-identifier
+    // is usually a uuid/urn, useless for lookup and dedup. Store nothing rather
+    // than a uuid when no ISBN is present.
+    let isbn = md
+        .identifiers()
+        .map(|i| i.value().to_string())
+        .find(|v| looks_like_isbn(v));
+
     let cover = epub
         .manifest()
         .cover_image()
@@ -37,10 +45,25 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         authors,
         language: md.language().map(|l| l.value().to_string()),
         publisher,
-        isbn: md.identifier().map(|i| i.value().to_string()),
+        isbn,
         description: md.description().map(|d| d.value().to_string()),
         cover,
     })
+}
+
+/// True if `s` is shaped like an ISBN-10 or ISBN-13 (hyphens/spaces ignored).
+/// ponytail: shape check, not checksum — enough to reject the uuid/urn values
+/// that fill most epub `dc:identifier`s. Add a checksum if false matches show up.
+fn looks_like_isbn(s: &str) -> bool {
+    let d: String = s.chars().filter(|c| !c.is_whitespace() && *c != '-').collect();
+    match d.len() {
+        13 => d.bytes().all(|b| b.is_ascii_digit()),
+        10 => {
+            d[..9].bytes().all(|b| b.is_ascii_digit())
+                && matches!(d.as_bytes()[9], b'0'..=b'9' | b'X' | b'x')
+        }
+        _ => false,
+    }
 }
 
 fn fallback_title(path: &Path) -> String {
@@ -138,5 +161,23 @@ fn cover_ext(bytes: &[u8]) -> &'static str {
         Ok(image::ImageFormat::Gif) => "gif",
         Ok(image::ImageFormat::WebP) => "webp",
         _ => "jpg",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::looks_like_isbn;
+
+    #[test]
+    fn isbn_shape() {
+        // Real ISBNs (with and without hyphens, ISBN-10 X check digit).
+        assert!(looks_like_isbn("978-0-307-95154-0"));
+        assert!(looks_like_isbn("9780393711752"));
+        assert!(looks_like_isbn("080442957X"));
+        // uuid / urn / junk that fills most epub identifiers.
+        assert!(!looks_like_isbn("99d7f960-0ff9-47f6-b677-f799aab4ef3a"));
+        assert!(!looks_like_isbn("urn:uuid:735093b7-c3c4-4d73-8a0f-96f1750d1140"));
+        assert!(!looks_like_isbn(""));
+        assert!(!looks_like_isbn("12345"));
     }
 }
