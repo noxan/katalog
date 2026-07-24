@@ -12,3 +12,6 @@ xcuserdata/
 # Generated Swift bindings + framework
 /macos/Generated/
 /dist/
+
+# Claude
+.claude/
