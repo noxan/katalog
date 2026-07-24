@@ -169,6 +169,17 @@ final class KindleWatcher: NSObject, ObservableObject {
         let dest = device.documents.appendingPathComponent(book.deviceFilename)
         if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
         try fm.copyItem(at: src, to: dest)
+        // Record the file we just wrote in the on-device index so the next
+        // reconnect reuses its keys instead of re-parsing it. Keys come from
+        // fileKeys (the same primitive scanKeys uses), so this entry is
+        // indistinguishable from one a full scan would produce.
+        let vals = try? dest.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        var index = loadIndex(device)
+        index[lpath(dest, on: device)] = CacheEntry(
+            size: Int64(vals?.fileSize ?? 0),
+            mtime: Int64(vals?.contentModificationDate?.timeIntervalSince1970 ?? 0),
+            keys: (try? fileKeys(path: dest.path)) ?? [])
+        if let data = try? JSONEncoder().encode(index) { try? data.write(to: indexURL(device)) }
         // We know exactly what we added — update the "on device" state directly
         // rather than kicking off a full background rescan (which lands late and
         // briefly flips the button back to its pre-send state). Callers run this
