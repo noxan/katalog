@@ -17,13 +17,26 @@ enum MetadataFetch {
     /// match (stale/wrong ISBN), fall back to title + author. Returns the first
     /// match, or nil if nothing was found either way.
     static func lookup(isbn: String?, title: String, author: String) async throws -> FetchedMetadata? {
-        let trimmedISBN = isbn?.trimmingCharacters(in: .whitespaces) ?? ""
-        if !trimmedISBN.isEmpty, let hit = try await search(query: "isbn:" + trimmedISBN) {
+        // Only query by ISBN when the field is actually an ISBN — most epub
+        // identifiers are uuid/urn junk, which would waste a guaranteed-miss call.
+        if let isbn, let clean = validISBN(isbn), let hit = try await search(query: "isbn:" + clean) {
             return hit
         }
         var q = "intitle:" + title
         if !author.trimmingCharacters(in: .whitespaces).isEmpty { q += "+inauthor:" + author }
         return try await search(query: q)
+    }
+
+    /// Normalized ISBN if `raw` is shaped like an ISBN-10/13, else nil.
+    /// ponytail: shape check, not checksum — enough to reject uuid/urn values.
+    static func validISBN(_ raw: String) -> String? {
+        let d = raw.filter { !$0.isWhitespace && $0 != "-" }
+        let isDigits = { (s: Substring) in s.allSatisfy(\.isNumber) }
+        switch d.count {
+        case 13 where isDigits(d[...]): return d
+        case 10 where isDigits(d.dropLast()) && (d.last!.isNumber || d.last! == "X" || d.last! == "x"): return d
+        default: return nil
+        }
     }
 
     /// Run one Google Books query and map the first result.
