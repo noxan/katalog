@@ -38,8 +38,10 @@ struct ContentView: View {
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
                     ForEach(grouping.sorted(store.books, by: sortOrder)) { book in
-                        BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
-                            .onTapGesture { sheet = .detail(book) }
+                        Button { sheet = .detail(book) } label: {
+                            BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
+                        }
+                        .buttonStyle(.plain)
                             .contextMenu { bookMenu(book) }
                     }
                 }
