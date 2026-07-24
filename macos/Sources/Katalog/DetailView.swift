@@ -63,16 +63,12 @@ struct DetailView: View {
     // MARK: Left — cover + primary action
 
     private var leftColumn: some View {
-        VStack(spacing: 14) {
-            CoverImage(path: book.coverPath, title: book.title,
-                       authors: book.authors.joined(separator: ", "))
-                .frame(width: Theme.coverWidth, height: Theme.coverHeight)
-                .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
-                .shadow(color: .black.opacity(0.5), radius: 18, y: 12)
-
-            transferSection.frame(width: Theme.coverWidth)
-        }
+        CoverImage(path: book.coverPath, title: book.title,
+                   authors: book.authors.joined(separator: ", "))
+            .frame(width: Theme.coverWidth, height: Theme.coverHeight)
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+            .shadow(color: .black.opacity(0.5), radius: 18, y: 12)
     }
 
     // MARK: Right — title + aligned metadata
@@ -95,6 +91,8 @@ struct DetailView: View {
             }
             .font(.subheadline)
             .padding(.top, 16)
+
+            transferSection.padding(.top, 16)
 
             Spacer(minLength: 0)
         }
