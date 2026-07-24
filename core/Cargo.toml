@@ -19,6 +19,8 @@ thiserror = "2"
 
 [dev-dependencies]
 tempfile = "3"
+# Tests inspect the raw OCF container (OPF bytes, mimetype-first/STORED invariant).
+zip = "8"
 
 [[bin]]
 # uniffi-bindgen CLI, invoked by build-core.sh to emit Swift bindings.

@@ -11,6 +11,7 @@ struct DetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var status: String?
     @State private var hoverSide = 0   // -1 left, 1 right, 0 none
+    @State private var editing = false
 
     var body: some View {
         ZStack {
@@ -33,6 +34,9 @@ struct DetailView: View {
         .overlay(alignment: .topTrailing) { chrome }
         .contextMenu { menuItems }
         .onChange(of: book.id) { status = nil }
+        .sheet(isPresented: $editing) {
+            EditView(book: book) { book = $0 }
+        }
     }
 
     private var content: some View {
@@ -179,6 +183,9 @@ struct DetailView: View {
     }
 
     @ViewBuilder private var menuItems: some View {
+        Button { editing = true } label: {
+            Label("Edit Metadata…", systemImage: "pencil")
+        }
         Button {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
         } label: {

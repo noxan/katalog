@@ -114,6 +114,14 @@ final class LibraryStore: ObservableObject {
         refresh()
     }
 
+    /// Apply edited metadata (index + epub file + optional cover). Returns the
+    /// updated book, or nil if the write failed.
+    func update(_ book: Book, _ edit: BookEdit) -> Book? {
+        guard let updated = try? lib.update(id: book.id, edit: edit) else { return nil }
+        refresh()
+        return updated
+    }
+
     /// Absolute path of the managed epub, validated for transfer.
     func transferPath(_ book: Book) throws -> String {
         try lib.prepareTransfer(id: book.id)
