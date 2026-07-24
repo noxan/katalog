@@ -11,6 +11,7 @@ struct DetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var status: String?
     @State private var working = false
+    @State private var hoverSide = 0   // -1 left, 1 right, 0 none
 
     var body: some View {
         ZStack {
@@ -28,6 +29,8 @@ struct DetailView: View {
             content
         }
         .frame(width: 560, height: 500)
+        .overlay(alignment: .leading) { navButton(-1) }
+        .overlay(alignment: .trailing) { navButton(1) }
         .overlay(alignment: .topTrailing) { chrome }
         .contextMenu { menuItems }
         .onChange(of: book.id) { status = nil }
@@ -131,24 +134,30 @@ struct DetailView: View {
         book = store.books[i + delta]
     }
 
+    /// Prev/next book, docked to the dialog's left (-1) and right (1) edges.
+    private func navButton(_ delta: Int) -> some View {
+        let disabled = delta < 0 ? (index ?? 0) <= 0
+                                 : index.map { $0 >= store.books.count - 1 } ?? true
+        return Button { step(delta) } label: {
+            Image(systemName: delta < 0 ? "chevron.backward.circle.fill" : "chevron.forward.circle.fill")
+        }
+        .buttonStyle(.plain)
+        .font(.largeTitle)
+        .symbolRenderingMode(.hierarchical)
+        .foregroundStyle(.secondary)
+        .keyboardShortcut(delta < 0 ? .leftArrow : .rightArrow, modifiers: [])
+        .disabled(disabled)
+        .help(delta < 0 ? "Previous book" : "Next book")
+        .padding(Theme.spacing)
+        .frame(maxHeight: .infinity)   // tall hover strip along the edge
+        .contentShape(Rectangle())
+        .opacity(hoverSide == delta ? 1 : 0)
+        .animation(.easeInOut(duration: 0.15), value: hoverSide)
+        .onHover { hoverSide = $0 ? delta : 0 }
+    }
+
     private var chrome: some View {
         HStack(spacing: 12) {
-            Button { step(-1) } label: {
-                Image(systemName: "chevron.backward.circle.fill")
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.leftArrow, modifiers: [])
-            .disabled((index ?? 0) <= 0)
-            .help("Previous book")
-
-            Button { step(1) } label: {
-                Image(systemName: "chevron.forward.circle.fill")
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.rightArrow, modifiers: [])
-            .disabled(index.map { $0 >= store.books.count - 1 } ?? true)
-            .help("Next book")
-
             Menu {
                 menuItems
             } label: {
