@@ -11,6 +11,7 @@ struct DetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var status: String?
     @State private var working = false
+    @State private var hoverSide = 0   // -1 left, 1 right, 0 none
 
     var body: some View {
         ZStack {
@@ -148,6 +149,11 @@ struct DetailView: View {
         .disabled(disabled)
         .help(delta < 0 ? "Previous book" : "Next book")
         .padding(Theme.spacing)
+        .frame(maxHeight: .infinity)   // tall hover strip along the edge
+        .contentShape(Rectangle())
+        .opacity(hoverSide == delta ? 1 : 0)
+        .animation(.easeInOut(duration: 0.15), value: hoverSide)
+        .onHover { hoverSide = $0 ? delta : 0 }
     }
 
     private var chrome: some View {
