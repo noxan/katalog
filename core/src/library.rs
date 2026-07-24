@@ -50,6 +50,23 @@ pub struct Book {
     pub added_at: String,
 }
 
+/// The editable subset of a book's metadata, applied by [`Library::update`].
+/// `cover` carries new image bytes; `None` leaves the current cover untouched.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct BookEdit {
+    pub title: String,
+    pub authors: Vec<String>,
+    pub series: Option<String>,
+    pub publisher: Option<String>,
+    pub isbn: Option<String>,
+    pub language: Option<String>,
+    pub description: Option<String>,
+    /// New cover bytes to set. `None` leaves the cover untouched — unless
+    /// `remove_cover` is set, which drops it entirely.
+    pub cover: Option<Vec<u8>>,
+    pub remove_cover: bool,
+}
+
 /// A pending import that matches a book already in the library. Carries the
 /// incoming book's preview so the UI can show it next to the existing one.
 #[derive(Debug, Clone, uniffi::Record)]
@@ -119,24 +136,20 @@ impl Library {
         let author = meta.authors.first().map(String::as_str).unwrap_or("Unknown");
 
         let file_path = if copy {
-            let dir = if organize {
-                self.books_dir.join(sanitize(author))
-            } else {
-                self.books_dir.clone()
-            };
-            fs::create_dir_all(&dir)?;
-            // ponytail: flat mode keeps the original filename; identical names collide.
-            let name = if organize {
-                // "Title - Author.ext" — self-describing, and different formats of
-                // one book coexist as same basename + different extension.
+            let dest = if organize {
+                // "Author/Title - Author.ext" — self-describing, and different
+                // formats of one book coexist as same basename + different extension.
                 let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("epub");
-                format!("{}.{}", sanitize(&format!("{} - {}", meta.title, author)), ext)
+                self.organized_dest(&meta.title, author, ext)
             } else {
-                src.file_name()
+                // ponytail: flat mode keeps the original filename; identical names collide.
+                let name = src
+                    .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| format!("{}.epub", sanitize(&meta.title)))
+                    .unwrap_or_else(|| format!("{}.epub", sanitize(&meta.title)));
+                self.books_dir.join(name)
             };
-            let dest = dir.join(name);
+            fs::create_dir_all(dest.parent().unwrap_or(&self.books_dir))?;
             fs::copy(&src, &dest)?;
             dest
         } else {
@@ -233,20 +246,78 @@ impl Library {
             // Never delete outside the library (in-place imports live elsewhere).
             if fp.starts_with(&self.books_dir) {
                 let _ = fs::remove_file(&fp);
-                // Prune now-empty Author/Title folders, stopping at books_dir.
-                let mut dir = fp.parent().map(Path::to_path_buf);
-                while let Some(d) = dir {
-                    if d == self.books_dir || !d.starts_with(&self.books_dir) {
-                        break;
-                    }
-                    if fs::remove_dir(&d).is_err() {
-                        break; // non-empty or gone — stop
-                    }
-                    dir = d.parent().map(Path::to_path_buf);
-                }
+                self.prune_empty_dirs(fp.parent().map(Path::to_path_buf));
             }
         }
         Ok(())
+    }
+
+    /// Apply edited metadata: write it back into the epub file, keep the managed
+    /// file's Author/Title path in sync (organized libraries only), refresh the
+    /// cached cover if a new one was given, and update the index row.
+    pub fn update(&self, id: i64, edit: BookEdit) -> Result<Book, KatalogError> {
+        let book = self
+            .get(id)?
+            .ok_or_else(|| KatalogError::Message(format!("no book with id {id}")))?;
+
+        // 1. Write metadata (and any new cover) back into the epub itself.
+        let mut file_path = PathBuf::from(&book.file_path);
+        if book.format == "epub" && file_path.exists() {
+            epub::write_metadata(&file_path, &edit)?;
+        }
+
+        // 2. Reorganize the managed file to match a changed title/author.
+        if let Some(new_path) = self.reorganized_path(&file_path, &edit) {
+            if new_path != file_path {
+                if new_path.exists() {
+                    return Err(KatalogError::Message(format!(
+                        "a file already exists at {}",
+                        new_path.display()
+                    )));
+                }
+                fs::create_dir_all(new_path.parent().unwrap_or(&self.books_dir))?;
+                fs::rename(&file_path, &new_path)?;
+                self.prune_empty_dirs(file_path.parent().map(Path::to_path_buf));
+                file_path = new_path;
+            }
+        }
+
+        // 3. Refresh the cached cover file the UI reads, and its indexed path.
+        let cover_path = if edit.remove_cover {
+            let _ = fs::remove_file(self.covers_dir.join(id.to_string()));
+            None
+        } else if let Some(bytes) = &edit.cover {
+            let p = self.covers_dir.join(id.to_string());
+            fs::write(&p, bytes)?;
+            Some(p.to_string_lossy().into_owned())
+        } else {
+            book.cover_path.clone()
+        };
+
+        // 4. Update the index row.
+        {
+            let conn = self.lock();
+            conn.execute(
+                "UPDATE books SET title=?1, authors=?2, series=?3, publisher=?4,
+                     isbn=?5, language=?6, description=?7, cover_path=?8, file_path=?9
+                 WHERE id=?10",
+                rusqlite::params![
+                    edit.title,
+                    edit.authors.join("\n"),
+                    edit.series,
+                    edit.publisher,
+                    edit.isbn,
+                    edit.language,
+                    edit.description,
+                    cover_path,
+                    file_path.to_string_lossy(),
+                    id,
+                ],
+            )?;
+        }
+
+        self.get(id)?
+            .ok_or_else(|| KatalogError::Message("book vanished after update".into()))
     }
 
     /// Validate a book is a transferable epub and return its source path.
@@ -318,6 +389,43 @@ impl Library {
     fn lock(&self) -> std::sync::MutexGuard<'_, Connection> {
         // ponytail: poisoned only if a holder panicked; recover and continue.
         self.conn.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Managed path for the organized layout: `books_dir/Author/Title - Author.ext`.
+    fn organized_dest(&self, title: &str, author: &str, ext: &str) -> PathBuf {
+        let name = format!("{}.{}", sanitize(&format!("{title} - {author}")), ext);
+        self.books_dir.join(sanitize(author)).join(name)
+    }
+
+    /// Where an edited book's managed file should live, or `None` if it must not
+    /// move: files outside `books_dir` (in-place imports) and flat-layout files
+    /// (directly under `books_dir`) keep their path. Organized layout is inferred
+    /// from the file already sitting in an `Author/` subfolder.
+    fn reorganized_path(&self, current: &Path, edit: &BookEdit) -> Option<PathBuf> {
+        if !current.starts_with(&self.books_dir) {
+            return None; // in-place import — never move
+        }
+        if current.parent()? == self.books_dir {
+            return None; // flat layout — leave the filename as-is
+        }
+        let ext = current.extension().and_then(|e| e.to_str()).unwrap_or("epub");
+        let author = edit.authors.first().map(String::as_str).unwrap_or("Unknown");
+        Some(self.organized_dest(&edit.title, author, ext))
+    }
+
+    /// Remove now-empty ancestor folders, walking up from `start` and stopping
+    /// at (and never removing) `books_dir`.
+    fn prune_empty_dirs(&self, start: Option<PathBuf>) {
+        let mut dir = start;
+        while let Some(d) = dir {
+            if d == self.books_dir || !d.starts_with(&self.books_dir) {
+                break;
+            }
+            if fs::remove_dir(&d).is_err() {
+                break; // non-empty or gone — stop
+            }
+            dir = d.parent().map(Path::to_path_buf);
+        }
     }
 }
 

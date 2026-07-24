@@ -41,7 +41,7 @@ MVP, grouped by area. Checked = shipped.
 
 **Metadata**
 - [x] View metadata + cover
-- [ ] Edit metadata (title, author, description)
+- [x] Edit metadata (all fields + cover), written back into the epub
 
 **Formats & transfer**
 - [x] EPUB parsing (read-only)
