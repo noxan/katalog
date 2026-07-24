@@ -210,11 +210,13 @@ struct DetailView: View {
                             Label("Remove from \(dev.name)", systemImage: "trash")
                         }
                     } label: {
-                        Label {
-                            Text(working ? "Removing…" : "On \(dev.name)")
-                        } icon: {
+                        // Explicit HStack: a Menu's `.button` style collapses
+                        // Label's icon/title spacing, so it wouldn't match the
+                        // Send button. 6pt mirrors Label's default.
+                        HStack(spacing: 6) {
                             if working { ProgressView().controlSize(.small) }
                             else { Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent) }
+                            Text(working ? "Removing…" : "On \(dev.name)")
                         }
                     }
                     .menuStyle(.button)
