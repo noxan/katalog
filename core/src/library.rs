@@ -246,12 +246,9 @@ impl Library {
             conn.execute("DELETE FROM books WHERE id = ?1", [id])?;
         }
 
-        // cover_path is authoritative; the id-named delete is a shim for rows
-        // imported before covers were content-versioned.
         if let Some(cp) = book.as_ref().and_then(|b| b.cover_path.as_ref()) {
             let _ = fs::remove_file(cp);
         }
-        let _ = fs::remove_file(self.covers_dir.join(id.to_string()));
 
         if let Some(b) = book {
             let fp = PathBuf::from(&b.file_path);
