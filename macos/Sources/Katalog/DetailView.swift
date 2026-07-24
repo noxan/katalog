@@ -186,8 +186,6 @@ struct DetailView: View {
 
     // MARK: Transfer
 
-    private let transferHeight: CGFloat = 28
-
     @ViewBuilder private var transferSection: some View {
         if kindle.devices.isEmpty {
             Label("Connect a Kindle to transfer", systemImage: "cable.connector.horizontal")
@@ -199,14 +197,13 @@ struct DetailView: View {
                     Label("On \(dev.name)", systemImage: "checkmark.circle.fill")
                         .font(.subheadline).fontWeight(.medium)
                         .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 14).frame(height: transferHeight)
+                        .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(Theme.accent.opacity(0.12), in: Capsule())
                         .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.35)))
                 } else {
                     Button { send(to: dev) } label: {
                         Label(working ? "Converting…" : "Send to \(dev.name)",
                               systemImage: "arrow.right.circle.fill")
-                            .frame(height: transferHeight)
                     }
                     .buttonStyle(.glassProminent).tint(Theme.accent)
                     .disabled(working)
