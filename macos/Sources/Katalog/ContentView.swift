@@ -262,6 +262,8 @@ enum Grouping: String, CaseIterable {
     func sorted(_ books: [Book], by sortOrder: SortOrder) -> [Book] {
         guard self == .series else { return sortOrder.sorted(books) }
         return books.sorted {
+            let authorComparison = ($0.authors.first ?? "").localizedStandardCompare($1.authors.first ?? "")
+            if authorComparison != .orderedSame { return authorComparison == .orderedAscending }
             let lhs = $0.series?.trimmingCharacters(in: .whitespacesAndNewlines)
             let rhs = $1.series?.trimmingCharacters(in: .whitespacesAndNewlines)
             switch (lhs?.isEmpty == false ? lhs : nil, rhs?.isEmpty == false ? rhs : nil) {
