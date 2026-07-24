@@ -3,9 +3,17 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var store: LibraryStore
+    @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
 
     var body: some View {
         Form {
+            Section {
+                Picker("Grid style", selection: $gridStyle) {
+                    Text("Compact").tag(GridStyle.compact)
+                    Text("Covers").tag(GridStyle.covers)
+                }
+            }
+
             Section {
                 LabeledContent("Library Location") {
                     PathControl(path: store.booksDir)

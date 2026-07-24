@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var selected: Book?
     @State private var prompts: [DuplicatePrompt] = []
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
+    // ponytail: gridStyle picker lives in Settings now; read here to render.
 
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
@@ -47,15 +48,6 @@ struct ContentView: View {
         }
         .navigationTitle("Katalog")
         .toolbar {
-            ToolbarItem {
-                Picker("View", selection: $gridStyle) {
-                    Image(systemName: "text.below.photo").tag(GridStyle.compact)
-                    Image(systemName: "square.grid.2x2").tag(GridStyle.covers)
-                }
-                .pickerStyle(.segmented)
-                .help("Grid style")
-            }
-            ToolbarSpacer(.fixed)
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .help("Import epubs or a folder")
