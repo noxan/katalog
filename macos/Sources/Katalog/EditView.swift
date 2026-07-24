@@ -26,6 +26,8 @@ struct EditView: View {
     @State private var removeCover = false  // set when the cover is removed
     @State private var dropTargeted = false
     @State private var error: String?
+    @State private var fetching = false     // applying a picked result (cover download)
+    @State private var showingSearch = false
 
     init(book: Book, onSaved: @escaping (Book) -> Void) {
         self.book = book
@@ -53,6 +55,17 @@ struct EditView: View {
             }
 
             HStack {
+                Button {
+                    showingSearch = true
+                } label: {
+                    if fetching {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Search Online", systemImage: "magnifyingglass")
+                    }
+                }
+                .disabled(fetching)
+                .help("Search Open Library and pick the right match")
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
@@ -64,7 +77,23 @@ struct EditView: View {
         }
         .padding(Theme.spacing * 1.4)
         .frame(width: 540)
+        .sheet(isPresented: $showingSearch) {
+            MetadataSearchView(
+                query: MetadataFetch.initialQuery(isbn: emptyToNil(isbn), title: title, author: firstAuthor)
+            ) { result in
+                Task { await apply(result) }
+            }
+        }
     }
+
+    /// The Authors field split into trimmed, non-empty names.
+    private var parsedAuthors: [String] {
+        authors.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    private var firstAuthor: String { parsedAuthors.first ?? "" }
 
     // MARK: Cover well — drop an image to replace it (Apple Music style)
 
@@ -190,14 +219,48 @@ struct EditView: View {
         }
     }
 
+    // MARK: Online lookup
+
+    /// Apply a result picked in the search sheet. Only non-empty fields
+    /// overwrite, so nothing the user typed is lost when the source lacks a value.
+    private func apply(_ meta: FetchedMetadata) async {
+        if let t = meta.title { title = t }
+        if !meta.authors.isEmpty { authors = meta.authors.joined(separator: ", ") }
+        if let p = meta.publisher { publisher = p }
+        if let i = meta.isbn { isbn = i }
+        fetching = true
+        defer { fetching = false }
+
+        // Description (from the work record) and cover live at different
+        // endpoints — fetch them concurrently.
+        async let desc = resolvedDescription(meta)
+        async let cover = coverBytes(meta)
+        if let d = await desc { descriptionText = d }
+        do {
+            if let data = try await cover { setCover(data) }
+        } catch {
+            self.error = "Couldn't download cover: \(error.localizedDescription)"
+        }
+    }
+
+    /// The description isn't in search results — fetch the work record on pick.
+    private func resolvedDescription(_ meta: FetchedMetadata) async -> String? {
+        if let d = meta.description { return d }
+        guard let key = meta.workKey else { return nil }
+        return await MetadataFetch.description(forWork: key)
+    }
+
+    private func coverBytes(_ meta: FetchedMetadata) async throws -> Data? {
+        guard let url = meta.coverURL else { return nil }
+        return try await MetadataFetch.coverData(from: url)
+    }
+
     // MARK: Save
 
     private func save() {
         let edit = BookEdit(
             title: title.trimmingCharacters(in: .whitespaces),
-            authors: authors.split(separator: ",")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty },
+            authors: parsedAuthors,
             series: emptyToNil(series),
             publisher: emptyToNil(publisher),
             isbn: emptyToNil(isbn),
