@@ -9,11 +9,18 @@ use rusqlite::Connection;
 use crate::epub;
 use crate::matching;
 
-#[derive(Debug, thiserror::Error, uniffi::Error)]
+#[derive(Debug, uniffi::Error)]
 pub enum KatalogError {
-    #[error("{0}")]
     Message(String),
 }
+
+impl std::fmt::Display for KatalogError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let KatalogError::Message(m) = self;
+        write!(f, "{m}")
+    }
+}
+impl std::error::Error for KatalogError {}
 
 impl From<rusqlite::Error> for KatalogError {
     fn from(e: rusqlite::Error) -> Self {

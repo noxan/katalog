@@ -15,7 +15,6 @@ mobi = "0.8"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 uniffi = { version = "0.32", features = ["cli"] }
-thiserror = "2"
 
 [dev-dependencies]
 tempfile = "3"
