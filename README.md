@@ -27,15 +27,40 @@ Xcode and Run (run `make core` once first so the xcframework exists).
 make test     # epub parse + library import/list/get/remove roundtrip
 ```
 
-## MVP scope
+## Scope
 
-- [x] EPUB metadata + cover extraction
-- [x] Import into a managed library (copies file, caches cover, indexes in SQLite)
-- [x] Transfer to Kindle over USB (mounted-volume detection + copy to `documents/`)
+MVP, grouped by area. Checked = shipped.
 
-Out of scope for now: reading/rendering, format conversion, metadata editing,
-online metadata, Send-to-Kindle email, Windows/Linux. The core stays
-platform-agnostic so those slot in later.
+**Library**
+- [x] Import epubs — files, folders, drag-and-drop, Finder "Open With"
+- [x] Managed library — copies file, caches cover, indexes in SQLite
+- [x] Duplicate detection on import
+- [x] Delete from library
+- [x] Empty-library welcome screen
+- [x] Configurable location + auto-organize into Author/Title folders
+
+**Metadata**
+- [x] View metadata + cover
+- [ ] Edit metadata (title, author, description)
+
+**Formats & transfer**
+- [x] EPUB parsing (read-only)
+- [x] Native EPUB → MOBI conversion
+- [x] Transfer to Kindle over USB + on-device detection
+
+**Browse**
+- [ ] Search
+- [ ] Sort by author / title
+- [x] Two grid styles (compact / covers)
+- [x] Follows system light / dark
+
+### Ideas for later (or never)
+
+- Automatic app updates (Sparkle) or App Store
+- Online metadata lookup
+- Send-to-Kindle email
+- Windows / Linux (the Rust core is already platform-agnostic)
+- In-app reading / rendering — Katalog is a manager, not a reader
 
 ## End-to-end check
 
