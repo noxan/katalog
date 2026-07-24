@@ -26,7 +26,8 @@ struct EditView: View {
     @State private var removeCover = false  // set when the cover is removed
     @State private var dropTargeted = false
     @State private var error: String?
-    @State private var fetching = false     // online lookup in flight
+    @State private var fetching = false     // applying a picked result (cover download)
+    @State private var showingSearch = false
 
     init(book: Book, onSaved: @escaping (Book) -> Void) {
         self.book = book
@@ -55,16 +56,16 @@ struct EditView: View {
 
             HStack {
                 Button {
-                    Task { await fetchOnline() }
+                    showingSearch = true
                 } label: {
                     if fetching {
                         ProgressView().controlSize(.small)
                     } else {
-                        Label("Fetch Online", systemImage: "square.and.arrow.down")
+                        Label("Search Online", systemImage: "magnifyingglass")
                     }
                 }
-                .disabled(fetching || title.trimmingCharacters(in: .whitespaces).isEmpty)
-                .help("Look up metadata from Google Books")
+                .disabled(fetching)
+                .help("Search Google Books and pick the right match")
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
@@ -76,6 +77,17 @@ struct EditView: View {
         }
         .padding(Theme.spacing * 1.4)
         .frame(width: 540)
+        .sheet(isPresented: $showingSearch) {
+            MetadataSearchView(
+                query: MetadataFetch.initialQuery(isbn: emptyToNil(isbn), title: title, author: firstAuthor)
+            ) { result in
+                Task { await apply(result) }
+            }
+        }
+    }
+
+    private var firstAuthor: String {
+        authors.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
     }
 
     // MARK: Cover well — drop an image to replace it (Apple Music style)
@@ -204,30 +216,21 @@ struct EditView: View {
 
     // MARK: Online lookup
 
-    /// Fetch metadata from Google Books and pre-fill fields the source returns.
-    /// Only non-empty results overwrite a field, so nothing the user typed is
-    /// lost when the source has no value for it.
-    private func fetchOnline() async {
+    /// Apply a result picked in the search sheet. Only non-empty fields
+    /// overwrite, so nothing the user typed is lost when the source lacks a value.
+    private func apply(_ meta: FetchedMetadata) async {
+        if let t = meta.title { title = t }
+        if !meta.authors.isEmpty { authors = meta.authors.joined(separator: ", ") }
+        if let p = meta.publisher { publisher = p }
+        if let i = meta.isbn { isbn = i }
+        if let d = meta.description { descriptionText = d }
+        guard let url = meta.coverURL else { return }
         fetching = true
-        error = nil
         defer { fetching = false }
         do {
-            let firstAuthor = authors.split(separator: ",").first.map { String($0) } ?? ""
-            guard let meta = try await MetadataFetch.lookup(
-                isbn: emptyToNil(isbn), title: title, author: firstAuthor) else {
-                error = "No online match found."
-                return
-            }
-            if let t = meta.title { title = t }
-            if !meta.authors.isEmpty { authors = meta.authors.joined(separator: ", ") }
-            if let p = meta.publisher { publisher = p }
-            if let i = meta.isbn { isbn = i }
-            if let d = meta.description { descriptionText = d }
-            if let url = meta.coverURL, let data = try await MetadataFetch.coverData(from: url) {
-                setCover(data)
-            }
+            if let data = try await MetadataFetch.coverData(from: url) { setCover(data) }
         } catch {
-            self.error = "Lookup failed: \(error.localizedDescription)"
+            self.error = "Couldn't download cover: \(error.localizedDescription)"
         }
     }
 
