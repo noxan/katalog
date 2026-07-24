@@ -153,6 +153,25 @@ fn update_removes_cover() {
     );
 }
 
+/// A new cover lands at a different cover_path (so the UI reloads it) and the
+/// old cached file is cleaned up.
+#[test]
+fn update_new_cover_changes_path_and_prunes_old() {
+    let tmp = tempfile::tempdir().unwrap();
+    let lib = lib_in(tmp.path());
+    let book = lib.import(fixture_str(), true, true).unwrap();
+    let old = book.cover_path.clone().unwrap();
+
+    let mut edit = edit_from(&book);
+    edit.cover = Some(tiny_png());
+    let updated = lib.update(book.id, edit).unwrap();
+
+    let new = updated.cover_path.clone().unwrap();
+    assert_ne!(new, old, "cover_path must change so SwiftUI reloads");
+    assert!(Path::new(&new).exists());
+    assert!(!Path::new(&old).exists(), "old cached cover pruned");
+}
+
 /// Series is DB-only: it round-trips in the index but is never written into the
 /// epub file (no standard dc slot).
 #[test]

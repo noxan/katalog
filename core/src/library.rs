@@ -239,6 +239,11 @@ impl Library {
             conn.execute("DELETE FROM books WHERE id = ?1", [id])?;
         }
 
+        // Cover may be named by id (import) or content-versioned (after an edit),
+        // so delete whatever cover_path points at, plus the legacy id name.
+        if let Some(cp) = book.as_ref().and_then(|b| b.cover_path.as_ref()) {
+            let _ = fs::remove_file(cp);
+        }
         let _ = fs::remove_file(self.covers_dir.join(id.to_string()));
 
         if let Some(b) = book {
@@ -283,12 +288,22 @@ impl Library {
         }
 
         // 3. Refresh the cached cover file the UI reads, and its indexed path.
+        // A new cover is written under a content-versioned name so cover_path
+        // actually changes — otherwise SwiftUI sees an unchanged path and the
+        // grid keeps showing the stale image.
         let cover_path = if edit.remove_cover {
-            let _ = fs::remove_file(self.covers_dir.join(id.to_string()));
+            if let Some(old) = &book.cover_path {
+                let _ = fs::remove_file(old);
+            }
             None
         } else if let Some(bytes) = &edit.cover {
-            let p = self.covers_dir.join(id.to_string());
+            let p = self.covers_dir.join(cover_name(id, bytes));
             fs::write(&p, bytes)?;
+            if let Some(old) = &book.cover_path {
+                if old.as_str() != p.to_string_lossy() {
+                    let _ = fs::remove_file(old);
+                }
+            }
             Some(p.to_string_lossy().into_owned())
         } else {
             book.cover_path.clone()
@@ -448,6 +463,16 @@ fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
         description: row.get(10)?,
         added_at: row.get(11)?,
     })
+}
+
+/// Cache filename for an edited cover: `<id>-<content hash>`. The hash makes the
+/// path change whenever the image changes, so the UI reloads it (a fixed name
+/// would keep the same path and show a stale image).
+fn cover_name(id: i64, bytes: &[u8]) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    bytes.hash(&mut h);
+    format!("{id}-{:x}", h.finish())
 }
 
 /// Turn a title/author into a safe single path component.

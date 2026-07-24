@@ -93,6 +93,7 @@ struct EditView: View {
         .contentShape(Rectangle())
         .onTapGesture { chooseCover() }
         .focusable()
+        .focusEffectDisabled()   // our accent drop border is the focus cue; hide the square system ring
         .onPasteCommand(of: [.image, .fileURL]) { _ in pasteCover() }
         .dropDestination(for: URL.self) { urls, _ in
             guard let url = urls.first, let data = try? Data(contentsOf: url),
