@@ -17,6 +17,7 @@ struct EditView: View {
     @State private var title: String
     @State private var authors: String     // comma-separated
     @State private var series: String
+    @State private var seriesIndex: String // series position, parsed to a number on save
     @State private var publisher: String
     @State private var isbn: String
     @State private var language: String
@@ -35,6 +36,7 @@ struct EditView: View {
         _title = State(initialValue: book.title)
         _authors = State(initialValue: book.authors.joined(separator: ", "))
         _series = State(initialValue: book.series ?? "")
+        _seriesIndex = State(initialValue: book.seriesIndex.map(Self.formatIndex) ?? "")
         _publisher = State(initialValue: book.publisher ?? "")
         _isbn = State(initialValue: book.isbn ?? "")
         _language = State(initialValue: book.language ?? "")
@@ -195,7 +197,10 @@ struct EditView: View {
         VStack(alignment: .leading, spacing: 10) {
             field("Title", $title)
             field("Authors", $authors, prompt: "comma-separated")
-            field("Series", $series)
+            HStack(alignment: .bottom, spacing: 10) {
+                field("Series", $series)
+                field("Book #", $seriesIndex, prompt: "e.g. 3").frame(width: 90)
+            }
             field("Publisher", $publisher)
             field("ISBN", $isbn)
             field("Language", $language)
@@ -262,6 +267,7 @@ struct EditView: View {
             title: title.trimmingCharacters(in: .whitespaces),
             authors: parsedAuthors,
             series: emptyToNil(series),
+            seriesIndex: Double(seriesIndex.trimmingCharacters(in: .whitespaces)),
             publisher: emptyToNil(publisher),
             isbn: emptyToNil(isbn),
             language: emptyToNil(language),
@@ -275,6 +281,11 @@ struct EditView: View {
         } else {
             error = "Couldn't save changes."
         }
+    }
+
+    /// Show a whole index as "3", a fractional one as "1.5" — no trailing ".0".
+    static func formatIndex(_ n: Double) -> String {
+        n == n.rounded() ? String(Int(n)) : String(n)
     }
 
     private func emptyToNil(_ s: String) -> String? {

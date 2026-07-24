@@ -108,7 +108,10 @@ struct DetailView: View {
     /// Present metadata fields, skipping any that are absent — nil-filtering lives here only.
     private var metadataRows: [(String, String)] {
         var rows: [(String, String)] = []
-        if let s = book.series, !s.isEmpty { rows.append(("Series", s)) }
+        if let s = book.series, !s.isEmpty {
+            let pos = book.seriesIndex.map { " #\(EditView.formatIndex($0))" } ?? ""
+            rows.append(("Series", s + pos))
+        }
         if let p = book.publisher, !p.isEmpty { rows.append(("Publisher", p)) }
         rows.append(("Format", book.format.uppercased()))
         if let l = book.language, !l.isEmpty { rows.append(("Language", l)) }
