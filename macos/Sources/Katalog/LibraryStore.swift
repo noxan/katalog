@@ -114,10 +114,10 @@ final class LibraryStore: ObservableObject {
         refresh()
     }
 
-    /// Apply edited metadata (index + epub file + optional cover). Returns the
-    /// updated book, or nil if the write failed.
-    func update(_ book: Book, _ edit: BookEdit) -> Book? {
-        guard let updated = try? lib.update(id: book.id, edit: edit) else { return nil }
+    /// Apply edited metadata (index + epub file + optional cover). Throws the
+    /// core's error so the caller can show why it failed.
+    func update(_ book: Book, _ edit: BookEdit) throws -> Book {
+        let updated = try lib.update(id: book.id, edit: edit)
         refresh()
         return updated
     }

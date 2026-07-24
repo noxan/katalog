@@ -275,11 +275,13 @@ struct EditView: View {
             cover: coverData,
             removeCover: removeCover
         )
-        if let saved = store.update(book, edit) {
+        do {
+            let saved = try store.update(book, edit)
             onSaved(saved)
             dismiss()
-        } else {
-            error = "Couldn't save changes."
+        } catch {
+            NSLog("Katalog: save failed for \(book.filePath): \(error)")
+            self.error = "Couldn't save: \(error.localizedDescription)"
         }
     }
 
