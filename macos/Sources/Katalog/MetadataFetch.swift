@@ -2,29 +2,29 @@ import Foundation
 
 /// Metadata pulled from an online source, ready to pre-fill the editor.
 /// Every field is optional — the caller fills only what came back.
-struct FetchedMetadata {
+struct FetchedMetadata: Identifiable {
+    let id = UUID()
     var title: String?
     var authors: [String]
     var publisher: String?
+    var publishedDate: String?   // "2016" or "2016-05-01" — for disambiguation
     var isbn: String?
     var description: String?
     var coverURL: URL?
+
+    var authorLine: String { authors.joined(separator: ", ") }
+    var year: String? { publishedDate.map { String($0.prefix(4)) } }
 }
 
 /// Online metadata lookup via the Google Books volumes API (no key required).
 enum MetadataFetch {
-    /// Look up a book, preferring ISBN. If an ISBN is given but returns no
-    /// match (stale/wrong ISBN), fall back to title + author. Returns the first
-    /// match, or nil if nothing was found either way.
-    static func lookup(isbn: String?, title: String, author: String) async throws -> FetchedMetadata? {
-        // Only query by ISBN when the field is actually an ISBN — most epub
-        // identifiers are uuid/urn junk, which would waste a guaranteed-miss call.
-        if let isbn, let clean = validISBN(isbn), let hit = try await search(query: "isbn:" + clean) {
-            return hit
-        }
+    /// Build the search query for a book: ISBN when the field is a real ISBN
+    /// (not a uuid/urn), else title + author.
+    static func initialQuery(isbn: String?, title: String, author: String) -> String {
+        if let isbn, let clean = validISBN(isbn) { return "isbn:" + clean }
         var q = "intitle:" + title
         if !author.trimmingCharacters(in: .whitespaces).isEmpty { q += "+inauthor:" + author }
-        return try await search(query: q)
+        return q
     }
 
     /// Normalized ISBN if `raw` is shaped like an ISBN-10/13, else nil.
@@ -39,26 +39,29 @@ enum MetadataFetch {
         }
     }
 
-    /// Run one Google Books query and map the first result.
-    private static func search(query: String) async throws -> FetchedMetadata? {
+    /// Run a Google Books query and map up to `limit` results for the picker.
+    static func search(query: String, limit: Int = 12) async throws -> [FetchedMetadata] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return [] }
         var comps = URLComponents(string: "https://www.googleapis.com/books/v1/volumes")!
-        comps.queryItems = [URLQueryItem(name: "q", value: query),
-                            URLQueryItem(name: "maxResults", value: "1")]
-        guard let url = comps.url else { return nil }
+        comps.queryItems = [URLQueryItem(name: "q", value: trimmed),
+                            URLQueryItem(name: "maxResults", value: String(limit))]
+        guard let url = comps.url else { return [] }
 
         let (data, _) = try await URLSession.shared.data(from: url)
         let resp = try JSONDecoder().decode(VolumesResponse.self, from: data)
-        // ponytail: take items[0] only — no result picker in the MVP.
-        guard let info = resp.items?.first?.volumeInfo else { return nil }
-
-        return FetchedMetadata(
-            title: info.title,
-            authors: info.authors ?? [],
-            publisher: info.publisher,
-            isbn: info.bestISBN,
-            description: info.description,
-            coverURL: info.imageLinks?.bestCoverURL
-        )
+        return (resp.items ?? []).map { item in
+            let info = item.volumeInfo
+            return FetchedMetadata(
+                title: info.title,
+                authors: info.authors ?? [],
+                publisher: info.publisher,
+                publishedDate: info.publishedDate,
+                isbn: info.bestISBN,
+                description: info.description,
+                coverURL: info.imageLinks?.bestCoverURL
+            )
+        }
     }
 
     /// Download cover image bytes from a thumbnail URL.
@@ -79,6 +82,7 @@ private struct VolumeInfo: Decodable {
     let title: String?
     let authors: [String]?
     let publisher: String?
+    let publishedDate: String?
     let description: String?
     let industryIdentifiers: [Identifier]?
     let imageLinks: ImageLinks?
