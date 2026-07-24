@@ -68,6 +68,7 @@ fn edit_from(b: &Book) -> BookEdit {
         title: b.title.clone(),
         authors: b.authors.clone(),
         series: b.series.clone(),
+        series_index: b.series_index,
         publisher: b.publisher.clone(),
         isbn: b.isbn.clone(),
         language: b.language.clone(),
@@ -96,7 +97,8 @@ fn update_roundtrips_db_and_epub() {
     let edit = BookEdit {
         title: "New Title".into(),
         authors: vec!["Grace Hopper".into(), "Katherine Johnson".into()],
-        series: Some("Pioneers #3".into()),
+        series: Some("Pioneers".into()),
+        series_index: Some(3.0),
         publisher: Some("Katalog Press".into()),
         isbn: Some("urn:isbn:9780000000002".into()),
         language: Some("fr".into()),
@@ -109,7 +111,8 @@ fn update_roundtrips_db_and_epub() {
     // DB reflects everything.
     assert_eq!(updated.title, "New Title");
     assert_eq!(updated.authors, vec!["Grace Hopper", "Katherine Johnson"]);
-    assert_eq!(updated.series.as_deref(), Some("Pioneers #3"));
+    assert_eq!(updated.series.as_deref(), Some("Pioneers"));
+    assert_eq!(updated.series_index, Some(3.0));
     assert_eq!(updated.publisher.as_deref(), Some("Katalog Press"));
     assert_eq!(updated.isbn.as_deref(), Some("urn:isbn:9780000000002"));
     assert_eq!(updated.language.as_deref(), Some("fr"));

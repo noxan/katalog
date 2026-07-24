@@ -45,6 +45,8 @@ pub struct Book {
     pub title: String,
     pub authors: Vec<String>,
     pub series: Option<String>,
+    /// Position within the series (e.g. 3, or 1.5 for a between-books entry).
+    pub series_index: Option<f64>,
     /// Absolute path to the cached cover image, if any.
     pub cover_path: Option<String>,
     /// Absolute path to the managed epub file.
@@ -64,6 +66,7 @@ pub struct BookEdit {
     pub title: String,
     pub authors: Vec<String>,
     pub series: Option<String>,
+    pub series_index: Option<f64>,
     pub publisher: Option<String>,
     pub isbn: Option<String>,
     pub language: Option<String>,
@@ -116,6 +119,7 @@ impl Library {
                 title       TEXT NOT NULL,
                 authors     TEXT NOT NULL DEFAULT '',
                 series      TEXT,
+                series_index REAL,
                 cover_path  TEXT,
                 file_path   TEXT NOT NULL,
                 format      TEXT NOT NULL DEFAULT 'epub',
@@ -126,6 +130,8 @@ impl Library {
                 added_at    TEXT NOT NULL DEFAULT (datetime('now'))
             );",
         )?;
+        // ponytail: migrate pre-existing DBs; the ADD fails once the column exists, ignore it.
+        let _ = conn.execute("ALTER TABLE books ADD COLUMN series_index REAL", []);
         Ok(Arc::new(Library {
             conn: Mutex::new(conn),
             books_dir,
@@ -325,13 +331,14 @@ impl Library {
         {
             let conn = self.lock();
             conn.execute(
-                "UPDATE books SET title=?1, authors=?2, series=?3, publisher=?4,
-                     isbn=?5, language=?6, description=?7, cover_path=?8, file_path=?9
-                 WHERE id=?10",
+                "UPDATE books SET title=?1, authors=?2, series=?3, series_index=?4, publisher=?5,
+                     isbn=?6, language=?7, description=?8, cover_path=?9, file_path=?10
+                 WHERE id=?11",
                 rusqlite::params![
                     edit.title,
                     edit.authors.join("\n"),
                     edit.series,
+                    edit.series_index,
                     edit.publisher,
                     edit.isbn,
                     edit.language,
@@ -457,7 +464,7 @@ impl Library {
 }
 
 const SELECT: &str = "SELECT id, title, authors, series, cover_path, file_path, \
-     format, isbn, language, publisher, description, added_at FROM books";
+     format, isbn, language, publisher, description, added_at, series_index FROM books";
 
 fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
     let authors: String = row.get(2)?;
@@ -466,6 +473,7 @@ fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
         title: row.get(1)?,
         authors: authors.lines().filter(|s| !s.is_empty()).map(str::to_string).collect(),
         series: row.get(3)?,
+        series_index: row.get(12)?,
         cover_path: row.get(4)?,
         file_path: row.get(5)?,
         format: row.get(6)?,
