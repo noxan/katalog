@@ -212,8 +212,12 @@ struct DetailView: View {
                     .disabled(working)
                 } else {
                     Button { send(to: dev) } label: {
-                        Label(working ? "Converting…" : "Send to \(dev.name)",
-                              systemImage: "arrow.right.circle.fill")
+                        Label {
+                            Text(working ? "Converting…" : "Send to \(dev.name)")
+                        } icon: {
+                            if working { ProgressView().controlSize(.small) }
+                            else { Image(systemName: "arrow.right.circle.fill") }
+                        }
                     }
                     .buttonStyle(.glassProminent).tint(Theme.accent)
                     .disabled(working)
