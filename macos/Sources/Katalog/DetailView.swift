@@ -194,12 +194,22 @@ struct DetailView: View {
         } else {
             ForEach(kindle.devices) { dev in
                 if kindle.onDevice(book) {
-                    Label("On \(dev.name)", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline).fontWeight(.medium)
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(Theme.accent.opacity(0.12), in: Capsule())
-                        .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.35)))
+                    Menu {
+                        Button(role: .destructive) { remove(from: dev) } label: {
+                            Label("Remove from \(dev.name)", systemImage: "trash")
+                        }
+                    } label: {
+                        Label(working ? "Removing…" : "On \(dev.name)", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline).fontWeight(.medium)
+                            .foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(Theme.accent.opacity(0.12), in: Capsule())
+                            .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.35)))
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .disabled(working)
                 } else {
                     Button { send(to: dev) } label: {
                         Label(working ? "Converting…" : "Send to \(dev.name)",
@@ -208,6 +218,21 @@ struct DetailView: View {
                     .buttonStyle(.glassProminent).tint(Theme.accent)
                     .disabled(working)
                 }
+            }
+        }
+    }
+
+    /// Delete this book's copies from the reader. Scanning the device for matches
+    /// touches the filesystem, so keep it off the main thread like `send`.
+    private func remove(from device: Device) {
+        working = true
+        status = "Removing…"
+        Task.detached {
+            do {
+                try await MainActor.run { try kindle.remove(book, from: device) }
+                await MainActor.run { status = "Removed from \(device.name)"; working = false }
+            } catch {
+                await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }
             }
         }
     }

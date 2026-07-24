@@ -117,4 +117,19 @@ final class KindleWatcher: NSObject, ObservableObject {
         try fm.copyItem(at: src, to: dest)
         rescan()
     }
+
+    /// Delete every copy of this book from the device — matched by the same keys
+    /// the "on device" badge uses, so what shows as present is exactly what we
+    /// remove. Also clears the `.sdr` sidecar folder Kindle keeps per book.
+    func remove(_ book: Book, from device: Device) throws {
+        let fm = FileManager.default
+        let keys = Set(bookKeys(title: book.title, isbn: book.isbn))
+        for file in bookFiles(in: device.documents) {
+            guard !Set((try? fileKeys(path: file.path)) ?? []).isDisjoint(with: keys) else { continue }
+            try fm.removeItem(at: file)
+            let sidecar = file.deletingPathExtension().appendingPathExtension("sdr")
+            if fm.fileExists(atPath: sidecar.path) { try? fm.removeItem(at: sidecar) }
+        }
+        rescan()
+    }
 }
