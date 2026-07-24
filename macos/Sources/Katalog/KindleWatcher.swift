@@ -90,27 +90,37 @@ final class KindleWatcher: NSObject, ObservableObject {
         dev.volume.appendingPathComponent(".katalog-index.json")
     }
 
+    /// A file's device-relative path — the index key. Relative so the cache
+    /// survives the mount moving (e.g. /Volumes/Kindle → /Volumes/Kindle 1).
+    private func lpath(_ file: URL, on dev: Device) -> String {
+        let prefix = dev.volume.path.hasSuffix("/") ? dev.volume.path : dev.volume.path + "/"
+        return file.path.hasPrefix(prefix) ? String(file.path.dropFirst(prefix.count)) : file.path
+    }
+
+    private func loadIndex(_ dev: Device) -> [String: CacheEntry] {
+        (try? JSONDecoder().decode(
+            [String: CacheEntry].self, from: Data(contentsOf: indexURL(dev)))) ?? [:]
+    }
+
     /// Match keys for every book on a device, re-parsing only files whose size
     /// or mtime changed since the last connect. Rewrites the on-device index
     /// when anything was added, changed, or removed. Index keys are paths
     /// relative to the volume, so the cache survives the mount moving (e.g.
     /// /Volumes/Kindle → /Volumes/Kindle 1).
     private func scanKeys(_ dev: Device) -> Set<String> {
-        let old = (try? JSONDecoder().decode(
-            [String: CacheEntry].self, from: Data(contentsOf: indexURL(dev)))) ?? [:]
-        let prefix = dev.volume.path.hasSuffix("/") ? dev.volume.path : dev.volume.path + "/"
+        let old = loadIndex(dev)
         var fresh: [String: CacheEntry] = [:]
         var changed = false
         for file in bookFiles(in: dev.documents) {
             let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
             let size = Int64(vals?.fileSize ?? 0)
             let mtime = Int64(vals?.contentModificationDate?.timeIntervalSince1970 ?? 0)
-            let lpath = file.path.hasPrefix(prefix) ? String(file.path.dropFirst(prefix.count)) : file.path
-            if let hit = old[lpath], hit.size == size, hit.mtime == mtime {
-                fresh[lpath] = hit
+            let key = lpath(file, on: dev)
+            if let hit = old[key], hit.size == size, hit.mtime == mtime {
+                fresh[key] = hit
             } else {
-                fresh[lpath] = CacheEntry(size: size, mtime: mtime,
-                                          keys: (try? fileKeys(path: file.path)) ?? [])
+                fresh[key] = CacheEntry(size: size, mtime: mtime,
+                                        keys: (try? fileKeys(path: file.path)) ?? [])
                 changed = true
             }
         }
@@ -173,11 +183,19 @@ final class KindleWatcher: NSObject, ObservableObject {
     func remove(_ book: Book, from device: Device) throws {
         let fm = FileManager.default
         let keys = Set(bookKeys(title: book.title, isbn: book.isbn))
+        var index = loadIndex(device)
+        var prunedIndex = false
         for file in bookFiles(in: device.documents) {
             guard !Set((try? fileKeys(path: file.path)) ?? []).isDisjoint(with: keys) else { continue }
             try fm.removeItem(at: file)
+            if index.removeValue(forKey: lpath(file, on: device)) != nil { prunedIndex = true }
             let sidecar = file.deletingPathExtension().appendingPathExtension("sdr")
             if fm.fileExists(atPath: sidecar.path) { try? fm.removeItem(at: sidecar) }
+        }
+        // Drop the deleted files from the on-device index now, so it doesn't
+        // carry dead entries until the next reconnect rebuilds it.
+        if prunedIndex, let data = try? JSONEncoder().encode(index) {
+            try? data.write(to: indexURL(device))
         }
         // ponytail: subtract the removed book's keys directly — correct for the
         // usual single connected Kindle. A book shared across two mounted devices
