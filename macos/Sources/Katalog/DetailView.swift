@@ -10,7 +10,6 @@ struct DetailView: View {
     @EnvironmentObject var kindle: KindleWatcher
     @Environment(\.dismiss) private var dismiss
     @State private var status: String?
-    @State private var working = false
     @State private var hoverSide = 0   // -1 left, 1 right, 0 none
 
     var body: some View {
@@ -201,6 +200,7 @@ struct DetailView: View {
                 .font(.caption).foregroundStyle(Theme.subtle)
                 .multilineTextAlignment(.center)
         } else {
+            let working = kindle.busy(book)
             ForEach(kindle.devices) { dev in
                 if kindle.onDevice(book) {
                     // Present/settled state: secondary bordered button, accent
@@ -251,42 +251,12 @@ struct DetailView: View {
         }
     }
 
-    /// Delete this book's copies from the reader. Scanning the device for matches
-    /// touches the filesystem, so keep it off the main thread like `send`.
-    private func remove(from device: Device) {
-        working = true
-        let book = book, kindle = kindle  // capture MainActor state for the detached task
-        Task.detached {
-            do {
-                try kindle.remove(book, from: device)
-                await MainActor.run { working = false }
-            } catch {
-                await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }
-            }
-        }
-    }
+    /// Hand off to the watcher, which owns the work so it keeps running (and
+    /// stays visible in the status bar) after this page closes.
+    private func remove(from device: Device) { kindle.remove(book, from: device) }
 
-    /// Convert the epub to MOBI (off the main thread — it's CPU work) and copy
-    /// the result to the reader.
     private func send(to device: Device) {
-        let epubPath: String
-        do { epubPath = try store.transferPath(book) }
-        catch { status = "Failed: \(error.localizedDescription)"; return }
-
-        working = true
-        let book = book, kindle = kindle  // capture MainActor state for the detached task
-        Task.detached {
-            do {
-                let tmp = FileManager.default.temporaryDirectory
-                    .appendingPathComponent(UUID().uuidString)
-                    .appendingPathExtension("mobi")
-                try convertEpubToMobi(epubPath: epubPath, outPath: tmp.path)
-                try kindle.transfer(book, from: tmp.path, to: device)
-                try? FileManager.default.removeItem(at: tmp)
-                await MainActor.run { working = false }
-            } catch {
-                await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }
-            }
-        }
+        do { kindle.send(book, epubPath: try store.transferPath(book), to: device) }
+        catch { status = "Failed: \(error.localizedDescription)" }
     }
 }

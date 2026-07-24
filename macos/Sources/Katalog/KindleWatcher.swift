@@ -10,6 +10,17 @@ struct Device: Identifiable, Hashable {
     var documents: URL { volume.appendingPathComponent("documents", isDirectory: true) }
 }
 
+/// A running Kindle send/remove, shown in the status bar while in flight.
+struct KindleJob: Identifiable, Equatable {
+    let id = UUID()
+    let bookId: Int64
+    let title: String
+    let deviceName: String
+    enum Kind { case send, remove }
+    let kind: Kind
+    var verb: String { kind == .send ? "Sending" : "Removing" }
+}
+
 extension Book {
     /// Stable, unique filename this book gets on a device. Deterministic so we
     /// can both write it and detect it — the basis of duplicate detection.
@@ -37,6 +48,16 @@ final class KindleWatcher: NSObject, ObservableObject {
     @Published private(set) var deviceKeys: Set<String> = []
     /// True while the background key-scan of a connected device is in flight.
     @Published private(set) var scanning = false
+    /// In-flight send/remove operations. Owned here (not by the book detail
+    /// view) so they keep running — and stay visible in the status bar — after
+    /// the detail page closes. This small array is the whole "job system": a
+    /// desktop app with one Kindle doesn't need a queue, persistence, or retry.
+    @Published private(set) var jobs: [KindleJob] = []
+    /// Last failed operation, surfaced in the status bar until dismissed.
+    @Published var lastFailure: String?
+
+    /// Whether a send or remove for this book is currently running.
+    func busy(_ book: Book) -> Bool { jobs.contains { $0.bookId == book.id } }
 
     override init() {
         super.init()
@@ -160,10 +181,50 @@ final class KindleWatcher: NSObject, ObservableObject {
         return hasDocs && vol.lastPathComponent.lowercased().contains("kindle")
     }
 
+    // MARK: - Owned operations
+    //
+    // These run the work in a watcher-owned task and track it in `jobs`, so it
+    // survives the book detail page closing and shows in the status bar. The
+    // view kicks one off and forgets it.
+
+    /// Convert `epubPath` to MOBI and copy it to the reader, in the background.
+    func send(_ book: Book, epubPath: String, to device: Device) {
+        let job = KindleJob(bookId: book.id, title: book.title, deviceName: device.name, kind: .send)
+        lastFailure = nil
+        jobs.append(job)
+        Task.detached { [weak self] in
+            do {
+                let tmp = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString).appendingPathExtension("mobi")
+                try convertEpubToMobi(epubPath: epubPath, outPath: tmp.path)
+                try self?.performTransfer(book, from: tmp.path, to: device)
+                try? FileManager.default.removeItem(at: tmp)
+                await self?.finish(job, error: nil)
+            } catch { await self?.finish(job, error: error.localizedDescription) }
+        }
+    }
+
+    /// Delete this book's copies from the reader, in the background.
+    func remove(_ book: Book, from device: Device) {
+        let job = KindleJob(bookId: book.id, title: book.title, deviceName: device.name, kind: .remove)
+        lastFailure = nil
+        jobs.append(job)
+        Task.detached { [weak self] in
+            do { try self?.performRemove(book, from: device); await self?.finish(job, error: nil) }
+            catch { await self?.finish(job, error: error.localizedDescription) }
+        }
+    }
+
+    /// Drop a finished job and surface any failure. Hops to main for @Published.
+    @MainActor private func finish(_ job: KindleJob, error: String?) {
+        jobs.removeAll { $0.id == job.id }
+        if let error { lastFailure = "\(job.verb) \(job.title): \(error)" }
+    }
+
     /// Copy the epub at `srcPath` into the device's documents folder under the
     /// book's stable `deviceFilename`. Overwrites an existing copy of the same
     /// book; refresh the scan so the "on device" state updates.
-    func transfer(_ book: Book, from srcPath: String, to device: Device) throws {
+    private func performTransfer(_ book: Book, from srcPath: String, to device: Device) throws {
         let fm = FileManager.default
         let src = URL(fileURLWithPath: srcPath)
         let dest = device.documents.appendingPathComponent(book.deviceFilename)
@@ -180,10 +241,10 @@ final class KindleWatcher: NSObject, ObservableObject {
             mtime: Int64(vals?.contentModificationDate?.timeIntervalSince1970 ?? 0),
             keys: (try? fileKeys(path: dest.path)) ?? [])
         if let data = try? JSONEncoder().encode(index) { try? data.write(to: indexURL(device)) }
-        // We know exactly what we added — update the "on device" state directly
-        // rather than kicking off a full background rescan (which lands late and
-        // briefly flips the button back to its pre-send state). Callers run this
-        // off-main, so hop back to touch the @Published set.
+        // Update the "on device" state directly rather than kicking off a full
+        // background rescan (which lands late and briefly flips the button back
+        // to its pre-send state). Callers run this off-main, so hop back to
+        // touch the @Published set.
         let added = bookKeys(title: book.title, isbn: book.isbn)
         DispatchQueue.main.async { self.deviceKeys.formUnion(added) }
     }
@@ -191,7 +252,7 @@ final class KindleWatcher: NSObject, ObservableObject {
     /// Delete every copy of this book from the device — matched by the same keys
     /// the "on device" badge uses, so what shows as present is exactly what we
     /// remove. Also clears the `.sdr` sidecar folder Kindle keeps per book.
-    func remove(_ book: Book, from device: Device) throws {
+    private func performRemove(_ book: Book, from device: Device) throws {
         let fm = FileManager.default
         let keys = Set(bookKeys(title: book.title, isbn: book.isbn))
         var index = loadIndex(device)
