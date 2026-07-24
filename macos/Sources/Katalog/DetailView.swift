@@ -199,7 +199,12 @@ struct DetailView: View {
                             Label("Remove from \(dev.name)", systemImage: "trash")
                         }
                     } label: {
-                        Label(working ? "Removing…" : "On \(dev.name)", systemImage: "checkmark.circle.fill")
+                        Label {
+                            Text(working ? "Removing…" : "On \(dev.name)")
+                        } icon: {
+                            if working { ProgressView().controlSize(.small) }
+                            else { Image(systemName: "checkmark.circle.fill") }
+                        }
                             .font(.subheadline).fontWeight(.medium)
                             .foregroundStyle(Theme.accent)
                             .padding(.horizontal, 12).padding(.vertical, 7)
