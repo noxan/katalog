@@ -195,7 +195,11 @@ struct DetailView: View {
             ForEach(kindle.devices) { dev in
                 if kindle.onDevice(book) {
                     Label("On \(dev.name)", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline).foregroundStyle(Theme.accent)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                        .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.35)))
                 } else {
                     Button { send(to: dev) } label: {
                         Label(working ? "Converting…" : "Send to \(dev.name)",
