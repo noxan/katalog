@@ -64,31 +64,200 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         .and_then(|b| recindex.get(&b).copied())
         .map(|rec| rec - 1);
 
-    // Flatten the spine into one HTML stream, rewriting <img src> → recindex,
-    // page-break between documents.
+    // Flatten the spine into one HTML stream, rewriting <img src> → recindex and
+    // internal <a href> → MOBI filepos (byte offset into the text). We track the
+    // byte offset of every id anchor and doc start, emit fixed-width filepos
+    // placeholders (so offsets stay stable), then patch in the resolved values.
+    const PREFIX: &str = "<html><head></head><body>";
+    const SUFFIX: &str = "</body></html>";
+    const PAGEBREAK: &str = "<mbp:pagebreak/>";
+
     let mut body = String::new();
+    let mut doc_start: HashMap<String, usize> = HashMap::new();
+    let mut id_at: HashMap<(String, String), usize> = HashMap::new();
+    let mut links: Vec<Link> = Vec::new();
+
     let mut first = true;
     let mut reader = epub.reader();
     while let Some(next) = reader.read_next() {
         let data = next.map_err(|e| format!("read spine: {e}"))?;
-        let content = data.content();
+        let href = basename(data.manifest_entry().resource().key().value().unwrap_or_default())
+            .to_string();
+        let inner = rewrite_images(body_inner(data.content()), &recindex);
+
         if !first {
-            body.push_str("<mbp:pagebreak/>");
+            body.push_str(PAGEBREAK);
         }
         first = false;
-        body.push_str(&rewrite_images(body_inner(content.as_ref()), &recindex));
+
+        // Byte offset where this document's content begins in the final html.
+        let base_off = PREFIX.len() + body.len();
+        doc_start.entry(href.clone()).or_insert(base_off);
+
+        let (rewritten, mut doc_links, doc_ids) = rewrite_links(&inner, &href);
+        for l in &mut doc_links {
+            l.digit_pos += base_off;
+        }
+        links.extend(doc_links);
+        for (id, pos) in doc_ids {
+            id_at.entry((href.clone(), id)).or_insert(base_off + pos);
+        }
+        body.push_str(&rewritten);
     }
-    let html = format!("<html><head></head><body>{body}</body></html>");
+
+    let mut html = format!("{PREFIX}{body}{SUFFIX}").into_bytes();
+
+    // Resolve each internal link to its target byte offset (id anchor if the
+    // link had a #fragment, else the document start) and patch the placeholder.
+    for link in &links {
+        let offset = link
+            .frag
+            .as_ref()
+            .and_then(|f| id_at.get(&(link.target.clone(), f.clone())).copied())
+            .or_else(|| doc_start.get(&link.target).copied())
+            .unwrap_or(0);
+        write_filepos(&mut html, link.digit_pos, offset);
+    }
 
     Ok(Source {
         author: meta.authors.first().cloned(),
         isbn: meta.isbn,
         description: meta.description,
         title: meta.title,
-        html: html.into_bytes(),
+        html,
         images,
         cover_recindex,
     })
+}
+
+/// A rewritten internal link awaiting its resolved filepos.
+struct Link {
+    /// Byte offset in the final html where the filepos digits go.
+    digit_pos: usize,
+    /// Basename of the target document.
+    target: String,
+    /// Fragment id, if the link had one.
+    frag: Option<String>,
+}
+
+const FILEPOS_WIDTH: usize = 10;
+
+/// Overwrite the fixed-width filepos placeholder at `pos` with `offset`.
+fn write_filepos(buf: &mut [u8], pos: usize, offset: usize) {
+    let s = format!("{offset:0FILEPOS_WIDTH$}");
+    let s = &s.as_bytes()[s.len().saturating_sub(FILEPOS_WIDTH)..];
+    buf[pos..pos + FILEPOS_WIDTH].copy_from_slice(s);
+}
+
+/// Rewrite internal `<a href>` to `<a filepos="0000000000">` (placeholder, later
+/// patched), and record the byte offset of every id/name anchor. Returns the
+/// rewritten html, the links (offsets local to the returned string), and the
+/// anchors as (id, local offset of the enclosing tag).
+fn rewrite_links(inner: &str, base: &str) -> (String, Vec<Link>, Vec<(String, usize)>) {
+    let mut out = String::with_capacity(inner.len() + 64);
+    let mut links = Vec::new();
+    let mut ids = Vec::new();
+    let bytes = inner.as_bytes();
+    let mut i = 0;
+
+    while i < inner.len() {
+        if bytes[i] != b'<' {
+            let next = inner[i..].find('<').map_or(inner.len(), |e| i + e);
+            out.push_str(&inner[i..next]);
+            i = next;
+            continue;
+        }
+
+        let end = inner[i..].find('>').map_or(inner.len(), |e| i + e + 1);
+        let tag = &inner[i..end];
+        let tag_out_pos = out.len();
+
+        if let Some(id) = attr_value(tag, "id").or_else(|| attr_value(tag, "name")) {
+            ids.push((id.to_string(), tag_out_pos));
+        }
+
+        if let Some((hpos, value, hlen)) = find_href(tag) {
+            if let Some((target, frag)) = internal_target(value, base) {
+                out.push_str(&tag[..hpos]);
+                let digit_pos = out.len() + "filepos=\"".len();
+                out.push_str("filepos=\"0000000000\"");
+                out.push_str(&tag[hpos + hlen..]);
+                links.push(Link { digit_pos, target, frag });
+                i = end;
+                continue;
+            }
+        }
+
+        out.push_str(tag);
+        i = end;
+    }
+
+    (out, links, ids)
+}
+
+/// Resolve an href to (target basename, fragment). Returns None for external
+/// links (http/mailto/etc.), which are left untouched.
+fn internal_target(href: &str, base: &str) -> Option<(String, Option<String>)> {
+    let href = href.trim();
+    if href.is_empty() || href.contains("://") || href.starts_with("mailto:")
+        || href.starts_with("tel:") || href.starts_with("//")
+    {
+        return None;
+    }
+    let (path, frag) = match href.split_once('#') {
+        Some((p, f)) => (p, Some(f.to_string())),
+        None => (href, None),
+    };
+    let target = if path.is_empty() { base.to_string() } else { basename(path).to_string() };
+    Some((target, frag))
+}
+
+/// Value of `name="..."`/`name='...'` in a tag, matched only at an attribute
+/// boundary (preceded by whitespace) so it never matches inside another word.
+fn attr_value<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+    let bytes = tag.as_bytes();
+    let mut search = 0;
+    while let Some(rel) = tag[search..].find(name) {
+        let at = search + rel;
+        let before = if at == 0 { b'<' } else { bytes[at - 1] };
+        let after = at + name.len();
+        if matches!(before, b' ' | b'\t' | b'\n' | b'\r') && bytes.get(after) == Some(&b'=') {
+            if let Some(&q) = bytes.get(after + 1) {
+                if q == b'"' || q == b'\'' {
+                    let vs = after + 2;
+                    if let Some(e) = tag[vs..].find(q as char) {
+                        return Some(&tag[vs..vs + e]);
+                    }
+                }
+            }
+        }
+        search = at + name.len();
+    }
+    None
+}
+
+/// Locate an `href` attribute, returning (byte pos of "href", value, full length
+/// of the `href="value"` span).
+fn find_href(tag: &str) -> Option<(usize, &str, usize)> {
+    let bytes = tag.as_bytes();
+    let mut search = 0;
+    while let Some(rel) = tag[search..].find("href") {
+        let at = search + rel;
+        let before = if at == 0 { b'<' } else { bytes[at - 1] };
+        let after = at + 4;
+        if matches!(before, b' ' | b'\t' | b'\n' | b'\r') && bytes.get(after) == Some(&b'=') {
+            if let Some(&q) = bytes.get(after + 1) {
+                if q == b'"' || q == b'\'' {
+                    let vs = after + 2;
+                    if let Some(e) = tag[vs..].find(q as char) {
+                        return Some((at, &tag[vs..vs + e], (vs + e + 1) - at));
+                    }
+                }
+            }
+        }
+        search = at + 4;
+    }
+    None
 }
 
 /// Last path component of a resource href.
