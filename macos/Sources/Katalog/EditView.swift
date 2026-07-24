@@ -26,6 +26,7 @@ struct EditView: View {
     @State private var removeCover = false  // set when the cover is removed
     @State private var dropTargeted = false
     @State private var error: String?
+    @State private var fetching = false     // online lookup in flight
 
     init(book: Book, onSaved: @escaping (Book) -> Void) {
         self.book = book
@@ -53,6 +54,17 @@ struct EditView: View {
             }
 
             HStack {
+                Button {
+                    Task { await fetchOnline() }
+                } label: {
+                    if fetching {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Fetch Online", systemImage: "square.and.arrow.down")
+                    }
+                }
+                .disabled(fetching || title.trimmingCharacters(in: .whitespaces).isEmpty)
+                .help("Look up metadata from Google Books")
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
@@ -187,6 +199,35 @@ struct EditView: View {
             Text(label).font(.caption).foregroundStyle(Theme.subtle)
             TextField(prompt, text: text)
                 .textFieldStyle(.roundedBorder)
+        }
+    }
+
+    // MARK: Online lookup
+
+    /// Fetch metadata from Google Books and pre-fill fields the source returns.
+    /// Only non-empty results overwrite a field, so nothing the user typed is
+    /// lost when the source has no value for it.
+    private func fetchOnline() async {
+        fetching = true
+        error = nil
+        defer { fetching = false }
+        do {
+            let firstAuthor = authors.split(separator: ",").first.map { String($0) } ?? ""
+            guard let meta = try await MetadataFetch.lookup(
+                isbn: emptyToNil(isbn), title: title, author: firstAuthor) else {
+                error = "No online match found."
+                return
+            }
+            if let t = meta.title { title = t }
+            if !meta.authors.isEmpty { authors = meta.authors.joined(separator: ", ") }
+            if let p = meta.publisher { publisher = p }
+            if let i = meta.isbn { isbn = i }
+            if let d = meta.description { descriptionText = d }
+            if let url = meta.coverURL, let data = try await MetadataFetch.coverData(from: url) {
+                setCover(data)
+            }
+        } catch {
+            self.error = "Lookup failed: \(error.localizedDescription)"
         }
     }
 
