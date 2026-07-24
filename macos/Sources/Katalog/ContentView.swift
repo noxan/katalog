@@ -10,6 +10,7 @@ struct ContentView: View {
     @EnvironmentObject var kindle: KindleWatcher
     @State private var importing = false
     @State private var selected: Book?
+    @State private var editing: Book?
     @State private var prompts: [DuplicatePrompt] = []
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
@@ -26,6 +27,7 @@ struct ContentView: View {
                     ForEach(sortOrder.sorted(store.books)) { book in
                         BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
                             .onTapGesture { selected = book }
+                            .contextMenu { bookMenu(book) }
                     }
                 }
                 .padding(Theme.spacing)
@@ -61,6 +63,7 @@ struct ContentView: View {
             }
         }
         .sheet(item: $selected) { DetailView(book: $0) }
+        .sheet(item: $editing) { EditView(book: $0) { _ in } }
         .sheet(isPresented: Binding(get: { !prompts.isEmpty },
                                     set: { if !$0 { prompts = [] } })) {
             if let current = prompts.first {
@@ -84,6 +87,24 @@ struct ContentView: View {
         } else {
             let p = prompts.removeFirst()
             if importAnyway { try? store.importBook(p.url) }
+        }
+    }
+
+    // Same actions as DetailView's overflow/context menu.
+    @ViewBuilder private func bookMenu(_ book: Book) -> some View {
+        Button { editing = book } label: {
+            Label("Edit Metadata…", systemImage: "pencil")
+        }
+        Button {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
+        } label: {
+            Label("Open in Finder", systemImage: "folder")
+        }
+        Divider()
+        Button(role: .destructive) {
+            store.remove(book)
+        } label: {
+            Label("Remove from Library", systemImage: "trash")
         }
     }
 
