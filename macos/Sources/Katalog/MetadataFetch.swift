@@ -13,17 +13,21 @@ struct FetchedMetadata {
 
 /// Online metadata lookup via the Google Books volumes API (no key required).
 enum MetadataFetch {
-    /// Look up a book by ISBN when present, else by title + author. Returns the
-    /// first match, or nil if nothing was found.
+    /// Look up a book, preferring ISBN. If an ISBN is given but returns no
+    /// match (stale/wrong ISBN), fall back to title + author. Returns the first
+    /// match, or nil if nothing was found either way.
     static func lookup(isbn: String?, title: String, author: String) async throws -> FetchedMetadata? {
-        let query: String
-        if let isbn, !isbn.trimmingCharacters(in: .whitespaces).isEmpty {
-            query = "isbn:" + isbn.trimmingCharacters(in: .whitespaces)
-        } else {
-            var q = "intitle:" + title
-            if !author.trimmingCharacters(in: .whitespaces).isEmpty { q += "+inauthor:" + author }
-            query = q
+        let trimmedISBN = isbn?.trimmingCharacters(in: .whitespaces) ?? ""
+        if !trimmedISBN.isEmpty, let hit = try await search(query: "isbn:" + trimmedISBN) {
+            return hit
         }
+        var q = "intitle:" + title
+        if !author.trimmingCharacters(in: .whitespaces).isEmpty { q += "+inauthor:" + author }
+        return try await search(query: q)
+    }
+
+    /// Run one Google Books query and map the first result.
+    private static func search(query: String) async throws -> FetchedMetadata? {
         var comps = URLComponents(string: "https://www.googleapis.com/books/v1/volumes")!
         comps.queryItems = [URLQueryItem(name: "q", value: query),
                             URLQueryItem(name: "maxResults", value: "1")]
