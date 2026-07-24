@@ -215,6 +215,13 @@ struct DetailView: View {
                     .menuIndicator(.hidden)
                     .fixedSize()
                     .disabled(working)
+                } else if kindle.scanning {
+                    // Keys aren't in yet — the book may already be on the device,
+                    // so don't imply it isn't with a Send button.
+                    Label {
+                        Text("Checking \(dev.name)…")
+                    } icon: { ProgressView().controlSize(.small) }
+                        .font(.subheadline).foregroundStyle(Theme.subtle)
                 } else {
                     Button { send(to: dev) } label: {
                         Label {
