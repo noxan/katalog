@@ -223,10 +223,15 @@ struct EditView: View {
         if !meta.authors.isEmpty { authors = meta.authors.joined(separator: ", ") }
         if let p = meta.publisher { publisher = p }
         if let i = meta.isbn { isbn = i }
-        if let d = meta.description { descriptionText = d }
-        guard let url = meta.coverURL else { return }
         fetching = true
         defer { fetching = false }
+        // Description isn't in search results — fetch the work on pick.
+        if let d = meta.description {
+            descriptionText = d
+        } else if let key = meta.workKey, let d = await MetadataFetch.description(forWork: key) {
+            descriptionText = d
+        }
+        guard let url = meta.coverURL else { return }
         do {
             if let data = try await MetadataFetch.coverData(from: url) { setCover(data) }
         } catch {
