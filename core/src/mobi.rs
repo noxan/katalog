@@ -53,7 +53,7 @@ fn read_epub(path: &Path) -> Result<Source, String> {
             .unwrap_or_default();
         let Ok(bytes) = entry.read_bytes() else { continue };
         recindex.entry(basename(&href).to_string()).or_insert(images.len() + 1);
-        images.push(bytes);
+        images.push(optimize_image(bytes));
     }
 
     // The cover's position among the images (for EXTH 201).
@@ -258,6 +258,49 @@ fn find_href(tag: &str) -> Option<(usize, &str, usize)> {
         search = at + 4;
     }
     None
+}
+
+/// Keep each embedded image under the MOBI comfort limit, which large images
+/// blow past — the Kindle renders those pages slowly. Oversized images are
+/// downscaled and JPEG-recompressed (like Calibre); small ones pass through
+/// untouched so sharp line-art/diagrams keep their original format.
+///
+/// ponytail: quality ladder at ≤1600px nearly always lands under the cap; add a
+/// second downscale pass only if a pathological image slips through.
+fn optimize_image(bytes: Vec<u8>) -> Vec<u8> {
+    const MAX_BYTES: usize = 120_000; // stay under the ~127 KB MOBI image limit
+    const MAX_DIM: u32 = 1600;
+
+    if bytes.len() <= MAX_BYTES {
+        return bytes;
+    }
+    let Ok(mut img) = image::load_from_memory(&bytes) else {
+        return bytes; // undecodable — ship as-is rather than drop it
+    };
+    if img.width() > MAX_DIM || img.height() > MAX_DIM {
+        img = img.resize(MAX_DIM, MAX_DIM, image::imageops::FilterType::Lanczos3);
+    }
+    let rgb = img.to_rgb8();
+
+    let mut best = bytes;
+    for quality in [82u8, 70, 60, 50, 40] {
+        let mut buf = Vec::new();
+        use image::{ExtendedColorType, ImageEncoder};
+        let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, quality);
+        if enc
+            .write_image(rgb.as_raw(), rgb.width(), rgb.height(), ExtendedColorType::Rgb8)
+            .is_err()
+        {
+            break;
+        }
+        if buf.len() < best.len() {
+            best = buf.clone();
+        }
+        if buf.len() <= MAX_BYTES {
+            return buf;
+        }
+    }
+    best
 }
 
 /// Last path component of a resource href.
