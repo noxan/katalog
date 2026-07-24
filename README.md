@@ -50,7 +50,7 @@ MVP, grouped by area. Checked = shipped.
 
 **Browse**
 - [ ] Search
-- [ ] Sort by author / title
+- [x] Sort by author / title
 - [x] Two grid styles (compact / covers)
 - [x] Follows system light / dark
 
