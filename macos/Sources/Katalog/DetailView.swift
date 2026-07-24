@@ -44,7 +44,6 @@ struct DetailView: View {
             }
 
             if let desc = book.description, !desc.isEmpty {
-                Divider().overlay(Theme.subtle.opacity(0.12))
                 ScrollView {
                     Text(renderedDescription(desc)).font(.callout).lineSpacing(2).foregroundStyle(Theme.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
