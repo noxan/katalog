@@ -197,9 +197,14 @@ final class KindleWatcher: NSObject, ObservableObject {
         var index = loadIndex(device)
         var prunedIndex = false
         for file in bookFiles(in: device.documents) {
-            guard !Set((try? fileKeys(path: file.path)) ?? []).isDisjoint(with: keys) else { continue }
+            let key = lpath(file, on: device)
+            // Match against cached keys — parsing every file here is what made
+            // remove slow (it re-read all books to find the one to delete). Fall
+            // back to a parse only for a file the index doesn't know yet.
+            let fileK = index[key]?.keys ?? (try? fileKeys(path: file.path)) ?? []
+            guard !Set(fileK).isDisjoint(with: keys) else { continue }
             try fm.removeItem(at: file)
-            if index.removeValue(forKey: lpath(file, on: device)) != nil { prunedIndex = true }
+            if index.removeValue(forKey: key) != nil { prunedIndex = true }
             let sidecar = file.deletingPathExtension().appendingPathExtension("sdr")
             if fm.fileExists(atPath: sidecar.path) { try? fm.removeItem(at: sidecar) }
         }
