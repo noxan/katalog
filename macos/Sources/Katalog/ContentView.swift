@@ -300,7 +300,19 @@ struct BookCell: View {
                             .foregroundStyle(.white, Theme.accent)
                             .shadow(color: .black.opacity(0.5), radius: 2)
                             .padding(6)
-                            .help("On your reader")
+                        .help("On your reader")
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if let index = book.seriesIndex {
+                        Text("#\(EditView.formatIndex(index))")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.black.opacity(0.7), in: Capsule())
+                            .padding(6)
+                            .help("Book \(EditView.formatIndex(index)) in \(book.series ?? "series")")
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
