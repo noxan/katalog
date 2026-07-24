@@ -244,6 +244,7 @@ struct DetailView: View {
     /// touches the filesystem, so keep it off the main thread like `send`.
     private func remove(from device: Device) {
         working = true
+        let book = book, kindle = kindle  // capture MainActor state for the detached task
         Task.detached {
             do {
                 try kindle.remove(book, from: device)
@@ -262,6 +263,7 @@ struct DetailView: View {
         catch { status = "Failed: \(error.localizedDescription)"; return }
 
         working = true
+        let book = book, kindle = kindle  // capture MainActor state for the detached task
         Task.detached {
             do {
                 let tmp = FileManager.default.temporaryDirectory
