@@ -67,14 +67,58 @@ final class KindleWatcher: NSObject, ObservableObject {
         let devices = self.devices
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            let keys = Set(devices.flatMap { dev in
-                self.bookFiles(in: dev.documents).flatMap { (try? fileKeys(path: $0.path)) ?? [] }
-            })
+            let keys = devices.reduce(into: Set<String>()) { $0.formUnion(self.scanKeys($1)) }
             DispatchQueue.main.async {
                 self.deviceKeys = keys
                 self.scanning = false
             }
         }
+    }
+
+    // MARK: - On-device key cache
+    //
+    // Reading every book's metadata on each connect is the slow part (see
+    // rescan). We cache each file's match keys in a hidden index at the device
+    // root — same idea as Calibre's metadata.calibre, but keyed on size *and*
+    // mtime (Calibre uses size alone, so a same-size edit slips through) and
+    // covering every book including native Amazon content Calibre's own cache
+    // ignores. A reconnect then re-parses only files that are new or changed.
+
+    private struct CacheEntry: Codable { let size: Int64; let mtime: Int64; let keys: [String] }
+
+    private func indexURL(_ dev: Device) -> URL {
+        dev.volume.appendingPathComponent(".katalog-index.json")
+    }
+
+    /// Match keys for every book on a device, re-parsing only files whose size
+    /// or mtime changed since the last connect. Rewrites the on-device index
+    /// when anything was added, changed, or removed. Index keys are paths
+    /// relative to the volume, so the cache survives the mount moving (e.g.
+    /// /Volumes/Kindle → /Volumes/Kindle 1).
+    private func scanKeys(_ dev: Device) -> Set<String> {
+        let old = (try? JSONDecoder().decode(
+            [String: CacheEntry].self, from: Data(contentsOf: indexURL(dev)))) ?? [:]
+        let prefix = dev.volume.path.hasSuffix("/") ? dev.volume.path : dev.volume.path + "/"
+        var fresh: [String: CacheEntry] = [:]
+        var changed = false
+        for file in bookFiles(in: dev.documents) {
+            let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            let size = Int64(vals?.fileSize ?? 0)
+            let mtime = Int64(vals?.contentModificationDate?.timeIntervalSince1970 ?? 0)
+            let lpath = file.path.hasPrefix(prefix) ? String(file.path.dropFirst(prefix.count)) : file.path
+            if let hit = old[lpath], hit.size == size, hit.mtime == mtime {
+                fresh[lpath] = hit
+            } else {
+                fresh[lpath] = CacheEntry(size: size, mtime: mtime,
+                                          keys: (try? fileKeys(path: file.path)) ?? [])
+                changed = true
+            }
+        }
+        if changed || fresh.count != old.count,  // count drop => a file was removed
+           let data = try? JSONEncoder().encode(fresh) {
+            try? data.write(to: indexURL(dev))
+        }
+        return Set(fresh.values.flatMap(\.keys))
     }
 
     private static let ebookExts: Set<String> = ["epub", "mobi", "azw", "azw3", "prc", "kfx"]
