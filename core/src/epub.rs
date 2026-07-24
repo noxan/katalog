@@ -50,7 +50,6 @@ fn fallback_title(path: &Path) -> String {
         .to_string()
 }
 
-/// Write edited metadata back into an epub's package document (OPF), in place.
 /// The metadata `write_metadata` writes into an epub. Deliberately narrower than
 /// the library's `BookEdit`: ISBN and series are omitted because they are NOT
 /// written to the file (the DB is authoritative). ISBN lives in `dc:identifier`,

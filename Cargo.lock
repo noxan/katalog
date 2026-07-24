@@ -703,7 +703,6 @@ dependencies = [
  "rbook",
  "rusqlite",
  "tempfile",
- "thiserror 2.0.19",
  "uniffi",
  "zip",
 ]
