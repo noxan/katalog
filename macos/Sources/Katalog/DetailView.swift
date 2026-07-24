@@ -34,6 +34,7 @@ struct DetailView: View {
         .overlay(alignment: .topTrailing) { chrome }
         .contextMenu { menuItems }
         .onChange(of: book.id) { status = nil }
+        .task(id: book.id) { book = (try? store.cachePageCount(book)) ?? book }
         .sheet(isPresented: $editing) {
             EditView(book: book) { book = $0 }
         }
@@ -116,6 +117,7 @@ struct DetailView: View {
         rows.append(("Format", book.format.uppercased()))
         if let l = book.language, !l.isEmpty { rows.append(("Language", l)) }
         if let i = book.isbn, !i.isEmpty { rows.append(("ISBN", i)) }
+        if book.pageCount > 0 { rows.append(("Pages", "\\(book.pageCount)")) }
         rows.append(("Added", formattedAdded))
         return rows
     }

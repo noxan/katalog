@@ -122,6 +122,12 @@ final class LibraryStore: ObservableObject {
         return updated
     }
 
+    func cachePageCount(_ book: Book) throws -> Book {
+        let updated = try lib.cachePageCount(id: book.id)
+        if let i = books.firstIndex(where: { $0.id == book.id }) { books[i] = updated }
+        return updated
+    }
+
     /// Absolute path of the managed epub, validated for transfer.
     func transferPath(_ book: Book) throws -> String {
         try lib.prepareTransfer(id: book.id)

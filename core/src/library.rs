@@ -56,6 +56,8 @@ pub struct Book {
     pub language: Option<String>,
     pub publisher: Option<String>,
     pub description: Option<String>,
+    /// Printed-page count from the EPUB, or -1 until an older row is cached.
+    pub page_count: i64,
     pub added_at: String,
 }
 
@@ -127,11 +129,14 @@ impl Library {
                 language    TEXT,
                 publisher   TEXT,
                 description TEXT,
+                page_count  INTEGER,
                 added_at    TEXT NOT NULL DEFAULT (datetime('now'))
             );",
         )?;
         // ponytail: migrate pre-existing DBs; the ADD fails once the column exists, ignore it.
         let _ = conn.execute("ALTER TABLE books ADD COLUMN series_index REAL", []);
+        // ponytail: migrate pre-existing DBs; the ADD fails once the column exists, ignore it.
+        let _ = conn.execute("ALTER TABLE books ADD COLUMN page_count INTEGER", []);
         normalize_stored_authors(&conn)?;
         Ok(Arc::new(Library {
             conn: Mutex::new(conn),
@@ -176,8 +181,8 @@ impl Library {
             let conn = self.lock();
             conn.execute(
                 "INSERT INTO books
-                    (title, authors, file_path, format, isbn, language, publisher, description)
-                 VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7)",
+                    (title, authors, file_path, format, isbn, language, publisher, description, page_count)
+                 VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7, ?8)",
                 rusqlite::params![
                     meta.title,
                     authors.join("\n"),
@@ -186,6 +191,7 @@ impl Library {
                     meta.language,
                     meta.publisher,
                     meta.description,
+                    meta.page_count.unwrap_or(0),
                 ],
             )?;
             conn.last_insert_rowid()
@@ -221,6 +227,25 @@ impl Library {
             Some(r) => Ok(Some(r?)),
             None => Ok(None),
         }
+    }
+
+    /// Populate the page-list count for libraries created before this field
+    /// existed. Zero means the EPUB does not declare printed pages.
+    pub fn cache_page_count(&self, id: i64) -> Result<Book, KatalogError> {
+        let book = self
+            .get(id)?
+            .ok_or_else(|| KatalogError::Message(format!("no book with id {id}")))?;
+        if book.page_count >= 0 {
+            return Ok(book);
+        }
+        let page_count = epub::parse(Path::new(&book.file_path))?.page_count.unwrap_or(0);
+        let conn = self.lock();
+        conn.execute(
+            "UPDATE books SET page_count = ?1 WHERE id = ?2",
+            rusqlite::params![page_count, id],
+        )?;
+        drop(conn);
+        self.get(id)?.ok_or_else(|| KatalogError::Message("book vanished after cache".into()))
     }
 
     /// If an epub matches a book already in the library — same ISBN, or same
@@ -469,7 +494,7 @@ impl Library {
 }
 
 const SELECT: &str = "SELECT id, title, authors, series, cover_path, file_path, \
-     format, isbn, language, publisher, description, added_at, series_index FROM books";
+     format, isbn, language, publisher, description, added_at, series_index, COALESCE(page_count, -1) FROM books";
 
 fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
     let authors: String = row.get(2)?;
@@ -487,6 +512,7 @@ fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
         publisher: row.get(9)?,
         description: row.get(10)?,
         added_at: row.get(11)?,
+        page_count: row.get(13)?,
     })
 }
 

@@ -11,6 +11,8 @@ pub struct ParsedEpub {
     pub publisher: Option<String>,
     pub isbn: Option<String>,
     pub description: Option<String>,
+    /// Printed-page count from the EPUB navigation page-list, when supplied.
+    pub page_count: Option<i64>,
     pub cover: Option<Vec<u8>>,
 }
 
@@ -47,6 +49,7 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         publisher,
         isbn,
         description: md.description().map(|d| d.value().to_string()),
+        page_count: epub.toc().by_kind("page-list").map(|pages| pages.flatten().count() as i64),
         cover,
     })
 }
