@@ -42,6 +42,7 @@ MVP, grouped by area. Checked = shipped.
 **Metadata**
 - [x] View metadata + cover
 - [x] Edit metadata (all fields + cover), written back into the epub
+- [x] Online metadata lookup
 
 **Formats & transfer**
 - [x] EPUB parsing (read-only)
@@ -57,7 +58,6 @@ MVP, grouped by area. Checked = shipped.
 ### Ideas for later (or never)
 
 - Automatic app updates (Sparkle) or App Store
-- Online metadata lookup
 - Send-to-Kindle email
 - Windows / Linux (the Rust core is already platform-agnostic)
 - In-app reading / rendering — Katalog is a manager, not a reader
