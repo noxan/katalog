@@ -235,11 +235,10 @@ struct DetailView: View {
     /// touches the filesystem, so keep it off the main thread like `send`.
     private func remove(from device: Device) {
         working = true
-        status = "Removing…"
         Task.detached {
             do {
                 try await MainActor.run { try kindle.remove(book, from: device) }
-                await MainActor.run { status = "Removed from \(device.name)"; working = false }
+                await MainActor.run { working = false }
             } catch {
                 await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }
             }
@@ -254,7 +253,6 @@ struct DetailView: View {
         catch { status = "Failed: \(error.localizedDescription)"; return }
 
         working = true
-        status = "Converting…"
         Task.detached {
             do {
                 let tmp = FileManager.default.temporaryDirectory
@@ -263,7 +261,7 @@ struct DetailView: View {
                 try convertEpubToMobi(epubPath: epubPath, outPath: tmp.path)
                 try await MainActor.run { try kindle.transfer(book, from: tmp.path, to: device) }
                 try? FileManager.default.removeItem(at: tmp)
-                await MainActor.run { status = "Sent to \(device.name) ✓"; working = false }
+                await MainActor.run { working = false }
             } catch {
                 await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }
             }
