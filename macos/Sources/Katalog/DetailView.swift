@@ -244,7 +244,7 @@ struct DetailView: View {
         working = true
         Task.detached {
             do {
-                try await MainActor.run { try kindle.remove(book, from: device) }
+                try kindle.remove(book, from: device)
                 await MainActor.run { working = false }
             } catch {
                 await MainActor.run { status = "Failed: \(error.localizedDescription)"; working = false }

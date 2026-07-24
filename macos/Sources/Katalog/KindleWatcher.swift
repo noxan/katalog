@@ -136,6 +136,8 @@ final class KindleWatcher: NSObject, ObservableObject {
         // ponytail: subtract the removed book's keys directly — correct for the
         // usual single connected Kindle. A book shared across two mounted devices
         // would need per-device key sets; mount/unmount rescan rebuilds the union.
-        deviceKeys.subtract(keys)
+        // Callers run this off the main thread (the scan is slow I/O), so hop back
+        // to update the @Published set.
+        DispatchQueue.main.async { self.deviceKeys.subtract(keys) }
     }
 }
