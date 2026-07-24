@@ -132,6 +132,7 @@ impl Library {
         )?;
         // ponytail: migrate pre-existing DBs; the ADD fails once the column exists, ignore it.
         let _ = conn.execute("ALTER TABLE books ADD COLUMN series_index REAL", []);
+        normalize_stored_authors(&conn)?;
         Ok(Arc::new(Library {
             conn: Mutex::new(conn),
             books_dir,
@@ -146,7 +147,8 @@ impl Library {
     pub fn import(&self, epub_path: String, copy: bool, organize: bool) -> Result<Book, KatalogError> {
         let src = PathBuf::from(&epub_path);
         let meta = epub::parse(&src)?;
-        let author = meta.authors.first().map(String::as_str).unwrap_or("Unknown");
+        let authors = normalize_authors(meta.authors);
+        let author = authors.first().map(String::as_str).unwrap_or("Unknown");
 
         let file_path = if copy {
             let dest = if organize {
@@ -178,7 +180,7 @@ impl Library {
                  VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7)",
                 rusqlite::params![
                     meta.title,
-                    meta.authors.join("\n"),
+                    authors.join("\n"),
                     file_path.to_string_lossy(),
                     meta.isbn,
                     meta.language,
@@ -235,7 +237,7 @@ impl Library {
             Some(existing) => Ok(Some(DuplicateHit {
                 existing,
                 incoming_title: meta.title,
-                incoming_authors: meta.authors,
+                incoming_authors: normalize_authors(meta.authors),
                 incoming_cover: meta.cover,
             })),
             None => Ok(None),
@@ -275,12 +277,14 @@ impl Library {
             .get(id)?
             .ok_or_else(|| KatalogError::Message(format!("no book with id {id}")))?;
 
+        let authors = normalize_authors(edit.authors.clone());
+
         // 1. Write metadata (and any new cover) back into the epub itself.
         let mut file_path = PathBuf::from(&book.file_path);
         if book.format == "epub" && file_path.exists() {
             epub::write_metadata(&file_path, &epub::EpubEdit {
                 title: &edit.title,
-                authors: &edit.authors,
+                authors: &authors,
                 publisher: nonempty(&edit.publisher),
                 language: nonempty(&edit.language),
                 description: nonempty(&edit.description),
@@ -336,7 +340,7 @@ impl Library {
                  WHERE id=?11",
                 rusqlite::params![
                     edit.title,
-                    edit.authors.join("\n"),
+                    authors.join("\n"),
                     edit.series,
                     edit.series_index,
                     edit.publisher,
@@ -443,7 +447,8 @@ impl Library {
             return None; // flat layout — leave the filename as-is
         }
         let ext = current.extension().and_then(|e| e.to_str()).unwrap_or("epub");
-        let author = edit.authors.first().map(String::as_str).unwrap_or("Unknown");
+        let authors = normalize_authors(edit.authors.clone());
+        let author = authors.first().map(String::as_str).unwrap_or("Unknown");
         Some(self.organized_dest(&edit.title, author, ext))
     }
 
@@ -485,6 +490,49 @@ fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
     })
 }
 
+/// Canonicalize the common library-export form, "Last, First", while keeping
+/// multi-part or combined names intact rather than guessing their structure.
+fn normalize_authors(authors: Vec<String>) -> Vec<String> {
+    authors
+        .into_iter()
+        .filter_map(|author| normalize_author(&author))
+        .collect()
+}
+
+fn normalize_author(author: &str) -> Option<String> {
+    let author = author.trim();
+    let Some((last, first)) = author.split_once(',') else {
+        return (!author.is_empty()).then(|| author.to_string());
+    };
+    if first.contains(',') || last.trim().is_empty() || first.trim().is_empty() {
+        return (!author.is_empty()).then(|| author.to_string());
+    }
+    Some(format!("{} {}", first.trim(), last.trim()))
+}
+
+/// Normalize old rows when the library opens, so the catalog changes without
+/// requiring every book to be re-saved.
+fn normalize_stored_authors(conn: &Connection) -> Result<(), KatalogError> {
+    let changed = {
+        let mut stmt = conn.prepare("SELECT id, authors FROM books")?;
+        let mut rows = stmt.query([])?;
+        let mut changed = Vec::new();
+        while let Some(row) = rows.next()? {
+            let id: i64 = row.get(0)?;
+            let authors: String = row.get(1)?;
+            let normalized = normalize_authors(authors.lines().map(str::to_string).collect()).join("\n");
+            if normalized != authors {
+                changed.push((id, normalized));
+            }
+        }
+        changed
+    };
+    for (id, authors) in changed {
+        conn.execute("UPDATE books SET authors = ?1 WHERE id = ?2", rusqlite::params![authors, id])?;
+    }
+    Ok(())
+}
+
 /// A trimmed-nonempty view of an optional string, else `None`.
 fn nonempty(opt: &Option<String>) -> Option<&str> {
     opt.as_deref().filter(|s| !s.is_empty())
@@ -509,4 +557,18 @@ fn sanitize(s: &str) -> String {
     let trimmed = cleaned.trim().trim_matches('.');
     let out: String = trimmed.chars().take(80).collect();
     if out.is_empty() { "_".into() } else { out }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_authors;
+
+    #[test]
+    fn normalizes_last_first_without_guessing_combined_names() {
+        assert_eq!(normalize_authors(vec!["Le Guin, Ursula K.".into()]), ["Ursula K. Le Guin"]);
+        assert_eq!(
+            normalize_authors(vec!["Lynch and Rothchild".into(), "Adam, James, 1860".into()]),
+            ["Lynch and Rothchild", "Adam, James, 1860"]
+        );
+    }
 }

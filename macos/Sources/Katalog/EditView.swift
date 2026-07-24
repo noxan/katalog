@@ -15,7 +15,7 @@ struct EditView: View {
     var onSaved: (Book) -> Void
 
     @State private var title: String
-    @State private var authors: String     // comma-separated
+    @State private var authors: String     // one author per line
     @State private var series: String
     @State private var seriesIndex: String // series position, parsed to a number on save
     @State private var publisher: String
@@ -34,7 +34,7 @@ struct EditView: View {
         self.book = book
         self.onSaved = onSaved
         _title = State(initialValue: book.title)
-        _authors = State(initialValue: book.authors.joined(separator: ", "))
+        _authors = State(initialValue: book.authors.joined(separator: "\n"))
         _series = State(initialValue: book.series ?? "")
         _seriesIndex = State(initialValue: book.seriesIndex.map(Self.formatIndex) ?? "")
         _publisher = State(initialValue: book.publisher ?? "")
@@ -88,9 +88,9 @@ struct EditView: View {
         }
     }
 
-    /// The Authors field split into trimmed, non-empty names.
+    /// The Authors field split into trimmed, non-empty lines.
     private var parsedAuthors: [String] {
-        authors.split(separator: ",")
+        authors.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
     }
@@ -196,7 +196,13 @@ struct EditView: View {
     private var fields: some View {
         VStack(alignment: .leading, spacing: 10) {
             field("Title", $title)
-            field("Authors", $authors, prompt: "comma-separated")
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Authors (one per line)").font(.caption).foregroundStyle(Theme.subtle)
+                TextEditor(text: $authors)
+                    .font(.callout)
+                    .frame(height: 52)
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.subtle.opacity(0.3)))
+            }
             HStack(alignment: .bottom, spacing: 10) {
                 field("Series", $series)
                 field("Book #", $seriesIndex, prompt: "e.g. 3").frame(width: 90)
@@ -230,7 +236,7 @@ struct EditView: View {
     /// overwrite, so nothing the user typed is lost when the source lacks a value.
     private func apply(_ meta: FetchedMetadata) async {
         if let t = meta.title { title = t }
-        if !meta.authors.isEmpty { authors = meta.authors.joined(separator: ", ") }
+        if !meta.authors.isEmpty { authors = meta.authors.joined(separator: "\n") }
         if let p = meta.publisher { publisher = p }
         if let i = meta.isbn { isbn = i }
         fetching = true
