@@ -39,6 +39,8 @@ struct Source {
     images: Vec<Vec<u8>>,
     /// 0-based index into `images` of the cover, for EXTH 201.
     cover_recindex: Option<usize>,
+    /// Resolved TOC entries (label + byte offset) for the NCX index.
+    toc: Vec<crate::mobi_index::TocEntry>,
 }
 
 fn read_epub(path: &Path) -> Result<Source, String> {
@@ -126,6 +128,29 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         write_filepos(&mut html, link.digit_pos, offset);
     }
 
+    // Extract the TOC and resolve each entry to a byte offset, reusing the same
+    // anchor maps as the filepos links. Offsets are final: patching filepos above
+    // only overwrites fixed-width digits, never shifts bytes.
+    let mut toc = Vec::new();
+    if let Some(root) = epub.toc().contents() {
+        for entry in root.flatten() {
+            let label = entry.label().trim();
+            let Some(href) = entry.resource().and_then(|r| r.key().value().map(str::to_string))
+            else {
+                continue;
+            };
+            if label.is_empty() {
+                continue;
+            }
+            if let Some(off) = resolve_offset(&href, &doc_start, &id_at) {
+                toc.push(crate::mobi_index::TocEntry {
+                    label: label.to_string(),
+                    offset: off as u32,
+                });
+            }
+        }
+    }
+
     Ok(Source {
         authors: meta.authors,
         isbn: meta.isbn,
@@ -141,7 +166,20 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         html,
         images,
         cover_recindex,
+        toc,
     })
+}
+
+/// Resolve a TOC/link href to its byte offset (id anchor if it has a #fragment,
+/// else the document start), reusing the flatten pass's anchor maps.
+fn resolve_offset(
+    href: &str,
+    doc_start: &HashMap<String, usize>,
+    id_at: &HashMap<(String, String), usize>,
+) -> Option<usize> {
+    let (target, frag) = internal_target(href, "")?;
+    frag.and_then(|f| id_at.get(&(target.clone(), f)).copied())
+        .or_else(|| doc_start.get(&target).copied())
 }
 
 /// A rewritten internal link awaiting its resolved filepos.
@@ -375,17 +413,24 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     };
     let n_text = text_records.len();
 
-    // Record numbering: 0 = header, 1..=n_text = text, then images, FLIS, FCIS, EOF.
+    // Record numbering: 0 = header, 1..=n_text = text, then the NCX index (INDX
+    // header, INDX entries, CNCX — must be contiguous, in that order), then
+    // images, FLIS, FCIS, EOF.
     let last_text = n_text; // 1-based record index of the last text record
     let n_images = src.images.len();
-    let first_image_record = last_text + 1; // record index of image #1 (recindex 1)
-    let flis_index = last_text + n_images + 1;
+
+    let index = crate::mobi_index::build_ncx(&src.toc, text_len);
+    let n_index = if index.is_some() { 3 } else { 0 };
+    let first_index_record = last_text + 1; // INDX header record
+    let first_image_record = last_text + n_index + 1; // image #1 (recindex 1)
+    let flis_index = last_text + n_index + n_images + 1;
     let fcis_index = flis_index + 1;
 
     let record0 = build_record0(
         src,
         text_len,
         n_text,
+        /* first_index_record */ if index.is_some() { first_index_record as u32 } else { NONE },
         /* first_image_index */ if n_images > 0 { first_image_record as u32 } else { NONE },
         /* first_non_book_index */ (last_text + 1) as u32,
         /* last_content_record */ (flis_index - 1) as u16,
@@ -393,9 +438,14 @@ fn build_mobi(src: &Source) -> Vec<u8> {
         flis_index as u32,
     );
 
-    let mut records: Vec<Vec<u8>> = Vec::with_capacity(n_text + n_images + 4);
+    let mut records: Vec<Vec<u8>> = Vec::with_capacity(n_text + n_index + n_images + 4);
     records.push(record0);
     records.extend(text_records);
+    if let Some(idx) = &index {
+        records.push(idx.header.clone());
+        records.push(idx.entries.clone());
+        records.push(idx.cncx.clone());
+    }
     records.extend(src.images.iter().cloned());
     records.push(flis_record());
     records.push(fcis_record(text_len));
@@ -404,10 +454,12 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     write_pdb(&src.title, &records)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_record0(
     src: &Source,
     text_len: u32,
     n_text: usize,
+    first_index_record: u32,
     first_image_index: u32,
     first_non_book_index: u32,
     last_content_record: u16,
@@ -423,6 +475,7 @@ fn build_record0(
     rec.extend_from_slice(&mobi_header(
         name_offset as u32,
         name.len() as u32,
+        first_index_record,
         first_image_index,
         first_non_book_index,
         last_content_record,
@@ -461,9 +514,11 @@ fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
 }
 
 /// The 232-byte MOBI header, fields in the exact order the `mobi` crate parses.
+#[allow(clippy::too_many_arguments)]
 fn mobi_header(
     name_offset: u32,
     name_length: u32,
+    first_index_record: u32,
     first_image_index: u32,
     first_non_book_index: u32,
     last_content_record: u16,
@@ -523,7 +578,7 @@ fn mobi_header(
     u32(&mut h, NONE); // data_section_count
     u32(&mut h, NONE); // unknown, conventional MOBI6 value
     u32(&mut h, 0); // extra_record_data_flags: no trailing bytes on text records
-    u32(&mut h, NONE); // first_index_record
+    u32(&mut h, first_index_record); // first INDX (NCX) record, or NONE
 
     debug_assert_eq!(h.len(), MOBI_HEADER_LEN as usize);
     h
