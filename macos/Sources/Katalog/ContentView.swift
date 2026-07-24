@@ -32,7 +32,8 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
         .safeAreaInset(edge: .bottom) {
-            StatusBar(bookCount: store.books.count, devices: kindle.devices, scanning: kindle.scanning)
+            StatusBar(bookCount: store.books.count, devices: kindle.devices, scanning: kindle.scanning,
+                      jobs: kindle.jobs, failure: kindle.lastFailure) { kindle.lastFailure = nil }
         }
         .dropDestination(for: URL.self) { urls, _ in
             let epubs = store.epubURLs(from: urls)
@@ -111,6 +112,9 @@ struct StatusBar: View {
     let bookCount: Int
     let devices: [Device]
     var scanning: Bool = false
+    var jobs: [KindleJob] = []
+    var failure: String?
+    var onDismissFailure: () -> Void = {}
     @State private var hoverReader = false
 
     var body: some View {
@@ -119,6 +123,7 @@ struct StatusBar: View {
             : (scanning ? "externaldrive.fill" : "externaldrive.fill.badge.checkmark")
         HStack(spacing: 6) {
             Text("\(bookCount) book\(bookCount == 1 ? "" : "s")")
+            jobStatus
             Spacer()
             if connected {
                 Menu {
@@ -154,6 +159,21 @@ struct StatusBar: View {
         .overlay(alignment: .top) { Divider() }
         .help(!connected ? "No reader mounted — unlock your Kindle and choose file transfer"
               : (scanning ? "Reading books on the reader…" : "Reader connected"))
+    }
+
+    /// In-flight sends/removes, or the last failure (click to dismiss). Sits
+    /// next to the book count so background work stays visible after the detail
+    /// page closes.
+    @ViewBuilder private var jobStatus: some View {
+        if let failure {
+            Button(action: onDismissFailure) {
+                Label(failure, systemImage: "exclamationmark.triangle.fill")
+            }
+            .buttonStyle(.plain).foregroundStyle(.red).help("Click to dismiss")
+        } else if !jobs.isEmpty {
+            ProgressView().controlSize(.small).scaleEffect(0.7)
+            Text(jobs.count == 1 ? "\(jobs[0].verb) \(jobs[0].title)…" : "\(jobs.count) transfers…")
+        }
     }
 
     @ViewBuilder private var deviceActions: some View {
