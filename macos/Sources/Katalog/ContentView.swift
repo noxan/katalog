@@ -5,12 +5,24 @@ import KatalogCore
 
 private let epubType = UTType(filenameExtension: "epub") ?? .data
 
+/// The single modal a book cell can open — detail or metadata editor.
+private enum BookSheet: Identifiable {
+    case detail(Book), edit(Book)
+    var id: String {
+        switch self {
+        case .detail(let b): return "detail-\(b.id)"
+        case .edit(let b): return "edit-\(b.id)"
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var store: LibraryStore
     @EnvironmentObject var kindle: KindleWatcher
     @State private var importing = false
-    @State private var selected: Book?
-    @State private var editing: Book?
+    // One sheet route: stacking two .sheet(item:) on the same view leaves the
+    // second binding stuck after first dismiss, so a second edit won't open.
+    @State private var sheet: BookSheet?
     @State private var prompts: [DuplicatePrompt] = []
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
@@ -26,7 +38,7 @@ struct ContentView: View {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
                     ForEach(sortOrder.sorted(store.books)) { book in
                         BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
-                            .onTapGesture { selected = book }
+                            .onTapGesture { sheet = .detail(book) }
                             .contextMenu { bookMenu(book) }
                     }
                 }
@@ -62,8 +74,12 @@ struct ContentView: View {
                 prompts = store.importBatch(store.epubURLs(from: urls))
             }
         }
-        .sheet(item: $selected) { DetailView(book: $0) }
-        .sheet(item: $editing) { EditView(book: $0) { _ in } }
+        .sheet(item: $sheet) { route in
+            switch route {
+            case .detail(let book): DetailView(book: book)
+            case .edit(let book): EditView(book: book) { _ in }
+            }
+        }
         .sheet(isPresented: Binding(get: { !prompts.isEmpty },
                                     set: { if !$0 { prompts = [] } })) {
             if let current = prompts.first {
@@ -92,7 +108,7 @@ struct ContentView: View {
 
     // Same actions as DetailView's overflow/context menu.
     @ViewBuilder private func bookMenu(_ book: Book) -> some View {
-        Button { editing = book } label: {
+        Button { sheet = .edit(book) } label: {
             Label("Edit Metadata…", systemImage: "pencil")
         }
         Button {
