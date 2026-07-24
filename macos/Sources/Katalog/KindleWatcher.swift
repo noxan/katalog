@@ -115,7 +115,10 @@ final class KindleWatcher: NSObject, ObservableObject {
         let dest = device.documents.appendingPathComponent(book.deviceFilename)
         if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
         try fm.copyItem(at: src, to: dest)
-        rescan()
+        // We know exactly what we added — update the "on device" state directly
+        // rather than kicking off a full background rescan (which lands late and
+        // briefly flips the button back to its pre-send state).
+        deviceKeys.formUnion(bookKeys(title: book.title, isbn: book.isbn))
     }
 
     /// Delete every copy of this book from the device — matched by the same keys
