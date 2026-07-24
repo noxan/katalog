@@ -278,6 +278,11 @@ struct BookCell: View {
             }
         }
         .frame(width: Theme.coverWidth, alignment: .leading)
+        // Fill the whole grid column so hover/tap map 1:1 to this book. The
+        // adaptive columns are wider than coverWidth; without this each cover
+        // is a narrow frame with dead gaps, and hits drift to the neighbor.
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
         .onHover { hover = $0 }
     }
 
