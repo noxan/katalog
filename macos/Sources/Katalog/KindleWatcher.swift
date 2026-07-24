@@ -133,6 +133,9 @@ final class KindleWatcher: NSObject, ObservableObject {
             let sidecar = file.deletingPathExtension().appendingPathExtension("sdr")
             if fm.fileExists(atPath: sidecar.path) { try? fm.removeItem(at: sidecar) }
         }
-        rescan()
+        // ponytail: subtract the removed book's keys directly — correct for the
+        // usual single connected Kindle. A book shared across two mounted devices
+        // would need per-device key sets; mount/unmount rescan rebuilds the union.
+        deviceKeys.subtract(keys)
     }
 }
