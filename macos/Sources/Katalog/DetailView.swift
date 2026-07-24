@@ -194,6 +194,8 @@ struct DetailView: View {
         } else {
             ForEach(kindle.devices) { dev in
                 if kindle.onDevice(book) {
+                    // Present/settled state: secondary bordered button, accent
+                    // checkmark. The menu chevron keeps it reading as interactive.
                     Menu {
                         Button(role: .destructive) { remove(from: dev) } label: {
                             Label("Remove from \(dev.name)", systemImage: "trash")
@@ -203,16 +205,12 @@ struct DetailView: View {
                             Text(working ? "Removing…" : "On \(dev.name)")
                         } icon: {
                             if working { ProgressView().controlSize(.small) }
-                            else { Image(systemName: "checkmark.circle.fill") }
+                            else { Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent) }
                         }
-                            .font(.subheadline).fontWeight(.medium)
-                            .foregroundStyle(Theme.accent)
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(Theme.accent.opacity(0.12), in: Capsule())
-                            .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.35)))
                     }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
+                    .menuStyle(.button)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
                     .fixedSize()
                     .disabled(working)
                 } else if kindle.scanning {
@@ -223,6 +221,7 @@ struct DetailView: View {
                     } icon: { ProgressView().controlSize(.small) }
                         .font(.subheadline).foregroundStyle(Theme.subtle)
                 } else {
+                    // Primary call-to-action: filled accent button, same height.
                     Button { send(to: dev) } label: {
                         Label {
                             Text(working ? "Converting…" : "Send to \(dev.name)")
@@ -231,7 +230,10 @@ struct DetailView: View {
                             else { Image(systemName: "arrow.right.circle.fill") }
                         }
                     }
-                    .buttonStyle(.glassProminent).tint(Theme.accent)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .tint(Theme.accent)
+                    .fixedSize()
                     .disabled(working)
                 }
             }
