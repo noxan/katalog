@@ -16,7 +16,7 @@ struct DetailView: View {
         ZStack {
             // Ambient backdrop: the book's own cover, blurred — the only color in the room.
             CoverImage(path: book.coverPath)
-                .frame(width: 560, height: 560)
+                .frame(width: 560, height: 500)
                 .clipped()
                 .blur(radius: 70)
                 .opacity(0.9)
@@ -27,7 +27,7 @@ struct DetailView: View {
 
             content
         }
-        .frame(width: 560, height: 560)
+        .frame(width: 560, height: 500)
         .overlay(alignment: .topTrailing) { chrome }
         .contextMenu { menuItems }
         .onChange(of: book.id) { status = nil }
@@ -37,7 +37,7 @@ struct DetailView: View {
         #if DEBUG
         _ = DescriptionHTMLCheck.run
         #endif
-        return VStack(alignment: .leading, spacing: Theme.spacing) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: Theme.spacing) {
                 leftColumn
                 rightColumn
@@ -186,6 +186,8 @@ struct DetailView: View {
 
     // MARK: Transfer
 
+    private let transferHeight: CGFloat = 28
+
     @ViewBuilder private var transferSection: some View {
         if kindle.devices.isEmpty {
             Label("Connect a Kindle to transfer", systemImage: "cable.connector.horizontal")
@@ -197,13 +199,14 @@ struct DetailView: View {
                     Label("On \(dev.name)", systemImage: "checkmark.circle.fill")
                         .font(.subheadline).fontWeight(.medium)
                         .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .padding(.horizontal, 14).frame(height: transferHeight)
                         .background(Theme.accent.opacity(0.12), in: Capsule())
                         .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.35)))
                 } else {
                     Button { send(to: dev) } label: {
                         Label(working ? "Converting…" : "Send to \(dev.name)",
                               systemImage: "arrow.right.circle.fill")
+                            .frame(height: transferHeight)
                     }
                     .buttonStyle(.glassProminent).tint(Theme.accent)
                     .disabled(working)
