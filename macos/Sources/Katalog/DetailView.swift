@@ -117,8 +117,8 @@ struct DetailView: View {
         rows.append(("Format", book.format.uppercased()))
         if let l = book.language, !l.isEmpty { rows.append(("Language", l)) }
         if let i = book.isbn, !i.isEmpty { rows.append(("ISBN", i)) }
-        if book.pageCount > 0 { rows.append(("Pages", "\\(book.pageCount)")) }
-        else if book.pageCount < 0 { rows.append(("Pages", "~\\(-book.pageCount)")) }
+        if book.pageCount > 0 { rows.append(("Pages", "\(book.pageCount)")) }
+        else if book.pageCount < 0 { rows.append(("Pages", "~\(-book.pageCount)")) }
         rows.append(("Added", formattedAdded))
         return rows
     }
