@@ -168,10 +168,22 @@ final class KindleWatcher: NSObject, ObservableObject {
         return files
     }
 
+    /// Match keys per book, memoized on title+isbn. `onDevice` is called for
+    /// every visible tile on every render; without this each one crossed the FFI
+    /// boundary into Rust just to rebuild the same key set.
+    private var keyCache: [String: Set<String>] = [:]
+
     /// Whether this book is on a connected device — same match-key primitive the
     /// core uses for duplicate detection, so import dedup and this agree.
     func onDevice(_ book: Book) -> Bool {
-        !Set(bookKeys(title: book.title, isbn: book.isbn)).isDisjoint(with: deviceKeys)
+        guard !deviceKeys.isEmpty else { return false }  // no reader: nothing to match
+        let cacheKey = "\(book.title)\u{1}\(book.isbn ?? "")"
+        let keys = keyCache[cacheKey] ?? {
+            let keys = Set(bookKeys(title: book.title, isbn: book.isbn))
+            keyCache[cacheKey] = keys
+            return keys
+        }()
+        return !keys.isDisjoint(with: deviceKeys)
     }
 
     private func isKindle(_ vol: URL) -> Bool {
