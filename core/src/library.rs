@@ -56,7 +56,7 @@ pub struct Book {
     pub language: Option<String>,
     pub publisher: Option<String>,
     pub description: Option<String>,
-    /// Printed-page count from the EPUB, or -1 until an older row is cached.
+    /// Positive for exact EPUB page-list counts; negative for estimates; zero until cached.
     pub page_count: i64,
     pub added_at: String,
 }
@@ -191,7 +191,7 @@ impl Library {
                     meta.language,
                     meta.publisher,
                     meta.description,
-                    meta.page_count.unwrap_or(0),
+                    meta.page_count,
                 ],
             )?;
             conn.last_insert_rowid()
@@ -229,16 +229,15 @@ impl Library {
         }
     }
 
-    /// Populate the page-list count for libraries created before this field
-    /// existed. Zero means the EPUB does not declare printed pages.
+    /// Populate the page count for libraries created before this field existed.
     pub fn cache_page_count(&self, id: i64) -> Result<Book, KatalogError> {
         let book = self
             .get(id)?
             .ok_or_else(|| KatalogError::Message(format!("no book with id {id}")))?;
-        if book.page_count >= 0 {
+        if book.page_count != 0 {
             return Ok(book);
         }
-        let page_count = epub::parse(Path::new(&book.file_path))?.page_count.unwrap_or(0);
+        let page_count = epub::parse(Path::new(&book.file_path))?.page_count;
         let conn = self.lock();
         conn.execute(
             "UPDATE books SET page_count = ?1 WHERE id = ?2",
@@ -494,7 +493,7 @@ impl Library {
 }
 
 const SELECT: &str = "SELECT id, title, authors, series, cover_path, file_path, \
-     format, isbn, language, publisher, description, added_at, series_index, COALESCE(page_count, -1) FROM books";
+     format, isbn, language, publisher, description, added_at, series_index, COALESCE(page_count, 0) FROM books";
 
 fn row_to_book(row: &rusqlite::Row) -> rusqlite::Result<Book> {
     let authors: String = row.get(2)?;

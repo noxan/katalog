@@ -11,8 +11,8 @@ pub struct ParsedEpub {
     pub publisher: Option<String>,
     pub isbn: Option<String>,
     pub description: Option<String>,
-    /// Printed-page count from the EPUB navigation page-list, when supplied.
-    pub page_count: Option<i64>,
+    /// Positive for an EPUB page-list count; negative for a word-count estimate.
+    pub page_count: i64,
     pub cover: Option<Vec<u8>>,
 }
 
@@ -49,9 +49,45 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         publisher,
         isbn,
         description: md.description().map(|d| d.value().to_string()),
-        page_count: epub.toc().by_kind("page-list").map(|pages| pages.flatten().count() as i64),
+        page_count: epub
+            .toc()
+            .by_kind("page-list")
+            .map(|pages| pages.flatten().count() as i64)
+            .unwrap_or_else(|| -estimated_pages(&epub)),
         cover,
     })
+}
+
+/// Estimate reflowable EPUB pages at 275 words per page. The page-list above
+/// wins whenever the publisher provided one.
+fn estimated_pages(epub: &rbook::Epub) -> i64 {
+    let words = epub
+        .spine()
+        .iter()
+        .filter_map(|entry| entry.manifest_entry())
+        .filter_map(|entry| entry.read_str().ok())
+        .map(|html| word_count(&html))
+        .sum::<usize>();
+    ((words + 274) / 275).max(1) as i64
+}
+
+/// Count visible-ish words without parsing XHTML into a DOM just for an estimate.
+fn word_count(html: &str) -> usize {
+    let (mut words, mut in_tag, mut in_entity, mut in_word) = (0, false, false, false);
+    for c in html.chars() {
+        match c {
+            '<' => { in_tag = true; in_word = false; }
+            '>' => in_tag = false,
+            '&' if !in_tag => { in_entity = true; in_word = false; }
+            ';' if in_entity => in_entity = false,
+            c if !in_tag && !in_entity && c.is_alphanumeric() => {
+                if !in_word { words += 1; in_word = true; }
+            }
+            _ if !in_tag && !in_entity => in_word = false,
+            _ => {}
+        }
+    }
+    words
 }
 
 /// True if `s` is shaped like an ISBN-10 or ISBN-13 (hyphens/spaces ignored).
@@ -169,7 +205,12 @@ fn cover_ext(bytes: &[u8]) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::looks_like_isbn;
+    use super::{looks_like_isbn, word_count};
+
+    #[test]
+    fn counts_visible_words() {
+        assert_eq!(word_count("<p>Hello <em>world</em>&nbsp;again.</p>"), 3);
+    }
 
     #[test]
     fn isbn_shape() {
