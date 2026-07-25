@@ -27,10 +27,15 @@ mv "$GEN"/*.h "$HEADERS"/
 mv "$GEN"/*.modulemap "$HEADERS/module.modulemap"
 
 echo "==> assemble xcframework"
-rm -rf dist/Katalog.xcframework
+# Build beside the real one and swap: a failure here (no Xcode selected, say)
+# used to leave the app with no framework at all.
 mkdir -p dist
+rm -rf dist/.staging  # xcodebuild insists the output end in .xcframework
 xcodebuild -create-xcframework \
   -library "$STATIC" -headers "$HEADERS" \
-  -output dist/Katalog.xcframework
+  -output dist/.staging/Katalog.xcframework
+rm -rf dist/Katalog.xcframework
+mv dist/.staging/Katalog.xcframework dist/Katalog.xcframework
+rmdir dist/.staging
 
 echo "==> done: dist/Katalog.xcframework + $GEN/katalog.swift"
