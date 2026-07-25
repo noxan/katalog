@@ -8,7 +8,8 @@ fn parses_metadata_and_cover() {
     assert_eq!(e.title, "The Zen of Katalog");
     assert_eq!(e.authors, vec!["Ada Lovelace", "Alan Turing"]);
     assert_eq!(e.language.as_deref(), Some("en"));
-    assert_eq!(e.isbn.as_deref(), Some("urn:isbn:9781234567897"));
+    // Stored bare: the fixture writes it as urn:isbn:9781234567897.
+    assert_eq!(e.isbn.as_deref(), Some("9781234567897"));
     assert!(e.page_count < 0, "fixture has no declared page list");
     assert!(e.description.is_some());
     assert!(e.cover.map(|c| !c.is_empty()).unwrap_or(false), "cover extracted");

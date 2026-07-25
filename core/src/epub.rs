@@ -29,12 +29,9 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
     let publisher = md.by_property("dc:publisher").next().map(|p| p.value().to_string());
 
     // Prefer a real ISBN from any dc:identifier; the package's unique-identifier
-    // is usually a uuid/urn, useless for lookup and dedup. Store nothing rather
+    // is usually a uuid, useless for lookup and dedup. Store nothing rather
     // than a uuid when no ISBN is present.
-    let isbn = md
-        .identifiers()
-        .map(|i| i.value().to_string())
-        .find(|v| looks_like_isbn(v));
+    let isbn = md.identifiers().find_map(|i| isbn_from(i.value()));
 
     let cover = epub
         .manifest()
@@ -103,6 +100,21 @@ fn looks_like_isbn(s: &str) -> bool {
         }
         _ => false,
     }
+}
+
+/// The bare ISBN inside a `dc:identifier` value, if there is one. EPUBs
+/// normally write `urn:isbn:9780…`, so matching on the raw string both missed
+/// real ISBNs and made two copies of one book that spelled the identifier
+/// differently fail to dedup. Store the digits — one canonical form.
+fn isbn_from(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    let bare = ["urn:isbn:", "isbn:", "isbn "]
+        .iter()
+        .find_map(|prefix| lower.starts_with(prefix).then(|| &trimmed[prefix.len()..]))
+        .unwrap_or(trimmed);
+    let digits: String = bare.chars().filter(|c| !c.is_whitespace() && *c != '-').collect();
+    looks_like_isbn(&digits).then(|| digits.to_ascii_uppercase())
 }
 
 fn fallback_title(path: &Path) -> String {
@@ -205,7 +217,18 @@ fn cover_ext(bytes: &[u8]) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{looks_like_isbn, word_count};
+    use super::{isbn_from, looks_like_isbn, word_count};
+
+    #[test]
+    fn isbn_extracted_from_identifier_forms() {
+        // The form nearly every epub uses.
+        assert_eq!(isbn_from("urn:isbn:9781234567897").as_deref(), Some("9781234567897"));
+        // Prefixes and punctuation collapse to one canonical value.
+        assert_eq!(isbn_from("ISBN 978-0-307-95154-0").as_deref(), Some("9780307951540"));
+        assert_eq!(isbn_from("  080442957x ").as_deref(), Some("080442957X"));
+        // Identifiers that aren't ISBNs stay out of the field.
+        assert_eq!(isbn_from("urn:uuid:735093b7-c3c4-4d73-8a0f-96f1750d1140"), None);
+    }
 
     #[test]
     fn counts_visible_words() {

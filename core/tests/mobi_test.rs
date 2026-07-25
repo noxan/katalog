@@ -19,7 +19,7 @@ fn converts_epub_to_readable_mobi() {
     let m = mobi::Mobi::from_path(&out).expect("mobi crate reads our output");
     assert_eq!(m.title(), "The Zen of Katalog");
     assert_eq!(m.author().as_deref(), Some("Ada Lovelace"));
-    assert_eq!(m.isbn().as_deref(), Some("urn:isbn:9781234567897"));
+    assert_eq!(m.isbn().as_deref(), Some("9781234567897"));
 
     // The chapter text must survive into the (PalmDOC-compressed) first text
     // record. We decompress it ourselves: the crate's content_as_string works
