@@ -65,11 +65,28 @@ final class LibraryStore: ObservableObject {
         books = (try? lib.list()) ?? []
     }
 
-    func importBook(_ url: URL) throws {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        _ = try lib.import(epubPath: url.path, copy: copyOnImport, organize: keepOrganized)
+    /// Import one file. Parsing + copying is seconds of work per book, so it runs
+    /// off the main thread; the caller decides when to `refresh()`.
+    /// ponytail: `Library` is Sendable (the Rust side is mutex-guarded), so the
+    /// detached task can hold it directly.
+    private func importOne(_ url: URL) async throws {
+        let (lib, copy, organize) = (self.lib, copyOnImport, keepOrganized)
+        try await Task.detached(priority: .userInitiated) {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            _ = try lib.import(epubPath: url.path, copy: copy, organize: organize)
+        }.value
+    }
+
+    func importBook(_ url: URL) async throws {
+        try await importOne(url)
         refresh()
+    }
+
+    /// Import files whose duplicate prompt the user already resolved.
+    func importAll(_ urls: [URL]) async {
+        for url in urls { try? await importOne(url) }
+        refresh()  // one list() for the whole batch, not one per book
     }
 
     /// Flatten a drop/pick selection into epub files, recursing into any
@@ -90,23 +107,19 @@ final class LibraryStore: ObservableObject {
     }
 
     /// Import a batch: files with no match are imported immediately; files that
-    /// match an existing book are returned as prompts for the user to resolve.
-    func importBatch(_ urls: [URL]) -> [DuplicatePrompt] {
-        var prompts: [DuplicatePrompt] = []
-        for url in urls {
-            if let hit = duplicateOf(url) {
-                prompts.append(DuplicatePrompt(url: url, hit: hit))
-            } else {
-                try? importBook(url)
-            }
-        }
-        return prompts
-    }
-
-    private func duplicateOf(_ url: URL) -> DuplicateHit? {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        return try? lib.findDuplicate(epubPath: url.path)
+    /// match an existing book come back as prompts for the user to resolve.
+    /// One core call for the whole batch — it parses each epub once and builds
+    /// the match index once, instead of a parse-and-scan per file per phase.
+    func importBatch(_ urls: [URL]) async -> [DuplicatePrompt] {
+        let (lib, copy, organize) = (self.lib, copyOnImport, keepOrganized)
+        let hits = await Task.detached(priority: .userInitiated) { () -> [DuplicateHit?] in
+            let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
+            defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+            return (try? lib.importBatch(epubPaths: urls.map(\.path), copy: copy,
+                                         organize: organize)) ?? []
+        }.value
+        refresh()  // one list() for the whole batch, not one per book
+        return zip(urls, hits).compactMap { url, hit in hit.map { DuplicatePrompt(url: url, hit: $0) } }
     }
 
     func remove(_ book: Book) {

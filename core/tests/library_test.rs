@@ -66,6 +66,41 @@ fn find_duplicate_matches_existing_and_carries_preview() {
 }
 
 #[test]
+fn import_batch_imports_once_and_flags_duplicates_within_the_batch() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db = tmp.path().join("library.db").to_string_lossy().into_owned();
+    let books = tmp.path().join("books").to_string_lossy().into_owned();
+
+    // A second copy of the same book, plus a file that isn't an epub at all.
+    let copy = tmp.path().join("copy.epub");
+    std::fs::copy(fixture(), &copy).unwrap();
+    let junk = tmp.path().join("broken.epub");
+    std::fs::write(&junk, b"not an epub").unwrap();
+
+    let lib = katalog::Library::open(db, books).unwrap();
+    let out = lib
+        .import_batch(
+            vec![
+                fixture(),
+                copy.to_string_lossy().into_owned(),
+                junk.to_string_lossy().into_owned(),
+            ],
+            true,
+            true,
+        )
+        .unwrap();
+
+    assert_eq!(out.len(), 3);
+    assert!(out[0].is_none(), "first copy imported");
+    // The duplicate is caught against the book imported earlier in this same
+    // batch, not just against what was already in the library.
+    let hit = out[1].as_ref().expect("second copy flagged as duplicate");
+    assert_eq!(hit.existing.title, "The Zen of Katalog");
+    assert!(out[2].is_none(), "unreadable file skipped, batch continues");
+    assert_eq!(lib.list().unwrap().len(), 1, "only one book indexed");
+}
+
+#[test]
 fn file_keys_reads_epub_and_falls_back_for_unparseable_mobi() {
     // Real epub → keys derived from parsed metadata.
     let keys = katalog::library::file_keys(fixture()).unwrap();
