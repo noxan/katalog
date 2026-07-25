@@ -365,30 +365,76 @@ struct BookCell: View {
     }
 }
 
+/// Decoded cover thumbnails, keyed by path + pixel size. Covers are stored at
+/// the epub's own resolution (often 1600px tall) while cells draw them at 150pt,
+/// so decoding the original inside `body` was the dominant grid cost — and kept
+/// a full-size bitmap alive per visible cell.
+/// ponytail: NSCache evicts under pressure, and the key is the content-versioned
+/// cover filename, so there is nothing to invalidate by hand.
+private let coverCache = NSCache<NSString, NSImage>()
+
+/// Decode straight to the target size — Image I/O never materializes the
+/// full-resolution bitmap.
+private func decodeCover(_ path: String, maxPixel: Int) -> NSImage? {
+    guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+          let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+              kCGImageSourceCreateThumbnailFromImageAlways: true,
+              kCGImageSourceCreateThumbnailWithTransform: true,
+              kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+          ] as CFDictionary)
+    else { return nil }
+    return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+}
+
 struct CoverImage: View {
     let path: String?
     var title: String = ""
     var authors: String = ""
+    /// Longest edge to decode — Theme.coverHeight at 2x covers every call site,
+    /// including the detail view's blurred backdrop.
+    var maxPixel: Int = Int(Theme.coverHeight * 2)
+    @State private var decoded: NSImage?
+
+    private var cacheKey: NSString? { path.map { "\($0)@\(maxPixel)" as NSString } }
+
     var body: some View {
-        if let path, let img = NSImage(contentsOfFile: path) {
-            Image(nsImage: img).resizable().aspectRatio(contentMode: .fill).clipped()
-        } else {
-            VStack(spacing: 8) {
-                Image(systemName: "book.closed")
-                    .font(.largeTitle).foregroundStyle(Theme.subtle)
-                if !title.isEmpty {
-                    Text(title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.text)
-                        .lineLimit(3)
-                    Text(authors)
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.subtle)
-                        .lineLimit(2)
-                }
+        // Read the cache in body so a re-render of an already-decoded cover
+        // draws immediately instead of flashing the placeholder.
+        let image = decoded ?? cacheKey.flatMap { coverCache.object(forKey: $0) }
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().aspectRatio(contentMode: .fill).clipped()
+            } else {
+                placeholder
             }
-            .multilineTextAlignment(.center)
-            .padding(10)
         }
+        .task(id: cacheKey) {
+            guard let path, let key = cacheKey, coverCache.object(forKey: key) == nil else { return }
+            let size = maxPixel
+            let image = await Task.detached(priority: .userInitiated) {
+                decodeCover(path, maxPixel: size)
+            }.value
+            if let image { coverCache.setObject(image, forKey: key) }
+            decoded = image
+        }
+    }
+
+    private var placeholder: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "book.closed")
+                .font(.largeTitle).foregroundStyle(Theme.subtle)
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(3)
+                Text(authors)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.subtle)
+                    .lineLimit(2)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .padding(10)
     }
 }
