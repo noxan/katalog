@@ -17,7 +17,11 @@ pub fn normalize(s: &str) -> String {
 pub fn keys_for(title: &str, isbn: Option<&str>) -> Vec<String> {
     let mut keys = Vec::new();
     if let Some(isbn) = isbn.map(str::trim).filter(|s| !s.is_empty()) {
+        // Strip the urn wrapper after normalizing: rows imported before we
+        // extracted the bare number still carry `urn:isbn:`, and they must
+        // match a freshly imported copy of the same book.
         let n = normalize(isbn);
+        let n = n.trim_start_matches("urn").trim_start_matches("isbn");
         if !n.is_empty() {
             keys.push(format!("isbn:{n}"));
         }
@@ -41,8 +45,10 @@ mod tests {
     #[test]
     fn keys_and_matching() {
         let a = keys_for("The Left Hand of Darkness", Some("urn:isbn:978-0"));
-        // ISBN normalizes (punctuation dropped) and title key is present.
-        assert!(a.contains(&"isbn:urnisbn9780".to_string()));
+        // ISBN normalizes (punctuation and urn wrapper dropped) and title key is present.
+        assert!(a.contains(&"isbn:9780".to_string()));
+        // The same ISBN written bare — as newer imports store it — matches.
+        assert!(shares_key(&a, &keys_for("Whatever", Some("978 0"))));
         assert!(a.contains(&"title:thelefthandofdarkness".to_string()));
 
         // Same title, different formatting → matches on the title key.
