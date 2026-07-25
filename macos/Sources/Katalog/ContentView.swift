@@ -56,13 +56,13 @@ struct ContentView: View {
         }
         .dropDestination(for: URL.self) { urls, _ in
             let epubs = store.epubURLs(from: urls)
-            prompts = store.importBatch(epubs)
+            Task { prompts = await store.importBatch(epubs) }
             return !epubs.isEmpty
         }
         // Files opened via Finder "Open With" (default-app handler). onOpenURL
         // fires once per URL; append so a multi-file open keeps every prompt.
         .onOpenURL { url in
-            prompts += store.importBatch(store.epubURLs(from: [url]))
+            Task { prompts += await store.importBatch(store.epubURLs(from: [url])) }
         }
         .navigationTitle("Katalog")
         .toolbar {
@@ -74,7 +74,7 @@ struct ContentView: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [epubType, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result {
-                prompts = store.importBatch(store.epubURLs(from: urls))
+                Task { prompts = await store.importBatch(store.epubURLs(from: urls)) }
             }
         }
         .sheet(item: $sheet) { route in
@@ -101,11 +101,12 @@ struct ContentView: View {
     /// "apply to all", to every remaining one — then advance the queue.
     private func resolve(importAnyway: Bool, applyToAll: Bool) {
         if applyToAll {
-            if importAnyway { for p in prompts { try? store.importBook(p.url) } }
+            let urls = prompts.map(\.url)
             prompts = []
+            if importAnyway { Task { await store.importAll(urls) } }
         } else {
             let p = prompts.removeFirst()
-            if importAnyway { try? store.importBook(p.url) }
+            if importAnyway { Task { try? await store.importBook(p.url) } }
         }
     }
 

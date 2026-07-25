@@ -65,11 +65,28 @@ final class LibraryStore: ObservableObject {
         books = (try? lib.list()) ?? []
     }
 
-    func importBook(_ url: URL) throws {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        _ = try lib.import(epubPath: url.path, copy: copyOnImport, organize: keepOrganized)
+    /// Import one file. Parsing + copying is seconds of work per book, so it runs
+    /// off the main thread; the caller decides when to `refresh()`.
+    /// ponytail: `Library` is Sendable (the Rust side is mutex-guarded), so the
+    /// detached task can hold it directly.
+    private func importOne(_ url: URL) async throws {
+        let (lib, copy, organize) = (self.lib, copyOnImport, keepOrganized)
+        try await Task.detached(priority: .userInitiated) {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            _ = try lib.import(epubPath: url.path, copy: copy, organize: organize)
+        }.value
+    }
+
+    func importBook(_ url: URL) async throws {
+        try await importOne(url)
         refresh()
+    }
+
+    /// Import files whose duplicate prompt the user already resolved.
+    func importAll(_ urls: [URL]) async {
+        for url in urls { try? await importOne(url) }
+        refresh()  // one list() for the whole batch, not one per book
     }
 
     /// Flatten a drop/pick selection into epub files, recursing into any
@@ -91,22 +108,28 @@ final class LibraryStore: ObservableObject {
 
     /// Import a batch: files with no match are imported immediately; files that
     /// match an existing book are returned as prompts for the user to resolve.
-    func importBatch(_ urls: [URL]) -> [DuplicatePrompt] {
+    func importBatch(_ urls: [URL]) async -> [DuplicatePrompt] {
         var prompts: [DuplicatePrompt] = []
         for url in urls {
-            if let hit = duplicateOf(url) {
+            if let hit = await duplicateOf(url) {
                 prompts.append(DuplicatePrompt(url: url, hit: hit))
             } else {
-                try? importBook(url)
+                try? await importOne(url)
             }
         }
+        refresh()  // one list() for the whole batch, not one per book
         return prompts
     }
 
-    private func duplicateOf(_ url: URL) -> DuplicateHit? {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        return try? lib.findDuplicate(epubPath: url.path)
+    /// Off the main thread too — this parses the incoming epub and scans the
+    /// library, which froze the window while a dropped folder was checked.
+    private func duplicateOf(_ url: URL) async -> DuplicateHit? {
+        let lib = self.lib
+        return await Task.detached(priority: .userInitiated) {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            return try? lib.findDuplicate(epubPath: url.path)
+        }.value
     }
 
     func remove(_ book: Book) {
