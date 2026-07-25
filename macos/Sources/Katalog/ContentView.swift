@@ -16,6 +16,13 @@ private enum BookSheet: Identifiable {
     }
 }
 
+/// Everything the display order depends on — the trigger for re-sorting.
+private struct OrderKey: Equatable {
+    let books: [Book]
+    let sort: SortOrder
+    let group: Grouping
+}
+
 struct ContentView: View {
     @EnvironmentObject var store: LibraryStore
     @EnvironmentObject var kindle: KindleWatcher
@@ -28,6 +35,10 @@ struct ContentView: View {
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
     @AppStorage("grouping") private var grouping: Grouping = .none
     // ponytail: display preferences live in Settings; read here to render.
+    /// The library in display order. Sorting runs localizedStandardCompare per
+    /// comparison, and body re-runs on every store/watcher change, so keep the
+    /// result until its inputs actually change.
+    @State private var ordered: [Book] = []
 
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
@@ -37,7 +48,7 @@ struct ContentView: View {
                 emptyState
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
-                    ForEach(grouping.sorted(store.books, by: sortOrder)) { book in
+                    ForEach(ordered) { book in
                         Button { sheet = .detail(book) } label: {
                             BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
                         }
@@ -50,6 +61,12 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg)
+        // Array equality short-circuits on identical storage, so an unchanged
+        // library costs a pointer compare here, not a re-sort.
+        .onChange(of: OrderKey(books: store.books, sort: sortOrder, group: grouping),
+                  initial: true) {
+            ordered = grouping.sorted(store.books, by: sortOrder)
+        }
         .safeAreaInset(edge: .bottom) {
             StatusBar(bookCount: store.books.count, devices: kindle.devices, scanning: kindle.scanning,
                       jobs: kindle.jobs, failure: kindle.lastFailure) { kindle.lastFailure = nil }
