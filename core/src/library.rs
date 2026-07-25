@@ -152,64 +152,7 @@ impl Library {
     pub fn import(&self, epub_path: String, copy: bool, organize: bool) -> Result<Book, KatalogError> {
         let src = PathBuf::from(&epub_path);
         let meta = epub::parse(&src)?;
-        let authors = normalize_authors(meta.authors);
-        let author = authors.first().map(String::as_str).unwrap_or("Unknown");
-
-        let file_path = if copy {
-            let dest = if organize {
-                // "Author/Title - Author.ext" — self-describing, and different
-                // formats of one book coexist as same basename + different extension.
-                let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("epub");
-                self.organized_dest(&meta.title, author, ext)
-            } else {
-                // ponytail: flat mode keeps the original filename; identical names collide.
-                let name = src
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| format!("{}.epub", sanitize(&meta.title)));
-                self.books_dir.join(name)
-            };
-            fs::create_dir_all(dest.parent().unwrap_or(&self.books_dir))?;
-            fs::copy(&src, &dest)?;
-            dest
-        } else {
-            src.clone()
-        };
-
-        // Insert first to get the id, then cache the cover keyed by id.
-        let id = {
-            let conn = self.lock();
-            conn.execute(
-                "INSERT INTO books
-                    (title, authors, file_path, format, isbn, language, publisher, description, page_count)
-                 VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7, ?8)",
-                rusqlite::params![
-                    meta.title,
-                    authors.join("\n"),
-                    file_path.to_string_lossy(),
-                    meta.isbn,
-                    meta.language,
-                    meta.publisher,
-                    meta.description,
-                    meta.page_count,
-                ],
-            )?;
-            conn.last_insert_rowid()
-        };
-
-        if let Some(bytes) = &meta.cover {
-            // Content-versioned name (see cover_name) — one scheme shared with edits.
-            let p = self.covers_dir.join(cover_name(id, bytes));
-            fs::write(&p, bytes)?;
-            let conn = self.lock();
-            conn.execute(
-                "UPDATE books SET cover_path = ?1 WHERE id = ?2",
-                rusqlite::params![p.to_string_lossy(), id],
-            )?;
-        }
-
-        self.get(id)?
-            .ok_or_else(|| KatalogError::Message("book vanished after insert".into()))
+        self.index_parsed(meta, &src, copy, organize)
     }
 
     pub fn list(&self) -> Result<Vec<Book>, KatalogError> {
@@ -266,6 +209,55 @@ impl Library {
             })),
             None => Ok(None),
         }
+    }
+
+    /// Import many epubs in one pass. Each entry of the result lines up with
+    /// `epub_paths`: `None` means the file was imported (or was unreadable and
+    /// skipped), `Some(hit)` means it matched an existing book and was left
+    /// alone for the caller to resolve.
+    ///
+    /// Doing this per file cost two epub parses (one to check for a duplicate,
+    /// one to import) plus a full `list()` scan each time. Here the match keys
+    /// are built once for the whole batch and each epub is parsed once.
+    pub fn import_batch(
+        &self,
+        epub_paths: Vec<String>,
+        copy: bool,
+        organize: bool,
+    ) -> Result<Vec<Option<DuplicateHit>>, KatalogError> {
+        let mut known: Vec<(Vec<String>, Book)> = self
+            .list()?
+            .into_iter()
+            .map(|b| (matching::keys_for(&b.title, b.isbn.as_deref()), b))
+            .collect();
+
+        let mut out = Vec::with_capacity(epub_paths.len());
+        for path in epub_paths {
+            let src = PathBuf::from(&path);
+            // ponytail: an unreadable file is skipped, not fatal — one bad epub
+            // in a dropped folder shouldn't abandon the rest of the batch.
+            let Ok(meta) = epub::parse(&src) else {
+                out.push(None);
+                continue;
+            };
+            let incoming = matching::keys_for(&meta.title, meta.isbn.as_deref());
+            match known.iter().find(|(keys, _)| matching::shares_key(&incoming, keys)) {
+                Some((_, existing)) => out.push(Some(DuplicateHit {
+                    existing: existing.clone(),
+                    incoming_title: meta.title,
+                    incoming_authors: normalize_authors(meta.authors),
+                    incoming_cover: meta.cover,
+                })),
+                None => {
+                    // Track what we just imported so two copies of one book
+                    // inside a single batch still flag as duplicates.
+                    let book = self.index_parsed(meta, &src, copy, organize)?;
+                    known.push((incoming, book));
+                    out.push(None);
+                }
+            }
+        }
+        Ok(out)
     }
 
     /// Remove a book from the index. Deletes managed files (the cached cover,
@@ -447,6 +439,76 @@ fn filestem(p: &Path) -> &str {
 }
 
 impl Library {
+
+    /// The half of `import` after parsing. Split out so a batch import can reuse
+    /// the metadata it already parsed for duplicate detection instead of opening
+    /// and parsing every epub twice.
+    fn index_parsed(
+        &self,
+        meta: epub::ParsedEpub,
+        src: &Path,
+        copy: bool,
+        organize: bool,
+    ) -> Result<Book, KatalogError> {
+        let authors = normalize_authors(meta.authors);
+        let author = authors.first().map(String::as_str).unwrap_or("Unknown");
+
+        let file_path = if copy {
+            let dest = if organize {
+                // "Author/Title - Author.ext" — self-describing, and different
+                // formats of one book coexist as same basename + different extension.
+                let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("epub");
+                self.organized_dest(&meta.title, author, ext)
+            } else {
+                // ponytail: flat mode keeps the original filename; identical names collide.
+                let name = src
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| format!("{}.epub", sanitize(&meta.title)));
+                self.books_dir.join(name)
+            };
+            fs::create_dir_all(dest.parent().unwrap_or(&self.books_dir))?;
+            fs::copy(src, &dest)?;
+            dest
+        } else {
+            src.to_path_buf()
+        };
+
+        // Insert first to get the id, then cache the cover keyed by id.
+        let id = {
+            let conn = self.lock();
+            conn.execute(
+                "INSERT INTO books
+                    (title, authors, file_path, format, isbn, language, publisher, description, page_count)
+                 VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    meta.title,
+                    authors.join("\n"),
+                    file_path.to_string_lossy(),
+                    meta.isbn,
+                    meta.language,
+                    meta.publisher,
+                    meta.description,
+                    meta.page_count,
+                ],
+            )?;
+            conn.last_insert_rowid()
+        };
+
+        if let Some(bytes) = &meta.cover {
+            // Content-versioned name (see cover_name) — one scheme shared with edits.
+            let p = self.covers_dir.join(cover_name(id, bytes));
+            fs::write(&p, bytes)?;
+            let conn = self.lock();
+            conn.execute(
+                "UPDATE books SET cover_path = ?1 WHERE id = ?2",
+                rusqlite::params![p.to_string_lossy(), id],
+            )?;
+        }
+
+        self.get(id)?
+            .ok_or_else(|| KatalogError::Message("book vanished after insert".into()))
+    }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Connection> {
         // ponytail: poisoned only if a holder panicked; recover and continue.
