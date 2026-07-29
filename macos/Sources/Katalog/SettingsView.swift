@@ -63,7 +63,7 @@ struct SettingsView: View {
         panel.prompt = "Choose"
         panel.directoryURL = URL(fileURLWithPath: store.booksDir)
         if panel.runModal() == .OK, let url = panel.url {
-            store.booksDir = url.path
+            store.setBooksDir(url)
         }
     }
 }
