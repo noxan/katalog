@@ -12,6 +12,12 @@ core:
 run: app
 	cd macos && swift run Katalog
 
+# Sandbox entitlements, applied when bundling. Sandboxed is what ships, so it
+# is the default — but it redirects Application Support (and so the library
+# index) into ~/Library/Containers/org.stromer.katalog. To bundle the way the
+# app used to behave: make bundle ENTITLEMENTS=
+ENTITLEMENTS ?= macos/Katalog.entitlements
+
 # Assemble a real Katalog.app (self-contained: core links statically) and
 # register it with LaunchServices so it shows up as an .epub handler.
 # Then: right-click any .epub → Open With → Katalog → Change All… to default it.
@@ -21,7 +27,7 @@ bundle: app
 	cp macos/Info.plist dist/Katalog.app/Contents/Info.plist
 	cp macos/.build/debug/Katalog dist/Katalog.app/Contents/MacOS/Katalog
 	macos/build-icon.sh macos/icon.svg dist/Katalog.app/Contents/Resources/AppIcon.icns
-	codesign --force --sign - dist/Katalog.app
+	codesign --force --sign - $(if $(ENTITLEMENTS),--entitlements $(ENTITLEMENTS)) dist/Katalog.app
 	/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(PWD)/dist/Katalog.app"
 	@echo "Built dist/Katalog.app — set default via Finder Get Info → Open With → Change All."
 

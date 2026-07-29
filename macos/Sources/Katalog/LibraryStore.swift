@@ -135,8 +135,9 @@ final class LibraryStore: ObservableObject {
     }
 
     /// Flatten a drop/pick selection into epub files, recursing into any
-    /// folders. ponytail: app is unsandboxed, so no security-scoped access is
-    /// needed to enumerate a dropped/picked directory.
+    /// folders. ponytail: no explicit security scoping here — the sandbox grant
+    /// that comes with a dropped or picked directory already covers everything
+    /// under it, and lasts until the app quits.
     func epubURLs(from urls: [URL]) -> [URL] {
         let fm = FileManager.default
         return urls.flatMap { url -> [URL] in
