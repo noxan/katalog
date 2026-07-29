@@ -21,6 +21,24 @@ Other targets: `make app` (full rebuild, no launch), `make core` (Rust core →
 xcframework only), `make test`, `make clean`. Or open `macos/Package.swift` in
 Xcode and Run (run `make core` once first so the xcframework exists).
 
+## Distribution
+
+`make bundle` signs with the sandbox entitlements the App Store requires, so
+dev builds behave like shipped ones. That moves the library index into
+`~/Library/Containers/org.stromer.katalog`; `make bundle ENTITLEMENTS=` opts
+out.
+
+`make release` produces a signed, notarized, stapled `dist/Katalog-<version>.dmg`
+for a GitHub release. One-time setup:
+
+```sh
+xcrun notarytool store-credentials katalog-notary \
+  --apple-id <you@example.com> --team-id J7794KYKGV --password <app-specific>
+```
+
+Bump `CFBundleShortVersionString` and `CFBundleVersion` in `macos/Info.plist`
+before each release. Builds are arm64 only.
+
 ## Test the core
 
 ```sh
@@ -57,7 +75,8 @@ MVP, grouped by area. Checked = shipped.
 
 ### Ideas for later (or never)
 
-- Automatic app updates (Sparkle) or App Store
+- Automatic app updates (Sparkle)
+- App Store submission (needs an Xcode app target — SwiftPM can't archive)
 - Send-to-Kindle email
 - Windows / Linux (the Rust core is already platform-agnostic)
 - In-app reading / rendering — Katalog is a manager, not a reader
