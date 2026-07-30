@@ -4,13 +4,43 @@ import KatalogCore
 // Book is Equatable/Hashable from the core; give it Identifiable for SwiftUI.
 extension Book: Identifiable {}
 
+/// A user-picked folder is only reachable across launches under the App Sandbox
+/// via a security-scoped bookmark. Unsandboxed every call degrades to a no-op —
+/// the plain path in UserDefaults is enough there — so this is safe either way.
+/// ponytail: access is started once and never stopped; the library folder stays
+/// open for the process lifetime, which is exactly how long we need it.
+private enum Bookmark {
+    static func save(_ url: URL, key: String) {
+        let data = try? url.bookmarkData(options: .withSecurityScope,
+                                         includingResourceValuesForKeys: nil,
+                                         relativeTo: nil)
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func clear(key: String) { UserDefaults.standard.removeObject(forKey: key) }
+
+    /// Resolve a saved bookmark and open access to it. Returns the folder, or
+    /// nil when there is no bookmark (unsandboxed, or the default location).
+    static func resolve(key: String) -> URL? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        var stale = false
+        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
+                                 relativeTo: nil, bookmarkDataIsStale: &stale),
+              url.startAccessingSecurityScopedResource()
+        else { return nil }
+        if stale { save(url, key: key) }  // volumes move; re-stamp while we can
+        return url
+    }
+}
+
 /// Observable wrapper around the Rust core `Library`, plus persisted settings.
 @MainActor
 final class LibraryStore: ObservableObject {
     @Published private(set) var books: [Book] = []
 
-    /// Where imported epubs are stored. Changing it re-opens the library.
-    @Published var booksDir: String {
+    /// Where imported epubs are stored. Changing it re-opens the library. Set it
+    /// through `setBooksDir`/`resetBooksDir` so the bookmark stays in step.
+    @Published private(set) var booksDir: String {
         didSet {
             UserDefaults.standard.set(booksDir, forKey: "booksDir")
             reopen()
@@ -44,9 +74,14 @@ final class LibraryStore: ObservableObject {
         appRoot.appendingPathComponent("library.db").path
     }
 
+    private static let bookmarkKey = "booksDirBookmark"
+
     init() {
         let d = UserDefaults.standard
-        let dir = d.string(forKey: "booksDir") ?? Self.defaultBooksDir
+        // A resolved bookmark wins over the stored path: it follows the folder
+        // if the user moved or renamed it, and it opens sandbox access.
+        let dir = Bookmark.resolve(key: Self.bookmarkKey)?.path
+            ?? d.string(forKey: "booksDir") ?? Self.defaultBooksDir
         booksDir = dir
         copyOnImport = d.object(forKey: "copyOnImport") as? Bool ?? true
         keepOrganized = d.object(forKey: "keepOrganized") as? Bool ?? true
@@ -54,7 +89,17 @@ final class LibraryStore: ObservableObject {
         refresh()
     }
 
-    func resetBooksDir() { booksDir = Self.defaultBooksDir }
+    /// Point the library at a user-picked folder. The bookmark has to be taken
+    /// here, while the open panel's grant is still live.
+    func setBooksDir(_ url: URL) {
+        Bookmark.save(url, key: Self.bookmarkKey)
+        booksDir = url.path
+    }
+
+    func resetBooksDir() {
+        Bookmark.clear(key: Self.bookmarkKey)
+        booksDir = Self.defaultBooksDir
+    }
 
     private func reopen() {
         lib = try! Library.open(dbPath: Self.dbPath, booksDir: booksDir)
@@ -90,8 +135,9 @@ final class LibraryStore: ObservableObject {
     }
 
     /// Flatten a drop/pick selection into epub files, recursing into any
-    /// folders. ponytail: app is unsandboxed, so no security-scoped access is
-    /// needed to enumerate a dropped/picked directory.
+    /// folders. ponytail: no explicit security scoping here — the sandbox grant
+    /// that comes with a dropped or picked directory already covers everything
+    /// under it, and lasts until the app quits.
     func epubURLs(from urls: [URL]) -> [URL] {
         let fm = FileManager.default
         return urls.flatMap { url -> [URL] in
