@@ -29,17 +29,17 @@ dev builds behave like shipped ones. That moves the library index into
 out.
 
 `make release` produces a signed, notarized, stapled `dist/Katalog-<version>.dmg`
-for a GitHub release. One-time setup — store the App Store Connect API key
-notarytool authenticates with:
+for a GitHub release. It authenticates through the `katalog-notary` keychain
+profile, which already exists on the dev machine. To recreate it elsewhere:
 
 ```sh
 xcrun notarytool store-credentials katalog-notary \
-  --key ~/private_keys/AuthKey_4C99F2J9GQ.p8 \
-  --key-id 4C99F2J9GQ --issuer <issuer-uuid>
+  --key ~/private_keys/AuthKey_<key-id>.p8 \
+  --key-id <key-id> --issuer <issuer-uuid>
 ```
 
-The issuer UUID is on the same App Store Connect page as the key (Users and
-Access → Integrations). Keep the `.p8` outside the repo — Apple serves it
+Key ID and issuer UUID both come from App Store Connect → Users and Access →
+Integrations. Keep the `.p8` outside the repo and mode 600 — Apple serves it
 exactly once, and it signs on your behalf.
 
 Bump `CFBundleShortVersionString` and `CFBundleVersion` in `macos/Info.plist`
