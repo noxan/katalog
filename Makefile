@@ -1,4 +1,4 @@
-.PHONY: app core run bundle release test clean
+.PHONY: app core run bundle release publish test clean
 
 # debug for dev, release for anything that leaves this machine.
 CONFIG ?= debug
@@ -42,7 +42,9 @@ bundle: app
 
 TEAM_ID ?= J7794KYKGV
 DEV_ID  ?= Developer ID Application: Richard Stromer ($(TEAM_ID))
-VERSION := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" macos/Info.plist)
+PLIST    = macos/Info.plist
+VERSION := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" $(PLIST))
+BUILD   := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleVersion" $(PLIST))
 DMG      = dist/Katalog-$(VERSION).dmg
 
 # Notarization credentials, already stored in the keychain from the App Store
@@ -66,6 +68,24 @@ release:
 	xcrun notarytool submit $(DMG) --keychain-profile $(NOTARY_PROFILE) --wait
 	xcrun stapler staple $(DMG)
 	@echo "Notarized $(DMG) — attach it to a GitHub release."
+
+# Cut a release end to end:  make publish VERSION=0.2
+# Bumps the version, builds and notarizes, then commits, tags and publishes to
+# GitHub. Notarizing happens before anything is committed or pushed, so a failed
+# build leaves only an uncommitted plist edit behind (git checkout $(PLIST)).
+publish:
+	@test "$(origin VERSION)" = "command line" || { echo "usage: make publish VERSION=0.2"; exit 1; }
+	@test -z "$$(git status --porcelain)" || { echo "working tree is dirty"; exit 1; }
+	@! git rev-parse -q --verify v$(VERSION) >/dev/null \
+		|| { echo "tag v$(VERSION) already exists"; exit 1; }
+	/usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $(VERSION)" $(PLIST)
+	/usr/libexec/PlistBuddy -c "Set CFBundleVersion $$(($(BUILD) + 1))" $(PLIST)
+	$(MAKE) release VERSION=$(VERSION)
+	git commit -q -m "Release $(VERSION)" $(PLIST)
+	git tag v$(VERSION)
+	git push origin HEAD v$(VERSION)
+	gh release create v$(VERSION) $(DMG) --title "Katalog $(VERSION)" --generate-notes
+	@echo "Published v$(VERSION)."
 
 # Core unit tests (epub parse + library roundtrip).
 test:
