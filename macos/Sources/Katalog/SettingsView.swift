@@ -46,7 +46,8 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 300)
+        .frame(width: 460)
+        .fixedSize(horizontal: false, vertical: true)
         .navigationTitle("Settings")
     }
 
