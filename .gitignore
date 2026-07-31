@@ -13,5 +13,9 @@ xcuserdata/
 /macos/Generated/
 /dist/
 
+# Signing keys, in case one ever lands here by accident
+*.p8
+*.p12
+
 # Claude
 .claude/

@@ -45,10 +45,10 @@ DEV_ID  ?= Developer ID Application: Richard Stromer ($(TEAM_ID))
 VERSION := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" macos/Info.plist)
 DMG      = dist/Katalog-$(VERSION).dmg
 
-# Notarization credentials, stored once (needs an app-specific password from
-# appleid.apple.com, not your Apple ID password):
+# Notarization credentials, stored once from the App Store Connect API key:
 #   xcrun notarytool store-credentials katalog-notary \
-#     --apple-id <you@example.com> --team-id $(TEAM_ID) --password <app-specific>
+#     --key ~/private_keys/AuthKey_4C99F2J9GQ.p8 \
+#     --key-id 4C99F2J9GQ --issuer <issuer-uuid>
 NOTARY_PROFILE ?= katalog-notary
 
 # Signed, notarized, stapled DMG for a GitHub release. Notarizing takes a few
