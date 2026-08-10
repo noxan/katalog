@@ -2,6 +2,8 @@
 
 use std::path::Path;
 
+use rbook::epub::metadata::DetachedEpubMetaEntry;
+
 /// Metadata pulled straight out of an epub, before it becomes a library row.
 #[derive(Debug, Clone)]
 pub struct ParsedEpub {
@@ -11,6 +13,9 @@ pub struct ParsedEpub {
     pub publisher: Option<String>,
     pub isbn: Option<String>,
     pub description: Option<String>,
+    /// Calibre-compatible series metadata, when supplied by the EPUB.
+    pub series: Option<String>,
+    pub series_index: Option<f64>,
     /// Positive for an EPUB page-list count; negative for a word-count estimate.
     pub page_count: i64,
     pub cover: Option<Vec<u8>>,
@@ -38,6 +43,13 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         .cover_image()
         .and_then(|entry| entry.read_bytes().ok())
         .map(|b| b.to_vec());
+    // Keep these out of the final struct expression: the iterator borrows the
+    // package metadata and must be dropped before `epub`.
+    let series = md.by_property("calibre:series").next().map(|s| s.value().to_string());
+    let series_index = md
+        .by_property("calibre:series_index")
+        .next()
+        .and_then(|i| i.value().trim().parse().ok());
 
     Ok(ParsedEpub {
         title,
@@ -46,6 +58,11 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         publisher,
         isbn,
         description: md.description().map(|d| d.value().to_string()),
+        // `calibre:series` and `calibre:series_index` are the de facto EPUB
+        // convention used by Calibre and most metadata tools. They work in both
+        // EPUB 2 and 3, unlike EPUB 3 collection refinements.
+        series,
+        series_index,
         page_count: epub
             .toc()
             .by_kind("page-list")
@@ -124,17 +141,18 @@ fn fallback_title(path: &Path) -> String {
         .to_string()
 }
 
-/// The metadata `write_metadata` writes into an epub. Deliberately narrower than
-/// the library's `BookEdit`: ISBN and series are omitted because they are NOT
-/// written to the file (the DB is authoritative). ISBN lives in `dc:identifier`,
-/// often the package `unique-identifier` — rewriting it risks breaking that link;
-/// series has no standard `dc:` slot. Optional fields are `None` when cleared.
+/// The metadata `write_metadata` writes into an epub. ISBN is omitted because it
+/// often supplies the package `unique-identifier`, so rewriting it risks breaking
+/// that link. Series uses Calibre's widely supported EPUB metadata convention.
+/// Optional fields are `None` when cleared.
 pub struct EpubEdit<'a> {
     pub title: &'a str,
     pub authors: &'a [String],
     pub publisher: Option<&'a str>,
     pub language: Option<&'a str>,
     pub description: Option<&'a str>,
+    pub series: Option<&'a str>,
+    pub series_index: Option<f64>,
     pub cover: Option<&'a [u8]>,
     pub remove_cover: bool,
 }
@@ -176,6 +194,19 @@ pub fn write_metadata(path: &Path, edit: &EpubEdit) -> Result<(), String> {
     editor = editor.clear_meta("dc:publisher");
     if let Some(p) = edit.publisher {
         editor = editor.publisher(p);
+    }
+    // Series has no Dublin Core field. Use Calibre's established EPUB 2
+    // `<meta name="calibre:series" content="…">` convention, which is also
+    // retained by EPUB 3 readers and metadata editors.
+    editor = editor.clear_meta("calibre:series");
+    if let Some(series) = edit.series {
+        editor = editor.meta(DetachedEpubMetaEntry::meta_name("calibre:series").value(series));
+    }
+    editor = editor.clear_meta("calibre:series_index");
+    if let Some(index) = edit.series_index {
+        editor = editor.meta(
+            DetachedEpubMetaEntry::meta_name("calibre:series_index").value(index.to_string()),
+        );
     }
     // dc:language is required for a valid epub, so only replace it when a value
     // is given — never clear it to nothing.

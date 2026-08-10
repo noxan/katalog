@@ -304,6 +304,8 @@ impl Library {
                 publisher: nonempty(&edit.publisher),
                 language: nonempty(&edit.language),
                 description: nonempty(&edit.description),
+                series: edit.series.as_deref(),
+                series_index: edit.series_index,
                 cover: edit.cover.as_deref(),
                 remove_cover: edit.remove_cover,
             })?;
@@ -479,8 +481,8 @@ impl Library {
             let conn = self.lock();
             conn.execute(
                 "INSERT INTO books
-                    (title, authors, file_path, format, isbn, language, publisher, description, page_count)
-                 VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7, ?8)",
+                    (title, authors, file_path, format, isbn, language, publisher, description, series, series_index, page_count)
+                 VALUES (?1, ?2, ?3, 'epub', ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 rusqlite::params![
                     meta.title,
                     authors.join("\n"),
@@ -489,6 +491,8 @@ impl Library {
                     meta.language,
                     meta.publisher,
                     meta.description,
+                    meta.series,
+                    meta.series_index,
                     meta.page_count,
                 ],
             )?;

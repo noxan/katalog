@@ -175,21 +175,29 @@ fn update_new_cover_changes_path_and_prunes_old() {
     assert!(!Path::new(&old).exists(), "old cached cover pruned");
 }
 
-/// Series is DB-only: it round-trips in the index but is never written into the
-/// epub file (no standard dc slot).
+/// Series and its position are stored in the EPUB using Calibre-compatible
+/// metadata, as well as in the library index.
 #[test]
-fn update_series_is_db_only() {
+fn update_series_writes_epub_metadata() {
     let tmp = tempfile::tempdir().unwrap();
     let lib = lib_in(tmp.path());
     let book = lib.import(fixture_str(), true, true).unwrap();
 
     let mut edit = edit_from(&book);
     edit.series = Some("Zzarquon Saga".into());
+    edit.series_index = Some(2.5);
     let updated = lib.update(book.id, edit).unwrap();
 
     assert_eq!(updated.series.as_deref(), Some("Zzarquon Saga"));
+    assert_eq!(updated.series_index, Some(2.5));
     let opf = read_opf_bytes(Path::new(&updated.file_path));
-    assert!(!opf.contains("Zzarquon"), "series must not leak into the OPF");
+    assert!(opf.contains("calibre:series") && opf.contains("Zzarquon Saga"));
+    assert!(opf.contains("calibre:series_index") && opf.contains("2.5"));
+
+    // Re-importing the edited file finds the persisted metadata.
+    let second = lib.import(updated.file_path.clone(), true, false).unwrap();
+    assert_eq!(second.series.as_deref(), Some("Zzarquon Saga"));
+    assert_eq!(second.series_index, Some(2.5));
 }
 
 /// Clearing an optional field to empty stores NULL and removes it from the file.
