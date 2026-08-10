@@ -1,5 +1,8 @@
 .PHONY: app core run bundle release publish test clean
 
+# `publish` uses Bash for its version-selection prompt and bump helper.
+SHELL := /bin/bash
+
 # debug for dev, release for anything that leaves this machine.
 CONFIG ?= debug
 
@@ -69,23 +72,35 @@ release:
 	xcrun stapler staple $(DMG)
 	@echo "Notarized $(DMG) — attach it to a GitHub release."
 
-# Cut a release end to end:  make publish VERSION=0.2
-# Bumps the version, builds and notarizes, then commits, tags and publishes to
-# GitHub. Notarizing happens before anything is committed or pushed, so a failed
-# build leaves only an uncommitted plist edit behind (git checkout $(PLIST)).
+# Cut a release end to end. With no options, choose patch/minor/major at a
+# prompt; use BUMP=patch (or minor/major) to avoid the prompt, or VERSION=0.2.0
+# to specify an exact version. Notarization happens before anything is committed
+# or pushed, and a failed build restores the plist.
 publish:
-	@test "$(origin VERSION)" = "command line" || { echo "usage: make publish VERSION=0.2"; exit 1; }
-	@test -z "$$(git status --porcelain)" || { echo "working tree is dirty"; exit 1; }
-	@! git rev-parse -q --verify v$(VERSION) >/dev/null \
-		|| { echo "tag v$(VERSION) already exists"; exit 1; }
-	/usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $(VERSION)" $(PLIST)
-	/usr/libexec/PlistBuddy -c "Set CFBundleVersion $$(($(BUILD) + 1))" $(PLIST)
-	$(MAKE) release VERSION=$(VERSION)
-	git commit -q -m "Release $(VERSION)" $(PLIST)
-	git tag v$(VERSION)
-	git push origin HEAD v$(VERSION)
-	gh release create v$(VERSION) $(DMG) --title "Katalog $(VERSION)" --generate-notes
-	@echo "Published v$(VERSION)."
+	@set -euo pipefail; \
+	command -v gh >/dev/null || { echo "gh is not installed" >&2; exit 1; }; \
+	[[ -z "$$(git status --porcelain)" ]] || { echo "working tree is dirty" >&2; exit 1; }; \
+	bump() { local ma mi pa; IFS=. read -r ma mi pa <<< "$$1"; case "$$2" in patch) pa=$$(( $${pa:-0} + 1 ));; minor) mi=$$(( $${mi:-0} + 1 )); pa=0;; major) ma=$$(( $${ma:-0} + 1 )); mi=0; pa=0;; esac; echo "$${ma:-0}.$${mi:-0}.$${pa:-0}"; }; \
+	if [[ "$(origin VERSION)" == "command line" ]]; then version="$(VERSION)"; \
+	else \
+		latest=$$(git tag --list 'v*' --sort=-v:refname | head -1); latest=$${latest#v}; latest=$${latest:-0.0.0}; \
+		kind="$(BUMP)"; \
+		if [[ -z "$$kind" ]]; then \
+			echo "Latest release: v$$latest"; echo "  1) patch  $$(bump "$$latest" patch)"; echo "  2) minor  $$(bump "$$latest" minor)"; echo "  3) major  $$(bump "$$latest" major)"; \
+			read -rp "Which? [1-3] " choice; case "$$choice" in 1) kind=patch;; 2) kind=minor;; 3) kind=major;; *) echo "aborted" >&2; exit 1;; esac; \
+		fi; \
+		case "$$kind" in patch|minor|major) version=$$(bump "$$latest" "$$kind");; *) echo "BUMP must be patch, minor, or major" >&2; exit 1;; esac; \
+	fi; \
+	git rev-parse -q --verify "v$$version" >/dev/null && { echo "tag v$$version already exists" >&2; exit 1; }; \
+	read -rp "Build, tag and publish v$$version? [y/N] " ok; [[ "$$ok" == [yY] ]] || { echo "aborted"; exit 1; }; \
+	build=$$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" $(PLIST)); \
+	/usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $$version" $(PLIST); \
+	/usr/libexec/PlistBuddy -c "Set CFBundleVersion $$((build + 1))" $(PLIST); \
+	if ! $(MAKE) release VERSION="$$version"; then git checkout -- $(PLIST); echo "build failed — version bump reverted" >&2; exit 1; fi; \
+	git commit -q -m "Release $$version" $(PLIST); \
+	git tag "v$$version"; git push -q origin HEAD "v$$version"; \
+	gh release create "v$$version" "dist/Katalog-$$version.dmg" --title "Katalog $$version" --generate-notes; \
+	echo "Published v$$version."
 
 # Core unit tests (epub parse + library roundtrip).
 test:

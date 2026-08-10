@@ -42,8 +42,10 @@ Key ID and issuer UUID both come from App Store Connect → Users and Access →
 Integrations. Keep the `.p8` outside the repo and mode 600 — Apple serves it
 exactly once, and it signs on your behalf.
 
-Bump `CFBundleShortVersionString` and `CFBundleVersion` in `macos/Info.plist`
-before each release. Builds are arm64 only.
+Run `make publish` to choose the next patch, minor, or major version; use
+`make publish BUMP=patch` to skip version selection, or
+`make publish VERSION=0.2.0` for an exact version. It updates the plist, builds,
+notarizes, commits, tags, and publishes the DMG. Builds are arm64 only.
 
 ## Test the core
 
