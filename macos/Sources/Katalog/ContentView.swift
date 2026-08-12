@@ -31,6 +31,7 @@ struct ContentView: View {
     // second binding stuck after first dismiss, so a second edit won't open.
     @State private var sheet: BookSheet?
     @State private var prompts: [DuplicatePrompt] = []
+    @State private var searchText = ""
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
     @AppStorage("grouping") private var grouping: Grouping = .series
@@ -46,9 +47,12 @@ struct ContentView: View {
         ScrollView {
             if store.books.isEmpty {
                 emptyState
+            } else if visibleBooks.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .frame(maxWidth: .infinity, minHeight: 400)
             } else {
                 LazyVGrid(columns: columns, spacing: Theme.spacing) {
-                    ForEach(ordered) { book in
+                    ForEach(visibleBooks) { book in
                         Button { sheet = .detail(book) } label: {
                             BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
                         }
@@ -83,6 +87,7 @@ struct ContentView: View {
             Task { prompts += await store.importBatch(store.epubURLs(from: [url])) }
         }
         .navigationTitle("Katalog")
+        .searchable(text: $searchText, placement: .toolbar, prompt: "Find in Books")
         .toolbar {
             ToolbarItemGroup {
                 libraryOptions
@@ -127,6 +132,15 @@ struct ContentView: View {
                     onCancel: { prompts = [] }
                 )
             }
+        }
+    }
+
+    private var visibleBooks: [Book] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return ordered }
+        return ordered.filter { book in
+            ([book.title] + book.authors + [book.series, book.publisher, book.isbn].compactMap { $0 })
+                .contains { $0.localizedCaseInsensitiveContains(query) }
         }
     }
 
