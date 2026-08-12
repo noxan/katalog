@@ -31,6 +31,7 @@ struct ContentView: View {
     // second binding stuck after first dismiss, so a second edit won't open.
     @State private var sheet: BookSheet?
     @State private var prompts: [DuplicatePrompt] = []
+    @State private var pendingRemoval: Book?
     @State private var searchText = ""
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
@@ -130,8 +131,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .removeCurrentBook)) { _ in
             guard let book = currentBook else { return }
-            sheet = nil
-            store.remove(book)
+            pendingRemoval = book
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [epubType, .folder],
                       allowsMultipleSelection: true) { result in
@@ -156,6 +156,23 @@ struct ContentView: View {
                     onCancel: { prompts = [] }
                 )
             }
+        }
+        .confirmationDialog(
+            "Remove \(pendingRemoval?.title ?? "this book")?",
+            isPresented: Binding(
+                get: { pendingRemoval != nil },
+                set: { if !$0 { pendingRemoval = nil } }
+            )
+        ) {
+            Button("Remove", role: .destructive) {
+                guard let book = pendingRemoval else { return }
+                sheet = nil
+                store.remove(book)
+                pendingRemoval = nil
+            }
+            Button("Cancel", role: .cancel) { pendingRemoval = nil }
+        } message: {
+            Text("The book will be moved to the Trash.")
         }
     }
 
@@ -236,9 +253,9 @@ struct ContentView: View {
         kindleMenu(for: book)
         Divider()
         Button(role: .destructive) {
-            store.remove(book)
+            pendingRemoval = book
         } label: {
-            Label("Remove from Library", systemImage: "trash")
+            Label("Remove…", systemImage: "trash")
         }
     }
 

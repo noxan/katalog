@@ -37,7 +37,7 @@ private struct BookCommands: Commands {
             .disabled(book == nil)
             Divider()
             Button { post(.removeCurrentBook) } label: {
-                Label("Remove from Library", systemImage: "trash")
+                Label("Remove…", systemImage: "trash")
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .disabled(book == nil)

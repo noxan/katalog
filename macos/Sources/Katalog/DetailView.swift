@@ -12,6 +12,7 @@ struct DetailView: View {
     @State private var status: String?
     @State private var hoverSide = 0   // -1 left, 1 right, 0 none
     @State private var editing = false
+    @State private var confirmingRemoval = false
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
     @AppStorage("grouping") private var grouping: Grouping = .series
 
@@ -39,6 +40,15 @@ struct DetailView: View {
         .task(id: book.id) { book = (try? store.cachePageCount(book)) ?? book }
         .sheet(isPresented: $editing) {
             EditView(book: book) { book = $0 }
+        }
+        .confirmationDialog("Remove \(book.title)?", isPresented: $confirmingRemoval) {
+            Button("Remove", role: .destructive) {
+                store.remove(book)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The book will be moved to the Trash.")
         }
     }
 
@@ -207,9 +217,9 @@ struct DetailView: View {
         .keyboardShortcut("r", modifiers: [.command, .shift])
         Divider()
         Button(role: .destructive) {
-            store.remove(book); dismiss()
+            confirmingRemoval = true
         } label: {
-            Label("Remove from Library", systemImage: "trash")
+            Label("Remove…", systemImage: "trash")
         }
         .keyboardShortcut(.delete, modifiers: .command)
     }
