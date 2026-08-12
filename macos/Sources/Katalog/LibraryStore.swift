@@ -181,8 +181,38 @@ final class LibraryStore: ObservableObject {
         return zip(urls, hits).compactMap { url, hit in hit.map { DuplicatePrompt(url: url, hit: $0) } }
     }
 
+    /// Move the ebook to the system Trash before removing its database row.
+    /// Finder records the original path, so its Put Back action restores the
+    /// file to the managed library folder instead of losing it permanently.
     func remove(_ book: Book) {
+        let url = URL(fileURLWithPath: book.filePath)
+        guard !FileManager.default.fileExists(atPath: url.path)
+              || (try? FileManager.default.trashItem(at: url, resultingItemURL: nil)) != nil
+        else { return } // Never drop the index when moving the file failed.
         try? lib.remove(id: book.id)
+        refresh()
+    }
+
+    /// Finder does not publish a dedicated "Put Back" notification. When the
+    /// app becomes active after a Trash/Finder operation, find EPUBs restored
+    /// inside the managed folder that have no database row and index them in
+    /// place. This also recovers files copied into the managed folder manually.
+    func importRestoredBooks() async {
+        let root = URL(fileURLWithPath: booksDir, isDirectory: true)
+        let known = Set(books.map { URL(fileURLWithPath: $0.filePath).standardizedFileURL.path })
+        let candidates = epubURLs(from: [root]).filter {
+            !known.contains($0.standardizedFileURL.path)
+        }
+        guard !candidates.isEmpty else { return }
+
+        let lib = self.lib
+        await Task.detached(priority: .utility) {
+            for url in candidates {
+                // The file is already in the managed folder. Copying it would
+                // select the same organized destination as its source.
+                _ = try? lib.import(epubPath: url.path, copy: false, organize: false)
+            }
+        }.value
         refresh()
     }
 

@@ -117,6 +117,9 @@ struct ContentView: View {
                     .help("Import epubs or a folder (⌘O)")
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await store.importRestoredBooks() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .importBooks)) { _ in importing = true }
         .onReceive(NotificationCenter.default.publisher(for: .editCurrentBook)) { _ in
             if case .detail(let book) = sheet { sheet = .edit(book) }
