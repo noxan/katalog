@@ -48,7 +48,7 @@ bundle: app
 # executable while the replacement is copied. Override INSTALL_DIR if needed.
 INSTALL_DIR ?= /Applications
 install:
-	$(MAKE) bundle CONFIG=release
+	$(MAKE) bundle CONFIG=release SIGN="$(DEV_ID)" CODESIGN_FLAGS="--options runtime"
 	-pkill -x Katalog
 	rm -rf "$(INSTALL_DIR)/Katalog.app"
 	ditto dist/Katalog.app "$(INSTALL_DIR)/Katalog.app"
