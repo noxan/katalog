@@ -134,21 +134,34 @@ final class LibraryStore: ObservableObject {
         refresh()  // one list() for the whole batch, not one per book
     }
 
-    /// Flatten a drop/pick selection into epub files, recursing into any
-    /// folders. ponytail: no explicit security scoping here — the sandbox grant
-    /// that comes with a dropped or picked directory already covers everything
-    /// under it, and lasts until the app quits.
+    /// Flatten a drop/pick selection into epub files, recursively walking every
+    /// selected folder. NSOpenPanel returns security-scoped URLs in a sandbox;
+    /// access must begin before enumeration or FileManager can see the selected
+    /// directory but silently omit protected descendants.
     func epubURLs(from urls: [URL]) -> [URL] {
         let fm = FileManager.default
         return urls.flatMap { url -> [URL] in
+            // Keep parent access for the process lifetime: importBatch runs
+            // asynchronously after this method returns and needs the same grant
+            // to open the descendant URLs discovered here.
+            _ = url.startAccessingSecurityScopedResource()
+
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { return [] }
-            if isDir.boolValue {
-                let children = fm.enumerator(at: url, includingPropertiesForKeys: nil)?
-                    .allObjects as? [URL] ?? []
-                return children.filter { $0.pathExtension.lowercased() == "epub" }
+            guard isDir.boolValue else {
+                return url.pathExtension.lowercased() == "epub" ? [url] : []
             }
-            return url.pathExtension.lowercased() == "epub" ? [url] : []
+
+            guard let enumerator = fm.enumerator(
+                at: url,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            ) else { return [] }
+            var epubs: [URL] = []
+            for case let child as URL in enumerator {
+                if child.pathExtension.lowercased() == "epub" { epubs.append(child) }
+            }
+            return epubs
         }
     }
 
