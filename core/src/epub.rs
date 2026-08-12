@@ -43,13 +43,33 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         .cover_image()
         .and_then(|entry| entry.read_bytes().ok())
         .map(|b| b.to_vec());
-    // Keep these out of the final struct expression: the iterator borrows the
-    // package metadata and must be dropped before `epub`.
-    let series = md.by_property("calibre:series").next().map(|s| s.value().to_string());
-    let series_index = md
-        .by_property("calibre:series_index")
-        .next()
-        .and_then(|i| i.value().trim().parse().ok());
+    // EPUB 3 collection metadata is authoritative. A series is a
+    // `belongs-to-collection` entry refined as collection-type=series, with its
+    // position in group-position. Fall back to Calibre's EPUB 2 convention for
+    // the large existing ecosystem that still emits it.
+    let epub3_series = md.by_property("belongs-to-collection").find_map(|entry| {
+        let is_series = entry
+            .refinements()
+            .by_property("collection-type")
+            .any(|kind| kind.value().eq_ignore_ascii_case("series"));
+        is_series.then(|| {
+            let index = entry
+                .refinements()
+                .by_property("group-position")
+                .next()
+                .and_then(|position| position.value().trim().parse().ok());
+            (entry.value().to_string(), index)
+        })
+    });
+    let (series, series_index) = epub3_series.unwrap_or_else(|| {
+        let series = md.by_property("calibre:series").next().map(|s| s.value().to_string());
+        let index = md
+            .by_property("calibre:series_index")
+            .next()
+            .and_then(|i| i.value().trim().parse().ok());
+        (series.unwrap_or_default(), index)
+    });
+    let series = (!series.is_empty()).then_some(series);
 
     Ok(ParsedEpub {
         title,
@@ -195,18 +215,28 @@ pub fn write_metadata(path: &Path, edit: &EpubEdit) -> Result<(), String> {
     if let Some(p) = edit.publisher {
         editor = editor.publisher(p);
     }
-    // Series has no Dublin Core field. Use Calibre's established EPUB 2
-    // `<meta name="calibre:series" content="…">` convention, which is also
-    // retained by EPUB 3 readers and metadata editors.
+    // Write the standard EPUB 3 collection vocabulary as the primary form.
+    // Keep Calibre's EPUB 2 fields alongside it for compatibility with readers
+    // and metadata tools that have not adopted collection refinements.
+    editor = editor.clear_meta("belongs-to-collection");
     editor = editor.clear_meta("calibre:series");
-    if let Some(series) = edit.series {
-        editor = editor.meta(DetachedEpubMetaEntry::meta_name("calibre:series").value(series));
-    }
     editor = editor.clear_meta("calibre:series_index");
-    if let Some(index) = edit.series_index {
-        editor = editor.meta(
-            DetachedEpubMetaEntry::meta_name("calibre:series_index").value(index.to_string()),
-        );
+    if let Some(series) = edit.series {
+        let mut collection = DetachedEpubMetaEntry::meta("belongs-to-collection")
+            .value(series)
+            .refinement(DetachedEpubMetaEntry::meta("collection-type").value("series"));
+        if let Some(index) = edit.series_index {
+            collection = collection.refinement(
+                DetachedEpubMetaEntry::meta("group-position").value(index.to_string()),
+            );
+        }
+        editor = editor.meta(collection);
+        editor = editor.meta(DetachedEpubMetaEntry::meta_name("calibre:series").value(series));
+        if let Some(index) = edit.series_index {
+            editor = editor.meta(
+                DetachedEpubMetaEntry::meta_name("calibre:series_index").value(index.to_string()),
+            );
+        }
     }
     // dc:language is required for a valid epub, so only replace it when a value
     // is given — never clear it to nothing.

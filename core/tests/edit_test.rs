@@ -191,6 +191,11 @@ fn update_series_writes_epub_metadata() {
     assert_eq!(updated.series.as_deref(), Some("Zzarquon Saga"));
     assert_eq!(updated.series_index, Some(2.5));
     let opf = read_opf_bytes(Path::new(&updated.file_path));
+    // EPUB 3 collection metadata is primary; Calibre fields remain as a
+    // compatibility fallback for older readers and metadata tools.
+    assert!(opf.contains("belongs-to-collection") && opf.contains("Zzarquon Saga"));
+    assert!(opf.contains("collection-type") && opf.contains("series"));
+    assert!(opf.contains("group-position") && opf.contains("2.5"));
     assert!(opf.contains("calibre:series") && opf.contains("Zzarquon Saga"));
     assert!(opf.contains("calibre:series_index") && opf.contains("2.5"));
 
