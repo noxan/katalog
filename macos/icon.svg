@@ -6,8 +6,10 @@
     </linearGradient>
   </defs>
 
-  <!-- rounded-rect app canvas (macOS icon grid: ~824 body, inset margins) -->
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <!-- Full-bleed artwork: macOS applies the platform icon mask itself. An
+       inset rounded rectangle gets masked a second time and shows up as a
+       pale/white border in the Dock and Finder. -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
 
   <!-- open book, centered -->
   <g>
