@@ -107,6 +107,9 @@ struct ContentView: View {
                     onDismissFailure: { kindle.lastFailure = nil }
                 )
             }
+            // Force a native visual boundary; adjacent primary-action items are
+            // otherwise coalesced into one Liquid Glass toolbar group.
+            ToolbarSpacer(.fixed, placement: .primaryAction)
             ToolbarItemGroup(placement: .primaryAction) {
                 libraryOptions
                 Button { importing = true } label: { Image(systemName: "plus") }
