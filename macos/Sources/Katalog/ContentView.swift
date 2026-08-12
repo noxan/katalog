@@ -242,34 +242,42 @@ struct ContentView: View {
         }
     }
 
-    /// Reader status and book-level transfer actions in the grid context menu.
+    /// Keep the usual one-Kindle case flat. A submenu only earns its place when
+    /// it disambiguates actions for multiple connected readers.
     @ViewBuilder private func kindleMenu(for book: Book) -> some View {
-        Menu("Kindle", systemImage: "externaldrive") {
-            if kindle.devices.isEmpty {
-                Label("No Kindle connected", systemImage: "cable.connector.horizontal")
-            } else {
+        if kindle.devices.isEmpty {
+            Label("No Kindle connected", systemImage: "cable.connector.horizontal")
+        } else if kindle.devices.count == 1, let device = kindle.devices.first {
+            kindleAction(for: book, on: device)
+                .disabled(kindle.busy(book))
+        } else {
+            Menu("Kindle", systemImage: "externaldrive") {
                 ForEach(kindle.devices) { device in
-                    if kindle.onDevice(book) {
-                        Button(role: .destructive) {
-                            kindle.remove(book, from: device)
-                        } label: {
-                            Label("Remove from \(device.name)", systemImage: "trash")
-                        }
-                    } else if kindle.scanning {
-                        Label("Checking \(device.name)…", systemImage: "arrow.triangle.2.circlepath")
-                    } else {
-                        Button {
-                            if let path = try? store.transferPath(book) {
-                                kindle.send(book, epubPath: path, to: device)
-                            }
-                        } label: {
-                            Label("Send to \(device.name)", systemImage: "arrow.right.circle")
-                        }
-                    }
+                    kindleAction(for: book, on: device)
                 }
             }
+            .disabled(kindle.busy(book))
         }
-        .disabled(kindle.busy(book))
+    }
+
+    @ViewBuilder private func kindleAction(for book: Book, on device: Device) -> some View {
+        if kindle.onDevice(book) {
+            Button(role: .destructive) {
+                kindle.remove(book, from: device)
+            } label: {
+                Label("Remove from \(device.name)", systemImage: "trash")
+            }
+        } else if kindle.scanning {
+            Label("Checking \(device.name)…", systemImage: "arrow.triangle.2.circlepath")
+        } else {
+            Button {
+                if let path = try? store.transferPath(book) {
+                    kindle.send(book, epubPath: path, to: device)
+                }
+            } label: {
+                Label("Send to \(device.name)", systemImage: "arrow.right.circle")
+            }
+        }
     }
 
     private var emptyState: some View {
