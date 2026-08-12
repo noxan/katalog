@@ -71,7 +71,7 @@ struct KatalogApp: App {
         .commands {
             CommandGroup(after: .newItem) {
                 Button { NotificationCenter.default.post(name: .importBooks, object: nil) } label: {
-                    Label("Import Books or Folder…", systemImage: "plus")
+                    Label("Import…", systemImage: "plus")
                 }
                 .keyboardShortcut("o", modifiers: .command)
             }
