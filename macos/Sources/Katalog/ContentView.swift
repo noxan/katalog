@@ -33,7 +33,7 @@ struct ContentView: View {
     @State private var prompts: [DuplicatePrompt] = []
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
-    @AppStorage("grouping") private var grouping: Grouping = .none
+    @AppStorage("grouping") private var grouping: Grouping = .series
     // ponytail: display preferences live in Settings; read here to render.
     /// The library in display order. Sorting runs localizedStandardCompare per
     /// comparison, and body re-runs on every store/watcher change, so keep the

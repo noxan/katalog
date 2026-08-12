@@ -5,7 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject var store: LibraryStore
     @AppStorage("gridStyle") private var gridStyle: GridStyle = .compact
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
-    @AppStorage("grouping") private var grouping: Grouping = .none
+    @AppStorage("grouping") private var grouping: Grouping = .series
 
     var body: some View {
         Form {
