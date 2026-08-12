@@ -149,30 +149,31 @@ struct ContentView: View {
     private var libraryOptions: some View {
         Menu {
             Menu("Sort By", systemImage: "arrow.up.arrow.down") {
-                Picker("Sort By", selection: $sortOrder) {
-                    ForEach(SortOrder.allCases, id: \.self) { order in
-                        Text(order.label).tag(order)
-                    }
+                ForEach(SortOrder.allCases, id: \.self) { order in
+                    optionButton(order.label, selected: sortOrder == order) { sortOrder = order }
                 }
             }
             Menu("Group By", systemImage: "rectangle.3.group") {
-                Picker("Group By", selection: $grouping) {
-                    ForEach(Grouping.allCases, id: \.self) { group in
-                        Text(group.label).tag(group)
-                    }
+                ForEach(Grouping.allCases, id: \.self) { group in
+                    optionButton(group.label, selected: grouping == group) { grouping = group }
                 }
             }
             Divider()
             Menu("View Options", systemImage: "rectangle.grid.2x2") {
-                Picker("View Options", selection: $gridStyle) {
-                    Text("Titles and Authors").tag(GridStyle.compact)
-                    Text("Covers Only").tag(GridStyle.covers)
-                }
+                optionButton("Titles and Authors", selected: gridStyle == .compact) { gridStyle = .compact }
+                optionButton("Covers Only", selected: gridStyle == .covers) { gridStyle = .covers }
             }
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
         }
         .help("Sort, group, and view options")
+    }
+
+    private func optionButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            if selected { Label(title, systemImage: "checkmark") }
+            else { Text(title) }
+        }
     }
 
     private var currentBook: Book? {
