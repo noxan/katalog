@@ -1,4 +1,4 @@
-.PHONY: app core run bundle release publish test clean
+.PHONY: app core run bundle install release publish test clean
 
 # `publish` uses Bash for its version-selection prompt and bump helper.
 SHELL := /bin/bash
@@ -42,6 +42,19 @@ bundle: app
 	codesign --force --sign "$(SIGN)" $(CODESIGN_FLAGS) $(if $(ENTITLEMENTS),--entitlements $(ENTITLEMENTS)) dist/Katalog.app
 	/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(PWD)/dist/Katalog.app"
 	@echo "Built dist/Katalog.app — set default via Finder Get Info → Open With → Change All."
+
+# Build a release bundle, replace the local /Applications copy, and launch it.
+# `ditto` preserves bundle metadata; terminating first avoids running a deleted
+# executable while the replacement is copied. Override INSTALL_DIR if needed.
+INSTALL_DIR ?= /Applications
+install:
+	$(MAKE) bundle CONFIG=release
+	-pkill -x Katalog
+	rm -rf "$(INSTALL_DIR)/Katalog.app"
+	ditto dist/Katalog.app "$(INSTALL_DIR)/Katalog.app"
+	codesign --verify --deep --strict "$(INSTALL_DIR)/Katalog.app"
+	open "$(INSTALL_DIR)/Katalog.app"
+	@echo "Installed and launched $(INSTALL_DIR)/Katalog.app"
 
 TEAM_ID ?= J7794KYKGV
 DEV_ID  ?= Developer ID Application: Richard Stromer ($(TEAM_ID))
