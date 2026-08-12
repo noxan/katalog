@@ -12,6 +12,8 @@ struct DetailView: View {
     @State private var status: String?
     @State private var hoverSide = 0   // -1 left, 1 right, 0 none
     @State private var editing = false
+    @AppStorage("sortOrder") private var sortOrder: SortOrder = .dateAdded
+    @AppStorage("grouping") private var grouping: Grouping = .series
 
     var body: some View {
         ZStack {
@@ -136,18 +138,21 @@ struct DetailView: View {
 
     // MARK: Chrome — close + overflow menu
 
-    /// Position of the shown book in the library grid's order.
-    private var index: Int? { store.books.firstIndex { $0.id == book.id } }
+    /// Use exactly the same ordering preferences as the main grid. Grouping's
+    /// sorter includes its group order, so navigation also crosses series and
+    /// author boundaries in the order they are displayed.
+    private var orderedBooks: [Book] { grouping.sorted(store.books, by: sortOrder) }
+    private var index: Int? { orderedBooks.firstIndex { $0.id == book.id } }
 
     private func step(_ delta: Int) {
-        guard let i = index, store.books.indices.contains(i + delta) else { return }
-        book = store.books[i + delta]
+        guard let i = index, orderedBooks.indices.contains(i + delta) else { return }
+        book = orderedBooks[i + delta]
     }
 
     /// Prev/next book, docked to the dialog's left (-1) and right (1) edges.
     private func navButton(_ delta: Int) -> some View {
         let disabled = delta < 0 ? (index ?? 0) <= 0
-                                 : index.map { $0 >= store.books.count - 1 } ?? true
+                                 : index.map { $0 >= orderedBooks.count - 1 } ?? true
         return Button { step(delta) } label: {
             Image(systemName: delta < 0 ? "chevron.backward.circle.fill" : "chevron.forward.circle.fill")
         }
