@@ -87,6 +87,9 @@ struct ContentView: View {
             Task { prompts += await store.importBatch(store.epubURLs(from: [url])) }
         }
         .navigationTitle("Katalog")
+        // Book commands are disabled while no detail/editor is active. This is
+        // important for text fields: otherwise ⌘Delete is stolen from Search.
+        .focusedValue(\.currentBook, currentBook)
         .searchable(text: $searchText, placement: .toolbar, prompt: "Find in Books")
         .toolbar {
             ToolbarItemGroup {
@@ -215,7 +218,6 @@ struct ContentView: View {
         } label: {
             Label("Remove from Library", systemImage: "trash")
         }
-        .keyboardShortcut(.delete, modifiers: .command)
     }
 
     private var emptyState: some View {

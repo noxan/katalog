@@ -1,11 +1,52 @@
 import AppKit
 import SwiftUI
+import KatalogCore
+
+private struct CurrentBookKey: FocusedValueKey {
+    typealias Value = Book
+}
+
+extension FocusedValues {
+    var currentBook: Book? {
+        get { self[CurrentBookKey.self] }
+        set { self[CurrentBookKey.self] = newValue }
+    }
+}
 
 extension Notification.Name {
     static let importBooks = Notification.Name("Katalog.importBooks")
     static let editCurrentBook = Notification.Name("Katalog.editCurrentBook")
     static let revealCurrentBook = Notification.Name("Katalog.revealCurrentBook")
     static let removeCurrentBook = Notification.Name("Katalog.removeCurrentBook")
+}
+
+private struct BookCommands: Commands {
+    @FocusedValue(\.currentBook) private var book
+
+    var body: some Commands {
+        CommandMenu("Book") {
+            Button { post(.editCurrentBook) } label: {
+                Label("Edit Metadata…", systemImage: "pencil")
+            }
+            .keyboardShortcut("e", modifiers: .command)
+            .disabled(book == nil)
+            Button { post(.revealCurrentBook) } label: {
+                Label("Show in Finder", systemImage: "folder")
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(book == nil)
+            Divider()
+            Button { post(.removeCurrentBook) } label: {
+                Label("Remove from Library", systemImage: "trash")
+            }
+            .keyboardShortcut(.delete, modifiers: .command)
+            .disabled(book == nil)
+        }
+    }
+
+    private func post(_ name: Notification.Name) {
+        NotificationCenter.default.post(name: name, object: nil)
+    }
 }
 
 @main
@@ -34,21 +75,7 @@ struct KatalogApp: App {
                 }
                 .keyboardShortcut("o", modifiers: .command)
             }
-            CommandMenu("Book") {
-                Button { NotificationCenter.default.post(name: .editCurrentBook, object: nil) } label: {
-                    Label("Edit Metadata…", systemImage: "pencil")
-                }
-                .keyboardShortcut("e", modifiers: .command)
-                Button { NotificationCenter.default.post(name: .revealCurrentBook, object: nil) } label: {
-                    Label("Show in Finder", systemImage: "folder")
-                }
-                .keyboardShortcut("r", modifiers: [.command, .shift])
-                Divider()
-                Button { NotificationCenter.default.post(name: .removeCurrentBook, object: nil) } label: {
-                    Label("Remove from Library", systemImage: "trash")
-                }
-                .keyboardShortcut(.delete, modifiers: .command)
-            }
+            BookCommands()
         }
 
         // Native Settings scene: adds the "Settings…" menu item and ⌘,.
