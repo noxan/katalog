@@ -44,23 +44,30 @@ struct ContentView: View {
     private let columns = [GridItem(.adaptive(minimum: Theme.coverWidth), spacing: Theme.spacing)]
 
     var body: some View {
-        ScrollView {
+        Group {
             if store.books.isEmpty {
+                // Keep the welcome view outside ScrollView: a scroll view gives
+                // its content no finite height, so vertical spacers collapse and
+                // make the artwork appear too high instead of truly centered.
                 emptyState
-            } else if visibleBooks.isEmpty {
-                ContentUnavailableView.search(text: searchText)
-                    .frame(maxWidth: .infinity, minHeight: 400)
             } else {
-                LazyVGrid(columns: columns, spacing: Theme.spacing) {
-                    ForEach(visibleBooks) { book in
-                        Button { sheet = .detail(book) } label: {
-                            BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
+                ScrollView {
+                    if visibleBooks.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                            .frame(maxWidth: .infinity, minHeight: 400)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: Theme.spacing) {
+                            ForEach(visibleBooks) { book in
+                                Button { sheet = .detail(book) } label: {
+                                    BookCell(book: book, onDevice: kindle.onDevice(book), style: gridStyle)
+                                }
+                                .buttonStyle(.plain)
+                                    .contextMenu { bookMenu(book) }
+                            }
                         }
-                        .buttonStyle(.plain)
-                            .contextMenu { bookMenu(book) }
+                        .padding(Theme.spacing)
                     }
                 }
-                .padding(Theme.spacing)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
