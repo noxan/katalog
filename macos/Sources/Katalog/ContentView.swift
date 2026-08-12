@@ -160,7 +160,7 @@ struct ContentView: View {
         } label: {
             Label("Show in Finder", systemImage: "folder")
         }
-        .keyboardShortcut("j", modifiers: [.command, .shift])
+        .keyboardShortcut("r", modifiers: [.command, .shift])
         Divider()
         Button(role: .destructive) {
             store.remove(book)

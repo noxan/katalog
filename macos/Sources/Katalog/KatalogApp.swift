@@ -42,7 +42,7 @@ struct KatalogApp: App {
                 Button { NotificationCenter.default.post(name: .revealCurrentBook, object: nil) } label: {
                     Label("Show in Finder", systemImage: "folder")
                 }
-                .keyboardShortcut("j", modifiers: [.command, .shift])
+                .keyboardShortcut("r", modifiers: [.command, .shift])
                 Divider()
                 Button { NotificationCenter.default.post(name: .removeCurrentBook, object: nil) } label: {
                     Label("Remove from Library", systemImage: "trash")
