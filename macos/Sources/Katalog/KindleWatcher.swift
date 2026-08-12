@@ -58,14 +58,36 @@ final class KindleWatcher: NSObject, ObservableObject {
     /// the detail page closes. This small array is the whole "job system": a
     /// desktop app with one Kindle doesn't need a queue, persistence, or retry.
     @Published private(set) var jobs: [KindleJob] = []
-    /// Last failed operation, surfaced in the status bar until dismissed.
+    /// Last failed operation, surfaced in the reader toolbar menu until dismissed.
     @Published var lastFailure: String?
+
+    // A user-selected security-scoped URL is stronger than the removable-volume
+    // entitlement on recent macOS builds, where reading a mounted Kindle works
+    // but creating files in documents/ can still be denied. Reuse the grant
+    // captured by the access picker rather than the unscoped mount-list URL.
+    private var authorizedVolume: URL?
+    private static let volumeBookmarkKey = "kindleVolumeBookmark"
 
     /// Whether a send or remove for this book is currently running.
     func busy(_ book: Book) -> Bool { jobs.contains { $0.bookId == book.id } }
 
     override init() {
         super.init()
+        if let data = UserDefaults.standard.data(forKey: Self.volumeBookmarkKey) {
+            var stale = false
+            if let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
+                                  relativeTo: nil, bookmarkDataIsStale: &stale),
+               url.startAccessingSecurityScopedResource() {
+                authorizedVolume = url
+                if stale, let refreshed = try? url.bookmarkData(
+                    options: .withSecurityScope,
+                    includingResourceValuesForKeys: nil,
+                    relativeTo: nil
+                ) {
+                    UserDefaults.standard.set(refreshed, forKey: Self.volumeBookmarkKey)
+                }
+            }
+        }
         rescan()
         let nc = NSWorkspace.shared.notificationCenter
         nc.addObserver(self, selector: #selector(volumesChanged),
@@ -86,7 +108,12 @@ final class KindleWatcher: NSObject, ObservableObject {
         let vols = fm.mountedVolumeURLs(
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
-        devices = vols.filter(isKindle).map(Device.init)
+        devices = vols.filter(isKindle).map { mounted in
+            if let authorizedVolume, authorizedVolume.path == mounted.path {
+                return Device(volume: authorizedVolume)
+            }
+            return Device(volume: mounted)
+        }
         scanGeneration = UUID()
         let generation = scanGeneration
         guard !devices.isEmpty else {
