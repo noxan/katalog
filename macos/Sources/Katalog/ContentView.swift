@@ -150,18 +150,18 @@ struct ContentView: View {
         Menu {
             Menu("Sort By", systemImage: "arrow.up.arrow.down") {
                 ForEach(SortOrder.allCases, id: \.self) { order in
-                    optionButton(order.label, selected: sortOrder == order) { sortOrder = order }
+                    optionToggle(order.label, selected: sortOrder == order) { sortOrder = order }
                 }
             }
             Menu("Group By", systemImage: "rectangle.3.group") {
                 ForEach(Grouping.allCases, id: \.self) { group in
-                    optionButton(group.label, selected: grouping == group) { grouping = group }
+                    optionToggle(group.label, selected: grouping == group) { grouping = group }
                 }
             }
             Divider()
             Menu("View Options", systemImage: "rectangle.grid.2x2") {
-                optionButton("Titles and Authors", selected: gridStyle == .compact) { gridStyle = .compact }
-                optionButton("Covers Only", selected: gridStyle == .covers) { gridStyle = .covers }
+                optionToggle("Titles and Authors", selected: gridStyle == .compact) { gridStyle = .compact }
+                optionToggle("Covers Only", selected: gridStyle == .covers) { gridStyle = .covers }
             }
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
@@ -170,11 +170,11 @@ struct ContentView: View {
         .help("Sort, group, and view options")
     }
 
-    private func optionButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            if selected { Label(title, systemImage: "checkmark") }
-            else { Text(title) }
-        }
+    /// A Toggle gets native menu checkmark treatment. The setter only handles
+    /// turning an option on because each group is mutually exclusive.
+    private func optionToggle(_ title: String, selected: Bool,
+                              action: @escaping () -> Void) -> some View {
+        Toggle(title, isOn: Binding(get: { selected }, set: { if $0 { action() } }))
     }
 
     private var currentBook: Book? {
