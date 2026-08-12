@@ -48,6 +48,11 @@ final class KindleWatcher: NSObject, ObservableObject {
     @Published private(set) var deviceKeys: Set<String> = []
     /// True while the background key-scan of a connected device is in flight.
     @Published private(set) var scanning = false
+    /// Completed and total files in the current scan. Keys are published as
+    /// each file completes, so matches appear before this reaches the total.
+    @Published private(set) var scanProgress: (done: Int, total: Int) = (0, 0)
+    /// A new scan invalidates callbacks from an older mount notification.
+    private var scanGeneration = UUID()
     /// In-flight send/remove operations. Owned here (not by the book detail
     /// view) so they keep running — and stay visible in the status bar — after
     /// the detail page closes. This small array is the whole "job system": a
@@ -82,16 +87,35 @@ final class KindleWatcher: NSObject, ObservableObject {
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
         devices = vols.filter(isKindle).map(Device.init)
-        guard !devices.isEmpty else { deviceKeys = []; scanning = false; return }
+        scanGeneration = UUID()
+        let generation = scanGeneration
+        guard !devices.isEmpty else {
+            deviceKeys = []; scanProgress = (0, 0); scanning = false; return
+        }
 
-        scanning = true
-        let devices = self.devices
+        // Enumerate up front so the UI immediately gets a real total. Clear old
+        // keys because they may belong to a Kindle that was just unplugged.
+        let scans = devices.map { ($0, bookFiles(in: $0.documents)) }
+        let total = scans.reduce(0) { $0 + $1.1.count }
+        deviceKeys = []
+        scanProgress = (0, total)
+        scanning = total > 0
+        guard total > 0 else { return }
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            let keys = devices.reduce(into: Set<String>()) { $0.formUnion(self.scanKeys($1)) }
-            DispatchQueue.main.async {
-                self.deviceKeys = keys
-                self.scanning = false
+            var done = 0
+            for (device, files) in scans {
+                self.scanKeys(device, files: files) { keys in
+                    done += 1
+                    let currentDone = done
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self, self.scanGeneration == generation else { return }
+                        self.deviceKeys.formUnion(keys)
+                        self.scanProgress = (currentDone, total)
+                        if currentDone == total { self.scanning = false }
+                    }
+                }
             }
         }
     }
@@ -128,28 +152,44 @@ final class KindleWatcher: NSObject, ObservableObject {
     /// when anything was added, changed, or removed. Index keys are paths
     /// relative to the volume, so the cache survives the mount moving (e.g.
     /// /Volumes/Kindle → /Volumes/Kindle 1).
-    private func scanKeys(_ dev: Device) -> Set<String> {
+    private func scanKeys(_ dev: Device, files: [URL], publish: (Set<String>) -> Void) {
         let old = loadIndex(dev)
         var fresh: [String: CacheEntry] = [:]
-        var changed = false
-        for file in bookFiles(in: dev.documents) {
+        var dirty = false
+        var changesSinceSave = 0
+
+        func save() {
+            guard let data = try? JSONEncoder().encode(fresh) else { return }
+            // Atomic replacement avoids leaving a truncated index if the Kindle
+            // is unplugged during a long first scan.
+            try? data.write(to: indexURL(dev), options: .atomic)
+        }
+
+        for file in files {
             let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
             let size = Int64(vals?.fileSize ?? 0)
             let mtime = Int64(vals?.contentModificationDate?.timeIntervalSince1970 ?? 0)
             let key = lpath(file, on: dev)
+            let entry: CacheEntry
             if let hit = old[key], hit.size == size, hit.mtime == mtime {
-                fresh[key] = hit
+                entry = hit
             } else {
-                fresh[key] = CacheEntry(size: size, mtime: mtime,
-                                        keys: (try? fileKeys(path: file.path)) ?? [])
-                changed = true
+                entry = CacheEntry(size: size, mtime: mtime,
+                                   keys: (try? fileKeys(path: file.path)) ?? [])
+                dirty = true
+                changesSinceSave += 1
+            }
+            fresh[key] = entry
+            publish(Set(entry.keys))
+
+            // Preserve useful work during a first scan rather than waiting for
+            // every MOBI parser invocation to finish.
+            if changesSinceSave >= 10 {
+                save()
+                changesSinceSave = 0
             }
         }
-        if changed || fresh.count != old.count,  // count drop => a file was removed
-           let data = try? JSONEncoder().encode(fresh) {
-            try? data.write(to: indexURL(dev))
-        }
-        return Set(fresh.values.flatMap(\.keys))
+        if dirty || fresh.count != old.count { save() }
     }
 
     private static let ebookExts: Set<String> = ["epub", "mobi", "azw", "azw3", "prc", "kfx"]

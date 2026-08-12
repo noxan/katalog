@@ -69,6 +69,7 @@ struct ContentView: View {
         }
         .safeAreaInset(edge: .bottom) {
             StatusBar(bookCount: store.books.count, devices: kindle.devices, scanning: kindle.scanning,
+                      scanDone: kindle.scanProgress.done, scanTotal: kindle.scanProgress.total,
                       jobs: kindle.jobs, failure: kindle.lastFailure) { kindle.lastFailure = nil }
         }
         .dropDestination(for: URL.self) { urls, _ in
@@ -163,6 +164,8 @@ struct StatusBar: View {
     let bookCount: Int
     let devices: [Device]
     var scanning: Bool = false
+    var scanDone: Int = 0
+    var scanTotal: Int = 0
     var jobs: [KindleJob] = []
     var failure: String?
     var onDismissFailure: () -> Void = {}
@@ -183,7 +186,8 @@ struct StatusBar: View {
                     HStack(spacing: 6) {
                         Image(systemName: icon)
                         Text(scanning
-                             ? "Scanning \(devices.map(\.name).joined(separator: ", "))…"
+                             ? "Scanning \(devices.map(\.name).joined(separator: ", ")) "
+                               + "\(scanDone) of \(scanTotal)…"
                              : devices.map(\.name).joined(separator: ", "))
                     }
                     .padding(.horizontal, 5)
