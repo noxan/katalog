@@ -132,8 +132,15 @@ struct EditView: View {
             return true
         } isTargeted: { dropTargeted = $0 }
         .contextMenu {
-            Button("Paste") { pasteCover() }.disabled(!clipboardHasImage)
-            Button("Remove", role: .destructive) { clearCover() }
+            Button { pasteCover() } label: {
+                Label("Paste", systemImage: "doc.on.clipboard")
+            }
+            .keyboardShortcut("v", modifiers: .command)
+            .disabled(!clipboardHasImage)
+            Button(role: .destructive) { clearCover() } label: {
+                Label("Remove", systemImage: "trash")
+            }
+            .keyboardShortcut(.delete, modifiers: .command)
                 .disabled(removeCover || (book.coverPath == nil && coverData == nil))
         }
         .help("Click to choose, drag an image here, or paste to replace the cover")

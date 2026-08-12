@@ -193,17 +193,20 @@ struct DetailView: View {
         Button { editing = true } label: {
             Label("Edit Metadata…", systemImage: "pencil")
         }
+        .keyboardShortcut("e", modifiers: .command)
         Button {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
         } label: {
             Label("Open in Finder", systemImage: "folder")
         }
+        .keyboardShortcut("r", modifiers: [.command, .shift])
         Divider()
         Button(role: .destructive) {
             store.remove(book); dismiss()
         } label: {
             Label("Remove from Library", systemImage: "trash")
         }
+        .keyboardShortcut(.delete, modifiers: .command)
     }
 
     // MARK: Transfer

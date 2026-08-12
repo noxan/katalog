@@ -86,7 +86,8 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem {
                 Button { importing = true } label: { Image(systemName: "plus") }
-                    .help("Import epubs or a folder")
+                    .keyboardShortcut("o", modifiers: .command)
+                    .help("Import epubs or a folder (⌘O)")
             }
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [epubType, .folder],
@@ -133,17 +134,20 @@ struct ContentView: View {
         Button { sheet = .edit(book) } label: {
             Label("Edit Metadata…", systemImage: "pencil")
         }
+        .keyboardShortcut("e", modifiers: .command)
         Button {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
         } label: {
             Label("Open in Finder", systemImage: "folder")
         }
+        .keyboardShortcut("r", modifiers: [.command, .shift])
         Divider()
         Button(role: .destructive) {
             store.remove(book)
         } label: {
             Label("Remove from Library", systemImage: "trash")
         }
+        .keyboardShortcut(.delete, modifiers: .command)
     }
 
     private var emptyState: some View {
@@ -152,8 +156,11 @@ struct ContentView: View {
                 .font(.system(size: 48)).foregroundStyle(Theme.subtle)
             Text("Your library is empty")
                 .font(.title3).foregroundStyle(Theme.text)
-            Button("Import epub") { importing = true }
-                .buttonStyle(.borderedProminent).tint(Theme.accent)
+            Button { importing = true } label: {
+                Label("Import epub", systemImage: "plus")
+            }
+            .keyboardShortcut("o", modifiers: .command)
+            .buttonStyle(.borderedProminent).tint(Theme.accent)
         }
         .frame(maxWidth: .infinity, minHeight: 400)
     }
@@ -235,15 +242,19 @@ struct StatusBar: View {
 
     @ViewBuilder private var deviceActions: some View {
         ForEach(devices) { device in
-            Button("Open \(device.name) in Finder") {
+            Button {
                 // `open` asks Launch Services to open the volume as a document,
                 // which macOS rejects for sandboxed apps even when removable-
                 // volume access is granted. Ask Finder to reveal its documents
                 // folder instead; this opens the same device without that check.
                 NSWorkspace.shared.activateFileViewerSelecting([device.documents])
+            } label: {
+                Label("Open \(device.name) in Finder", systemImage: "folder")
             }
-            Button("Eject \(device.name)") {
+            Button {
                 try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
+            } label: {
+                Label("Eject \(device.name)", systemImage: "eject")
             }
         }
     }
