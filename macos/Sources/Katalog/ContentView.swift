@@ -94,15 +94,9 @@ struct ContentView: View {
         .focusedValue(\.currentBook, currentBook)
         .searchable(text: $searchText, placement: .toolbar, prompt: "Find in Books")
         .toolbar {
-            ToolbarItemGroup {
-                libraryOptions
-                Button { importing = true } label: { Image(systemName: "plus") }
-                    .keyboardShortcut("o", modifiers: .command)
-                    .help("Import epubs or a folder (⌘O)")
-            }
-            // A distinct toolbar item, deliberately outside the library control
-            // group: reader state is global, not a way to change this view.
-            ToolbarItem(placement: .primaryAction) {
+            // Reader state is global, so give it a standalone leading position
+            // rather than grouping it with the trailing library controls.
+            ToolbarItem(placement: .navigation) {
                 ReaderToolbarMenu(
                     devices: kindle.devices,
                     scanning: kindle.scanning,
@@ -112,6 +106,12 @@ struct ContentView: View {
                     failure: kindle.lastFailure,
                     onDismissFailure: { kindle.lastFailure = nil }
                 )
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
+                libraryOptions
+                Button { importing = true } label: { Image(systemName: "plus") }
+                    .keyboardShortcut("o", modifiers: .command)
+                    .help("Import epubs or a folder (⌘O)")
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .importBooks)) { _ in importing = true }
