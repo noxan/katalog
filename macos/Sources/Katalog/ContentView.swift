@@ -78,11 +78,6 @@ struct ContentView: View {
                   initial: true) {
             ordered = grouping.sorted(store.books, by: sortOrder)
         }
-        .safeAreaInset(edge: .bottom) {
-            StatusBar(bookCount: store.books.count, devices: kindle.devices, scanning: kindle.scanning,
-                      scanDone: kindle.scanProgress.done, scanTotal: kindle.scanProgress.total,
-                      jobs: kindle.jobs, failure: kindle.lastFailure) { kindle.lastFailure = nil }
-        }
         .dropDestination(for: URL.self) { urls, _ in
             let epubs = store.epubURLs(from: urls)
             Task { prompts = await store.importBatch(epubs) }
@@ -104,6 +99,19 @@ struct ContentView: View {
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .keyboardShortcut("o", modifiers: .command)
                     .help("Import epubs or a folder (⌘O)")
+            }
+            // A distinct toolbar item, deliberately outside the library control
+            // group: reader state is global, not a way to change this view.
+            ToolbarItem(placement: .primaryAction) {
+                ReaderToolbarMenu(
+                    devices: kindle.devices,
+                    scanning: kindle.scanning,
+                    scanDone: kindle.scanProgress.done,
+                    scanTotal: kindle.scanProgress.total,
+                    jobs: kindle.jobs,
+                    failure: kindle.lastFailure,
+                    onDismissFailure: { kindle.lastFailure = nil }
+                )
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .importBooks)) { _ in importing = true }
@@ -260,97 +268,81 @@ struct ContentView: View {
     }
 }
 
-/// Bottom status bar: book count on the left, reader status on the right.
-struct StatusBar: View {
-    let bookCount: Int
+/// Global reader state and device actions live in a dedicated toolbar item.
+/// Book-level send/remove controls remain in DetailView, where their context is.
+struct ReaderToolbarMenu: View {
     let devices: [Device]
-    var scanning: Bool = false
-    var scanDone: Int = 0
-    var scanTotal: Int = 0
+    var scanning = false
+    var scanDone = 0
+    var scanTotal = 0
     var jobs: [KindleJob] = []
     var failure: String?
     var onDismissFailure: () -> Void = {}
-    @State private var hoverReader = false
+
+    private var connected: Bool { !devices.isEmpty }
+    private var icon: String {
+        if failure != nil { return "externaldrive.badge.exclamationmark" }
+        if !connected { return "externaldrive" }
+        if scanning || !jobs.isEmpty { return "externaldrive.fill" }
+        return "externaldrive.fill.badge.checkmark"
+    }
 
     var body: some View {
-        let connected = !devices.isEmpty
-        let icon = !connected ? "externaldrive"
-            : (scanning ? "externaldrive.fill" : "externaldrive.fill.badge.checkmark")
-        HStack(spacing: 6) {
-            Text("\(bookCount) book\(bookCount == 1 ? "" : "s")")
-            jobStatus
-            Spacer()
-            if connected {
-                Menu {
-                    deviceActions
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: icon)
-                        Text(scanning
-                             ? "Scanning \(devices.map(\.name).joined(separator: ", ")) "
-                               + "\(scanDone) of \(scanTotal)…"
-                             : devices.map(\.name).joined(separator: ", "))
-                    }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 5)
-                        .fill(hoverReader ? Color.primary.opacity(0.1) : .clear))
-                    .contentShape(Rectangle())
+        Menu {
+            if let failure {
+                Button(action: onDismissFailure) {
+                    Label(failure, systemImage: "exclamationmark.triangle.fill")
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .onHover { hoverReader = $0 }
-                .contextMenu { deviceActions }
-                if scanning { ProgressView().controlSize(.small) }
+                Divider()
+            }
+            if !jobs.isEmpty {
+                let text = jobs.count == 1
+                    ? "\(jobs[0].verb) \(jobs[0].title)…"
+                    : "\(jobs.count) transfers in progress…"
+                Label(text, systemImage: "arrow.left.arrow.right")
+                Divider()
+            }
+            if devices.isEmpty {
+                Label("No reader connected", systemImage: "cable.connector.horizontal")
             } else {
+                ForEach(devices) { device in
+                    Section(device.name) {
+                        if scanning {
+                            Label("Scanning \(scanDone) of \(scanTotal)…", systemImage: "arrow.triangle.2.circlepath")
+                        } else {
+                            Label("Connected", systemImage: "checkmark.circle")
+                        }
+                        Button {
+                            // Reveal the documents folder instead of asking
+                            // Launch Services to open a sandboxed volume.
+                            NSWorkspace.shared.activateFileViewerSelecting([device.documents])
+                        } label: {
+                            Label("Show in Finder", systemImage: "folder")
+                        }
+                        Button {
+                            try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
+                        } label: {
+                            Label("Eject", systemImage: "eject")
+                        }
+                    }
+                }
+            }
+        } label: {
+            ZStack {
                 Image(systemName: icon)
-                Text("No reader")
+                if scanning || !jobs.isEmpty {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .scaleEffect(0.55)
+                        .offset(x: 8, y: 8)
+                }
             }
         }
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .frame(maxWidth: .infinity)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
-        .help(!connected ? "No reader mounted — unlock your Kindle and choose file transfer"
-              : (scanning ? "Reading books on the reader…" : "Reader connected"))
-    }
-
-    /// In-flight sends/removes, or the last failure (click to dismiss). Sits
-    /// next to the book count so background work stays visible after the detail
-    /// page closes.
-    @ViewBuilder private var jobStatus: some View {
-        if let failure {
-            Button(action: onDismissFailure) {
-                Label(failure, systemImage: "exclamationmark.triangle.fill")
-            }
-            .buttonStyle(.plain).foregroundStyle(.red).help("Click to dismiss")
-        } else if !jobs.isEmpty {
-            ProgressView().controlSize(.small).scaleEffect(0.7)
-            Text(jobs.count == 1 ? "\(jobs[0].verb) \(jobs[0].title)…" : "\(jobs.count) transfers…")
-        }
-    }
-
-    @ViewBuilder private var deviceActions: some View {
-        ForEach(devices) { device in
-            Button {
-                // `open` asks Launch Services to open the volume as a document,
-                // which macOS rejects for sandboxed apps even when removable-
-                // volume access is granted. Ask Finder to reveal its documents
-                // folder instead; this opens the same device without that check.
-                NSWorkspace.shared.activateFileViewerSelecting([device.documents])
-            } label: {
-                Label("Open \(device.name) in Finder", systemImage: "folder")
-            }
-            Button {
-                try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
-            } label: {
-                Label("Eject \(device.name)", systemImage: "eject")
-            }
-        }
+        .menuIndicator(.hidden)
+        .help(!connected ? "No reader connected"
+              : scanning ? "Scanning reader: \(scanDone) of \(scanTotal)"
+              : !jobs.isEmpty ? "Reader transfer in progress"
+              : "Reader connected")
     }
 }
 
