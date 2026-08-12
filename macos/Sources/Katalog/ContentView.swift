@@ -230,7 +230,11 @@ struct StatusBar: View {
     @ViewBuilder private var deviceActions: some View {
         ForEach(devices) { device in
             Button("Open \(device.name) in Finder") {
-                NSWorkspace.shared.open(device.volume)
+                // `open` asks Launch Services to open the volume as a document,
+                // which macOS rejects for sandboxed apps even when removable-
+                // volume access is granted. Ask Finder to reveal its documents
+                // folder instead; this opens the same device without that check.
+                NSWorkspace.shared.activateFileViewerSelecting([device.documents])
             }
             Button("Eject \(device.name)") {
                 try? NSWorkspace.shared.unmountAndEjectDevice(at: device.volume)
