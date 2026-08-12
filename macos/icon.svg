@@ -11,8 +11,9 @@
        pale/white border in the Dock and Finder. -->
   <rect width="1024" height="1024" fill="url(#bg)"/>
 
-  <!-- open book, centered -->
-  <g>
+  <!-- Open book, sized to the prominent central-glyph proportions used by
+       native macOS icons rather than floating as a small mark in the canvas. -->
+  <g transform="translate(512 512) scale(1.35) translate(-512 -512)">
     <!-- left page -->
     <path d="M512 372
              Q396 320 300 356
