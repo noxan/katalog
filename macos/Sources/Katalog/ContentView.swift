@@ -221,18 +221,52 @@ struct ContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "books.vertical")
-                .font(.system(size: 48)).foregroundStyle(Theme.subtle)
-            Text("Your library is empty")
-                .font(.title3).foregroundStyle(Theme.text)
+        VStack(spacing: 0) {
+            Spacer(minLength: 48)
+
+            ZStack {
+                Circle()
+                    .fill(Theme.accent.opacity(0.12))
+                    .frame(width: 112, height: 112)
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 54, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Theme.accent)
+            }
+            .padding(.bottom, 30)
+
+            Text("Add Books to Your Library")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.text)
+                .multilineTextAlignment(.center)
+
+            Text("Import your EPUB collection to organize, edit, and send books to your Kindle.")
+                .font(.title3)
+                .foregroundStyle(Theme.subtle)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 560)
+                .padding(.top, 14)
+
             Button { importing = true } label: {
-                Label("Import epub", systemImage: "plus")
+                Label("Import Books", systemImage: "plus")
+                    .font(.headline)
+                    .padding(.horizontal, 8)
             }
             .keyboardShortcut("o", modifiers: .command)
-            .buttonStyle(.borderedProminent).tint(Theme.accent)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(Theme.accent)
+            .padding(.top, 28)
+
+            Text("You can also drag books or folders into this window.")
+                .font(.caption)
+                .foregroundStyle(Theme.subtle)
+                .padding(.top, 12)
+
+            Spacer(minLength: 48)
         }
-        .frame(maxWidth: .infinity, minHeight: 400)
+        .padding(.horizontal, 40)
+        .frame(maxWidth: .infinity, minHeight: 440)
     }
 }
 
