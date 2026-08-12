@@ -32,6 +32,25 @@ fn converts_epub_to_readable_mobi() {
 }
 
 #[test]
+fn container_ids_and_content_range_are_valid() {
+    let tmp = tempfile::tempdir().unwrap();
+    let out = tmp.path().join("book.mobi");
+    katalog::mobi::epub_to_mobi(&fixture(), &out.to_string_lossy()).unwrap();
+    let data = std::fs::read(out).unwrap();
+    let u16_at = |n| u16::from_be_bytes(data[n..n + 2].try_into().unwrap());
+    let u32_at = |n| u32::from_be_bytes(data[n..n + 4].try_into().unwrap());
+    let records = u16_at(76) as usize;
+    let record0 = u32_at(78) as usize;
+    let max_id = (0..records)
+        .map(|i| u32::from_be_bytes([0, data[83 + i * 8], data[84 + i * 8], data[85 + i * 8]]))
+        .max().unwrap();
+    assert!(u32_at(68) > max_id, "PDB unique-ID seed follows assigned IDs");
+    let mobi = record0 + 16;
+    let flis = u32_at(mobi + 192);
+    assert_eq!(u16_at(mobi + 178) as u32, flis - 1, "content ends before FLIS");
+}
+
+#[test]
 fn internal_links_become_correct_filepos() {
     let epub = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/nav.epub");
     let tmp = tempfile::tempdir().unwrap();

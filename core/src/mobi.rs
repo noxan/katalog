@@ -374,7 +374,7 @@ fn build_mobi(src: &Source) -> Vec<u8> {
         n_text,
         /* first_image_index */ if n_images > 0 { first_image_record as u32 } else { NONE },
         /* first_non_book_index */ (last_text + 1) as u32,
-        /* last_content_record */ last_text as u16,
+        /* last_content_record */ (flis_index - 1) as u16,
         fcis_index as u32,
         flis_index as u32,
     );
@@ -597,7 +597,7 @@ fn write_pdb(title: &str, records: &[Vec<u8>]) -> Vec<u8> {
     out.extend_from_slice(&0u32.to_be_bytes()); // sort_info_id
     out.extend_from_slice(b"BOOK"); // type
     out.extend_from_slice(b"MOBI"); // creator
-    out.extend_from_slice(&(n as u32).to_be_bytes()); // unique_id_seed
+    out.extend_from_slice(&((n * 2) as u32).to_be_bytes()); // unique_id_seed
     out.extend_from_slice(&0u32.to_be_bytes()); // next_record_list_id
     out.extend_from_slice(&(n as u16).to_be_bytes()); // num_records
 
