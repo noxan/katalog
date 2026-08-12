@@ -76,7 +76,7 @@ MVP, grouped by area. Checked = shipped.
 - [x] Transfer to Kindle over USB + on-device detection
 
 **Browse**
-- [ ] Search
+- [x] Search
 - [x] Sort by author / title
 - [x] Two grid styles (compact / covers)
 - [x] Follows system light / dark
