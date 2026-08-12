@@ -233,12 +233,43 @@ struct ContentView: View {
             Label("Show in Finder", systemImage: "folder")
         }
         .keyboardShortcut("r", modifiers: [.command, .shift])
+        kindleMenu(for: book)
         Divider()
         Button(role: .destructive) {
             store.remove(book)
         } label: {
             Label("Remove from Library", systemImage: "trash")
         }
+    }
+
+    /// Reader status and book-level transfer actions in the grid context menu.
+    @ViewBuilder private func kindleMenu(for book: Book) -> some View {
+        Menu("Kindle", systemImage: "externaldrive") {
+            if kindle.devices.isEmpty {
+                Label("No Kindle connected", systemImage: "cable.connector.horizontal")
+            } else {
+                ForEach(kindle.devices) { device in
+                    if kindle.onDevice(book) {
+                        Button(role: .destructive) {
+                            kindle.remove(book, from: device)
+                        } label: {
+                            Label("Remove from \(device.name)", systemImage: "trash")
+                        }
+                    } else if kindle.scanning {
+                        Label("Checking \(device.name)…", systemImage: "arrow.triangle.2.circlepath")
+                    } else {
+                        Button {
+                            if let path = try? store.transferPath(book) {
+                                kindle.send(book, epubPath: path, to: device)
+                            }
+                        } label: {
+                            Label("Send to \(device.name)", systemImage: "arrow.right.circle")
+                        }
+                    }
+                }
+            }
+        }
+        .disabled(kindle.busy(book))
     }
 
     private var emptyState: some View {
