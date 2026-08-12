@@ -199,7 +199,7 @@ struct DetailView: View {
         } label: {
             Label("Open in Finder", systemImage: "folder")
         }
-        .keyboardShortcut("r", modifiers: [.command, .shift])
+        .keyboardShortcut("j", modifiers: [.command, .shift])
         Divider()
         Button(role: .destructive) {
             store.remove(book); dismiss()
