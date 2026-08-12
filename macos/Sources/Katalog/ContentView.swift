@@ -166,6 +166,7 @@ struct ContentView: View {
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
         }
+        .menuIndicator(.hidden)
         .help("Sort, group, and view options")
     }
 
