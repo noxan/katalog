@@ -40,7 +40,7 @@ struct KatalogApp: App {
                 }
                 .keyboardShortcut("e", modifiers: .command)
                 Button { NotificationCenter.default.post(name: .revealCurrentBook, object: nil) } label: {
-                    Label("Open in Finder", systemImage: "folder")
+                    Label("Show in Finder", systemImage: "folder")
                 }
                 .keyboardShortcut("j", modifiers: [.command, .shift])
                 Divider()

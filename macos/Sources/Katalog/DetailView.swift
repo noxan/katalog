@@ -197,7 +197,7 @@ struct DetailView: View {
         Button {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
         } label: {
-            Label("Open in Finder", systemImage: "folder")
+            Label("Show in Finder", systemImage: "folder")
         }
         .keyboardShortcut("j", modifiers: [.command, .shift])
         Divider()
