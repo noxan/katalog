@@ -84,7 +84,8 @@ struct ContentView: View {
         }
         .navigationTitle("Katalog")
         .toolbar {
-            ToolbarItem {
+            ToolbarItemGroup {
+                libraryOptions
                 Button { importing = true } label: { Image(systemName: "plus") }
                     .keyboardShortcut("o", modifiers: .command)
                     .help("Import epubs or a folder (⌘O)")
@@ -127,6 +128,37 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    /// Music-style toolbar menu keeps ordering and presentation controls near
+    /// the collection they affect, without permanently occupying toolbar space.
+    private var libraryOptions: some View {
+        Menu {
+            Menu("Sort By", systemImage: "arrow.up.arrow.down") {
+                Picker("Sort By", selection: $sortOrder) {
+                    ForEach(SortOrder.allCases, id: \.self) { order in
+                        Text(order.label).tag(order)
+                    }
+                }
+            }
+            Menu("Group By", systemImage: "rectangle.3.group") {
+                Picker("Group By", selection: $grouping) {
+                    ForEach(Grouping.allCases, id: \.self) { group in
+                        Text(group.label).tag(group)
+                    }
+                }
+            }
+            Divider()
+            Menu("View Options", systemImage: "rectangle.grid.2x2") {
+                Picker("View Options", selection: $gridStyle) {
+                    Text("Titles and Authors").tag(GridStyle.compact)
+                    Text("Covers Only").tag(GridStyle.covers)
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+        }
+        .help("Sort, group, and view options")
     }
 
     private var currentBook: Book? {
