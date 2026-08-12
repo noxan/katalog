@@ -182,7 +182,9 @@ struct StatusBar: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: icon)
-                        Text(devices.map(\.name).joined(separator: ", "))
+                        Text(scanning
+                             ? "Scanning \(devices.map(\.name).joined(separator: ", "))…"
+                             : devices.map(\.name).joined(separator: ", "))
                     }
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
