@@ -94,9 +94,9 @@ struct ContentView: View {
         .focusedValue(\.currentBook, currentBook)
         .searchable(text: $searchText, placement: .toolbar, prompt: "Find in Books")
         .toolbar {
-            // Reader state is global, so give it a standalone leading position
-            // rather than grouping it with the trailing library controls.
-            ToolbarItem(placement: .navigation) {
+            // Standalone item immediately left of the trailing Sort/Import
+            // group—not at the window's navigation edge and not inside the group.
+            ToolbarItem(placement: .primaryAction) {
                 ReaderToolbarMenu(
                     devices: kindle.devices,
                     scanning: kindle.scanning,
