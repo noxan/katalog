@@ -90,6 +90,19 @@ struct ContentView: View {
                     .help("Import epubs or a folder (⌘O)")
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .importBooks)) { _ in importing = true }
+        .onReceive(NotificationCenter.default.publisher(for: .editCurrentBook)) { _ in
+            if case .detail(let book) = sheet { sheet = .edit(book) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .revealCurrentBook)) { _ in
+            guard let book = currentBook else { return }
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: book.filePath)])
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .removeCurrentBook)) { _ in
+            guard let book = currentBook else { return }
+            sheet = nil
+            store.remove(book)
+        }
         .fileImporter(isPresented: $importing, allowedContentTypes: [epubType, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result {
@@ -113,6 +126,13 @@ struct ContentView: View {
                     onCancel: { prompts = [] }
                 )
             }
+        }
+    }
+
+    private var currentBook: Book? {
+        switch sheet {
+        case .detail(let book), .edit(let book): return book
+        case nil: return nil
         }
     }
 
