@@ -357,7 +357,7 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     let text_records: Vec<Vec<u8>> = if src.html.is_empty() {
         vec![Vec::new()]
     } else {
-        src.html.chunks(TEXT_RECORD_SIZE).map(palmdoc_compress).collect()
+        utf8_chunks(&src.html, TEXT_RECORD_SIZE).map(palmdoc_compress).collect()
     };
     let n_text = text_records.len();
 
@@ -417,12 +417,22 @@ fn build_record0(
     ));
     rec.extend_from_slice(&exth);
     rec.extend_from_slice(name);
-    // Pad to a 4-byte boundary, plus a little trailing slack (writers do this).
+    rec.extend_from_slice(&[0, 0]);
     while rec.len() % 4 != 0 {
         rec.push(0);
     }
-    rec.extend_from_slice(&[0, 0]);
     rec
+}
+
+fn utf8_chunks(mut data: &[u8], max: usize) -> impl Iterator<Item = &[u8]> {
+    std::iter::from_fn(move || {
+        if data.is_empty() { return None; }
+        let mut end = data.len().min(max);
+        while std::str::from_utf8(&data[..end]).is_err() { end -= 1; }
+        let (chunk, rest) = data.split_at(end);
+        data = rest;
+        Some(chunk)
+    })
 }
 
 fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
@@ -487,17 +497,17 @@ fn mobi_header(
     h.extend_from_slice(&[0u8; 8]); // unused_2
     u16(&mut h, 1); // first_content_record
     u16(&mut h, last_content_record);
-    u32(&mut h, 0); // unused_3
+    u32(&mut h, 1); // unknown, conventional MOBI6 value
     u32(&mut h, fcis_record);
     u32(&mut h, 1); // fcis count
     u32(&mut h, flis_record);
     u32(&mut h, 1); // flis count
     u32(&mut h, 0); // unused_6 (u64 hi)
     u32(&mut h, 0); // unused_6 (u64 lo)
-    u32(&mut h, 0); // unused_7
+    u32(&mut h, NONE); // unknown, conventional MOBI6 value
     u32(&mut h, 0); // first_compilation_data_section_count
-    u32(&mut h, 0); // data_section_count
-    u32(&mut h, 0); // unused_8
+    u32(&mut h, NONE); // data_section_count
+    u32(&mut h, NONE); // unknown, conventional MOBI6 value
     u32(&mut h, 0); // extra_record_data_flags: no trailing bytes on text records
     u32(&mut h, NONE); // first_index_record
 
@@ -533,7 +543,7 @@ fn build_exth(src: &Source) -> Vec<u8> {
 
     let mut out = Vec::with_capacity(unpadded + pad);
     out.extend_from_slice(b"EXTH");
-    out.extend_from_slice(&((unpadded + pad) as u32).to_be_bytes());
+    out.extend_from_slice(&(unpadded as u32).to_be_bytes());
     out.extend_from_slice(&(recs.len() as u32).to_be_bytes());
     out.extend_from_slice(&body);
     out.resize(unpadded + pad, 0);
@@ -767,7 +777,7 @@ mod tests {
     fn exth_keeps_every_author() {
         let exth = build_exth(&Source {
             title: "Book".into(),
-            authors: vec!["Author".into(), "Translator".into()],
+            authors: vec!["Author".into(), "T".into()],
             isbn: None,
             description: None,
             html: vec![],
@@ -781,6 +791,30 @@ mod tests {
             u32::from_be_bytes(exth[second..second + 4].try_into().unwrap()),
             100
         );
+        assert_eq!(u32::from_be_bytes(exth[4..8].try_into().unwrap()), 35);
+        assert_eq!(exth.len(), 36);
+    }
+
+    #[test]
+    fn record_layout_matches_mobi6_conventions() {
+        let src = Source {
+            title: "é".into(), authors: vec!["A".into()], isbn: None,
+            description: None, html: vec![], images: vec![], cover_recindex: None,
+        };
+        let rec = build_record0(&src, 0, 1, NONE, 2, 1, 3, 2);
+        let at = |n| u32::from_be_bytes(rec[n..n + 4].try_into().unwrap());
+        let title = at(16 + 68) as usize;
+        assert_eq!(&rec[title..], &[0xc3, 0xa9, 0, 0]);
+        assert_eq!((at(196), at(224), at(232), at(236)), (1, NONE, NONE, NONE));
+    }
+
+    #[test]
+    fn text_chunks_do_not_split_utf8() {
+        let text = format!("{}éx", "a".repeat(TEXT_RECORD_SIZE - 1));
+        let chunks: Vec<&[u8]> = utf8_chunks(text.as_bytes(), TEXT_RECORD_SIZE).collect();
+        assert_eq!(chunks.iter().map(|c| c.len()).collect::<Vec<_>>(), [4095, 3]);
+        assert!(chunks.iter().all(|c| std::str::from_utf8(c).is_ok()));
+        assert_eq!(chunks.concat(), text.as_bytes());
     }
 }
 
