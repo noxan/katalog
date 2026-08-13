@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import KatalogCore
+import OSLog
 
 /// A mounted removable reader (Kindle) exposed as a copy target.
 struct Device: Identifiable, Hashable {
@@ -42,6 +43,7 @@ private func deviceSanitize(_ s: String) -> String {
 /// Detection + copy live here — inherently platform-specific, so Foundation
 /// owns them; the core just hands us the validated source path.
 final class KindleWatcher: NSObject, ObservableObject {
+    private static let log = Logger(subsystem: "com.katalog.app", category: "KindleWatcher")
     @Published private(set) var devices: [Device] = []
     /// Match keys for every book on the connected devices (union). Built from
     /// real epub metadata where possible, else the filename — see core file_keys.
@@ -96,7 +98,10 @@ final class KindleWatcher: NSObject, ObservableObject {
                        name: NSWorkspace.didUnmountNotification, object: nil)
     }
 
-    @objc private func volumesChanged() { rescan() }
+    @objc private func volumesChanged() {
+        Self.log.info("volume notification")
+        rescan()
+    }
 
     /// Detecting a device is cheap (volume list + a stat), so do it synchronously
     /// — the reader shows as mounted immediately. Reading every MOBI/AZW file for
@@ -116,7 +121,9 @@ final class KindleWatcher: NSObject, ObservableObject {
         }
         scanGeneration = UUID()
         let generation = scanGeneration
+        Self.log.info("rescan: mounted=\(vols.count) kindles=\(self.devices.count)")
         guard !devices.isEmpty else {
+            Self.log.info("rescan: no Kindle")
             deviceKeys = []; scanProgress = (0, 0); scanning = false; return
         }
 
@@ -124,10 +131,14 @@ final class KindleWatcher: NSObject, ObservableObject {
         // keys because they may belong to a Kindle that was just unplugged.
         let scans = devices.map { ($0, bookFiles(in: $0.documents)) }
         let total = scans.reduce(0) { $0 + $1.1.count }
+        Self.log.info("rescan: ebook files=\(total)")
         deviceKeys = []
         scanProgress = (0, total)
         scanning = total > 0
-        guard total > 0 else { return }
+        guard total > 0 else {
+            Self.log.error("rescan: no ebook files visible")
+            return
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
@@ -137,10 +148,16 @@ final class KindleWatcher: NSObject, ObservableObject {
                     done += 1
                     let currentDone = done
                     DispatchQueue.main.async { [weak self] in
-                        guard let self, self.scanGeneration == generation else { return }
+                        guard let self, self.scanGeneration == generation else {
+                            Self.log.info("scan result ignored as stale")
+                            return
+                        }
                         self.deviceKeys.formUnion(keys)
                         self.scanProgress = (currentDone, total)
-                        if currentDone == total { self.scanning = false }
+                        if currentDone == total {
+                            self.scanning = false
+                            Self.log.info("scan complete: files=\(total) unique keys=\(self.deviceKeys.count)")
+                        }
                     }
                 }
             }
@@ -181,9 +198,13 @@ final class KindleWatcher: NSObject, ObservableObject {
     /// /Volumes/Kindle → /Volumes/Kindle 1).
     private func scanKeys(_ dev: Device, files: [URL], publish: (Set<String>) -> Void) {
         let old = loadIndex(dev)
+        Self.log.info("key scan started: files=\(files.count) cached=\(old.count)")
         var fresh: [String: CacheEntry] = [:]
         var dirty = false
         var changesSinceSave = 0
+        var cacheHits = 0
+        var parsed = 0
+        var failures = 0
 
         func save() {
             guard let data = try? JSONEncoder().encode(fresh) else { return }
@@ -200,9 +221,16 @@ final class KindleWatcher: NSObject, ObservableObject {
             let entry: CacheEntry
             if let hit = old[key], hit.size == size, hit.mtime == mtime {
                 entry = hit
+                cacheHits += 1
             } else {
-                entry = CacheEntry(size: size, mtime: mtime,
-                                   keys: (try? fileKeys(path: file.path)) ?? [])
+                do {
+                    entry = CacheEntry(size: size, mtime: mtime,
+                                       keys: try fileKeys(path: file.path))
+                    parsed += 1
+                } catch {
+                    entry = CacheEntry(size: size, mtime: mtime, keys: [])
+                    failures += 1
+                }
                 dirty = true
                 changesSinceSave += 1
             }
@@ -217,6 +245,7 @@ final class KindleWatcher: NSObject, ObservableObject {
             }
         }
         if dirty || fresh.count != old.count { save() }
+        Self.log.info("key scan finished: cache hits=\(cacheHits) parsed=\(parsed) failures=\(failures)")
     }
 
     private static let ebookExts: Set<String> = ["epub", "mobi", "azw", "azw3", "prc", "kfx"]
@@ -226,7 +255,10 @@ final class KindleWatcher: NSObject, ObservableObject {
     private func bookFiles(in root: URL) -> [URL] {
         guard let en = FileManager.default.enumerator(
             at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-        ) else { return [] }
+        ) else {
+            Self.log.error("cannot enumerate Kindle documents directory")
+            return []
+        }
         var files: [URL] = []
         for case let url as URL in en {
             if url.pathComponents.contains(where: { $0.hasSuffix(".sdr") }) { continue }
