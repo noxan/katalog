@@ -24,7 +24,7 @@ pub fn epub_to_mobi(epub_path: &str, out_path: &str) -> Result<(), String> {
 
 struct Source {
     title: String,
-    author: Option<String>,
+    authors: Vec<String>,
     isbn: Option<String>,
     description: Option<String>,
     html: Vec<u8>,
@@ -120,7 +120,7 @@ fn read_epub(path: &Path) -> Result<Source, String> {
     }
 
     Ok(Source {
-        author: meta.authors.first().cloned(),
+        authors: meta.authors,
         isbn: meta.isbn,
         description: meta.description,
         title: meta.title,
@@ -507,7 +507,7 @@ fn mobi_header(
 
 fn build_exth(src: &Source) -> Vec<u8> {
     let mut recs: Vec<(u32, Vec<u8>)> = Vec::new();
-    if let Some(a) = &src.author {
+    for a in &src.authors {
         recs.push((100, a.clone().into_bytes()));
     }
     if let Some(d) = &src.description {
@@ -757,6 +757,31 @@ pub fn palmdoc_decompress(data: &[u8]) -> Vec<u8> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exth_keeps_every_author() {
+        let exth = build_exth(&Source {
+            title: "Book".into(),
+            authors: vec!["Author".into(), "Translator".into()],
+            isbn: None,
+            description: None,
+            html: vec![],
+            images: vec![],
+            cover_recindex: None,
+        });
+        assert_eq!(u32::from_be_bytes(exth[8..12].try_into().unwrap()), 2);
+        assert_eq!(u32::from_be_bytes(exth[12..16].try_into().unwrap()), 100);
+        let second = 12 + u32::from_be_bytes(exth[16..20].try_into().unwrap()) as usize;
+        assert_eq!(
+            u32::from_be_bytes(exth[second..second + 4].try_into().unwrap()),
+            100
+        );
+    }
 }
 
 #[cfg(test)]
