@@ -5,16 +5,14 @@
 //! Calibre-produced .mobi (field-by-field, varints verified against real
 //! entries), not copied from GPL source.
 //!
-//! ponytail: FLAT TOC only — the epub's nav tree is walked in reading order and
-//! emitted as a single-level list (tags offset/length/label/depth, depth always
-//! 0). Nested TOC (parent/child tags 21–23) is a later addition. If the entries
-//! or labels don't fit one 64 KB record, we return None and the book ships with
+//! If the entries or labels don't fit one 64 KB record, we return None and the book ships with
 //! no index (exactly today's behavior) rather than risk a corrupt one.
 
 /// A resolved TOC entry: its label and the byte offset it points at in the text.
 pub struct TocEntry {
     pub label: String,
     pub offset: u32,
+    pub depth: usize,
 }
 
 /// The three records that make up the index, in order.
@@ -42,7 +40,15 @@ fn vwi(mut n: u32) -> Vec<u8> {
 }
 
 /// The 192-byte INDX record header, zero-padded after the 13 longwords.
-fn indx_header(type_: u32, gen: u32, idxt_start: u32, count: u32, code: u32, total: u32, nctoc: u32) -> Vec<u8> {
+fn indx_header(
+    type_: u32,
+    gen: u32,
+    idxt_start: u32,
+    count: u32,
+    code: u32,
+    total: u32,
+    nctoc: u32,
+) -> Vec<u8> {
     let mut h = Vec::with_capacity(INDX_HEADER_LEN as usize);
     h.extend_from_slice(b"INDX");
     for v in [
@@ -63,16 +69,39 @@ fn indx_header(type_: u32, gen: u32, idxt_start: u32, count: u32, code: u32, tot
         h.extend_from_slice(&v.to_be_bytes());
     }
     h.resize(INDX_HEADER_LEN as usize, 0);
+    if type_ == 0 {
+        h[0xB4..0xB8].copy_from_slice(&INDX_HEADER_LEN.to_be_bytes());
+    }
     h
 }
 
-/// Fixed TAGX table for a flat NCX: tags offset(1)/length(2)/label(3)/depth(4).
-fn tagx() -> Vec<u8> {
+/// NCX tags: offset, length, label, depth and optional hierarchy links.
+fn tagx(nested: bool) -> Vec<u8> {
+    let tags = if nested {
+        vec![
+            (1, 1, 0x01, 0),
+            (2, 1, 0x02, 0),
+            (3, 1, 0x04, 0),
+            (4, 1, 0x08, 0),
+            (21, 1, 0x10, 0),
+            (22, 1, 0x20, 0),
+            (23, 1, 0x40, 0),
+            (0, 0, 0, 1),
+        ]
+    } else {
+        vec![
+            (1, 1, 0x01, 0),
+            (2, 1, 0x02, 0),
+            (3, 1, 0x04, 0),
+            (4, 1, 0x08, 0),
+            (0, 0, 0, 1),
+        ]
+    };
     let mut t = Vec::new();
     t.extend_from_slice(b"TAGX");
-    t.extend_from_slice(&32u32.to_be_bytes()); // length (12 + 5*4)
+    t.extend_from_slice(&(12u32 + tags.len() as u32 * 4).to_be_bytes());
     t.extend_from_slice(&1u32.to_be_bytes()); // control byte count
-    for (tag, nvals, mask, end) in [(1, 1, 0x01, 0), (2, 1, 0x02, 0), (3, 1, 0x04, 0), (4, 1, 0x08, 0), (0, 0, 0, 1)] {
+    for (tag, nvals, mask, end) in tags {
         t.extend_from_slice(&[tag, nvals, mask, end]);
     }
     t
@@ -81,10 +110,7 @@ fn tagx() -> Vec<u8> {
 /// Build the NCX index for `toc`. `text_len` bounds the last entry's length.
 /// Returns None if there's nothing to index or it wouldn't fit one record each.
 pub fn build_ncx(toc: &[TocEntry], text_len: u32) -> Option<Index> {
-    // Sort by target offset (the index must be ascending) and drop duplicates.
-    let mut items: Vec<&TocEntry> = toc.iter().filter(|e| e.offset < text_len).collect();
-    items.sort_by_key(|e| e.offset);
-    items.dedup_by_key(|e| e.offset);
+    let items: Vec<&TocEntry> = toc.iter().filter(|e| e.offset < text_len).collect();
     if items.is_empty() {
         return None;
     }
@@ -92,6 +118,24 @@ pub fn build_ncx(toc: &[TocEntry], text_len: u32) -> Option<Index> {
     if n > 0xFFFF {
         return None; // absurd TOC — fall back to no index
     }
+
+    // Convert EPUB depths to parent/child entry indices after invalid entries
+    // have been removed. A missing parent promotes its children one level.
+    let mut parents = vec![None; n];
+    let mut children: Vec<Vec<usize>> = vec![Vec::new(); n];
+    let mut stack: Vec<usize> = Vec::new();
+    let mut depths = Vec::with_capacity(n);
+    for (i, e) in items.iter().enumerate() {
+        stack.truncate(e.depth.min(stack.len()));
+        let parent = stack.last().copied();
+        parents[i] = parent;
+        if let Some(p) = parent {
+            children[p].push(i);
+        }
+        depths.push(stack.len());
+        stack.push(i);
+    }
+    let nested = parents.iter().any(Option::is_some);
 
     // CNCX: [vwi(byte-len)][utf8] per label; label offset = its byte position.
     let mut cncx = Vec::new();
@@ -125,11 +169,25 @@ pub fn build_ncx(toc: &[TocEntry], text_len: u32) -> Option<Index> {
         let mut blk = Vec::new();
         blk.push(ident.len() as u8);
         blk.extend_from_slice(ident.as_bytes());
-        blk.push(0x0F); // control byte: tags 1,2,3,4 present
+        let mut control = 0x0F; // offset, length, label and depth
+        if parents[i].is_some() {
+            control |= 0x10;
+        }
+        if !children[i].is_empty() {
+            control |= 0x60;
+        }
+        blk.push(control);
         blk.extend_from_slice(&vwi(e.offset));
         blk.extend_from_slice(&vwi(length));
         blk.extend_from_slice(&vwi(label_off[i]));
-        blk.extend_from_slice(&vwi(0)); // depth
+        blk.extend_from_slice(&vwi(depths[i] as u32));
+        if let Some(parent) = parents[i] {
+            blk.extend_from_slice(&vwi(parent as u32));
+        }
+        if let (Some(first), Some(last)) = (children[i].first(), children[i].last()) {
+            blk.extend_from_slice(&vwi(*first as u32));
+            blk.extend_from_slice(&vwi(*last as u32));
+        }
         entry_offsets.push(cursor as u16);
         cursor += blk.len();
         blocks.extend_from_slice(&blk);
@@ -150,8 +208,8 @@ pub fn build_ncx(toc: &[TocEntry], text_len: u32) -> Option<Index> {
 
     // Index-header record: header(type=0) + TAGX + geometry entry + IDXT.
     let mut header = indx_header(0, 2, 0, 1, 65001, n as u32, 1);
-    header.extend_from_slice(&tagx());
-    let geom_off = header.len() as u16; // = 224 (0xC0 + 0x20)
+    header.extend_from_slice(&tagx(nested));
+    let geom_off = header.len() as u16;
     let last_ident = format!("{:0width$X}", n - 1, width = width);
     header.push(last_ident.len() as u8);
     header.extend_from_slice(last_ident.as_bytes());
@@ -164,7 +222,11 @@ pub fn build_ncx(toc: &[TocEntry], text_len: u32) -> Option<Index> {
     // Patch the header's IDXT-start field (offset 0x14) now that we know it.
     header[0x14..0x18].copy_from_slice(&hdr_idxt.to_be_bytes());
 
-    Some(Index { header, entries, cncx })
+    Some(Index {
+        header,
+        entries,
+        cncx,
+    })
 }
 
 fn pad4(v: &mut Vec<u8>) {
@@ -189,7 +251,7 @@ mod tests {
     #[test]
     fn tagx_bytes_match_calibre() {
         assert_eq!(
-            tagx(),
+            tagx(false),
             vec![
                 b'T', b'A', b'G', b'X', 0, 0, 0, 32, 0, 0, 0, 1, //
                 1, 1, 1, 0, 2, 1, 2, 0, 3, 1, 4, 0, 4, 1, 8, 0, 0, 0, 0, 1,
@@ -200,32 +262,129 @@ mod tests {
     #[test]
     fn builds_a_flat_index_that_round_trips() {
         let toc = vec![
-            TocEntry { label: "Title Page".into(), offset: 3643 },
-            TocEntry { label: "Copyright".into(), offset: 3777 },
-            TocEntry { label: "Chapter One".into(), offset: 5718 },
+            TocEntry {
+                label: "Title Page".into(),
+                offset: 3643,
+                depth: 0,
+            },
+            TocEntry {
+                label: "Copyright".into(),
+                offset: 3777,
+                depth: 0,
+            },
+            TocEntry {
+                label: "Chapter One".into(),
+                offset: 5718,
+                depth: 0,
+            },
         ];
         let idx = build_ncx(&toc, 10_000).expect("index built");
 
         // Header record: magic, len, type 0, count 1, code 65001, total 3, nctoc 1.
         assert_eq!(&idx.header[0..4], b"INDX");
-        assert_eq!(u32::from_be_bytes(idx.header[0x0C..0x10].try_into().unwrap()), 0);
-        assert_eq!(u32::from_be_bytes(idx.header[0x18..0x1C].try_into().unwrap()), 1);
-        assert_eq!(u32::from_be_bytes(idx.header[0x1C..0x20].try_into().unwrap()), 65001);
-        assert_eq!(u32::from_be_bytes(idx.header[0x24..0x28].try_into().unwrap()), 3);
+        assert_eq!(
+            u32::from_be_bytes(idx.header[0x0C..0x10].try_into().unwrap()),
+            0
+        );
+        assert_eq!(
+            u32::from_be_bytes(idx.header[0x18..0x1C].try_into().unwrap()),
+            1
+        );
+        assert_eq!(
+            u32::from_be_bytes(idx.header[0x1C..0x20].try_into().unwrap()),
+            65001
+        );
+        assert_eq!(
+            u32::from_be_bytes(idx.header[0x24..0x28].try_into().unwrap()),
+            3
+        );
         assert_eq!(&idx.header[0xC0..0xC4], b"TAGX");
 
         // Entry record: type 1, count 3, then decode entry 0 and check it.
-        assert_eq!(u32::from_be_bytes(idx.entries[0x0C..0x10].try_into().unwrap()), 1);
-        assert_eq!(u32::from_be_bytes(idx.entries[0x18..0x1C].try_into().unwrap()), 3);
+        assert_eq!(
+            u32::from_be_bytes(idx.entries[0x0C..0x10].try_into().unwrap()),
+            1
+        );
+        assert_eq!(
+            u32::from_be_bytes(idx.entries[0x18..0x1C].try_into().unwrap()),
+            3
+        );
         let e0 = &idx.entries[0xC0..];
         assert_eq!(e0[0], 2); // ident length
         assert_eq!(&e0[1..3], b"00"); // ident
         assert_eq!(e0[3], 0x0F); // control byte
-        // offset varint = 3643
+                                 // offset varint = 3643
         assert_eq!(&e0[4..6], &[0x1c, 0xbb]);
 
         // CNCX: first label is length-prefixed "Title Page".
         assert_eq!(idx.cncx[0], 0x80 | 10);
         assert_eq!(&idx.cncx[1..11], b"Title Page");
+    }
+
+    #[test]
+    fn preserves_nested_toc_order_and_relationships() {
+        let toc = vec![
+            TocEntry {
+                label: "Part".into(),
+                offset: 100,
+                depth: 0,
+            },
+            TocEntry {
+                label: "Chapter".into(),
+                offset: 200,
+                depth: 1,
+            },
+            TocEntry {
+                label: "Section".into(),
+                offset: 250,
+                depth: 2,
+            },
+            TocEntry {
+                label: "Appendix".into(),
+                offset: 300,
+                depth: 1,
+            },
+        ];
+        let idx = build_ncx(&toc, 1_000).unwrap();
+        assert_eq!(
+            &idx.header[0xC0 + 28..0xC0 + 40],
+            &[21, 1, 16, 0, 22, 1, 32, 0, 23, 1, 64, 0]
+        );
+
+        let idxt = u32::from_be_bytes(idx.entries[0x14..0x18].try_into().unwrap()) as usize;
+        let offsets: Vec<usize> = (0..toc.len())
+            .map(|i| {
+                u16::from_be_bytes(
+                    idx.entries[idxt + 4 + i * 2..idxt + 6 + i * 2]
+                        .try_into()
+                        .unwrap(),
+                ) as usize
+            })
+            .collect();
+        let decode = |i: usize, count: usize| {
+            let mut pos = offsets[i];
+            pos += 1 + idx.entries[pos] as usize;
+            let control = idx.entries[pos];
+            pos += 1;
+            let mut values = Vec::new();
+            for _ in 0..count {
+                let mut value = 0;
+                loop {
+                    let byte = idx.entries[pos];
+                    pos += 1;
+                    value = (value << 7) | u32::from(byte & 0x7f);
+                    if byte & 0x80 != 0 {
+                        break;
+                    }
+                }
+                values.push(value);
+            }
+            (control, values)
+        };
+
+        assert_eq!(decode(0, 6), (0x6f, vec![100, 100, 0, 0, 1, 3]));
+        assert_eq!(decode(1, 7), (0x7f, vec![200, 50, 5, 1, 0, 2, 2]));
+        assert_eq!(decode(2, 5), (0x1f, vec![250, 50, 13, 2, 1]));
+        assert_eq!(decode(3, 5), (0x1f, vec![300, 700, 21, 1, 0]));
     }
 }
