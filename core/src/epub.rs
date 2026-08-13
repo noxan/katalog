@@ -11,6 +11,11 @@ pub struct ParsedEpub {
     pub authors: Vec<String>,
     pub language: Option<String>,
     pub publisher: Option<String>,
+    pub subjects: Vec<String>,
+    pub publication_date: Option<String>,
+    pub contributors: Vec<String>,
+    pub rights: Option<String>,
+    pub source: Option<String>,
     pub isbn: Option<String>,
     pub description: Option<String>,
     /// Calibre-compatible series metadata, when supplied by the EPUB.
@@ -32,6 +37,11 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
 
     let authors: Vec<String> = md.creators().map(|c| c.value().to_string()).collect();
     let publisher = md.by_property("dc:publisher").next().map(|p| p.value().to_string());
+    let subjects = md.tags().map(|s| s.value().to_string()).collect();
+    let publication_date = md.published_entry().map(|d| d.value().to_string());
+    let contributors = md.contributors().map(|c| c.value().to_string()).collect();
+    let rights = md.rights().next().map(|r| r.value().to_string());
+    let source = md.by_property("dc:source").next().map(|s| s.value().to_string());
 
     // Prefer a real ISBN from any dc:identifier; the package's unique-identifier
     // is usually a uuid, useless for lookup and dedup. Store nothing rather
@@ -76,6 +86,11 @@ pub fn parse(path: &Path) -> Result<ParsedEpub, String> {
         authors,
         language: md.language().map(|l| l.value().to_string()),
         publisher,
+        subjects,
+        publication_date,
+        contributors,
+        rights,
+        source,
         isbn,
         description: md.description().map(|d| d.value().to_string()),
         // `calibre:series` and `calibre:series_index` are the de facto EPUB

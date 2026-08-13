@@ -27,6 +27,13 @@ struct Source {
     authors: Vec<String>,
     isbn: Option<String>,
     description: Option<String>,
+    publisher: Option<String>,
+    subjects: Vec<String>,
+    publication_date: Option<String>,
+    contributors: Vec<String>,
+    rights: Option<String>,
+    source: Option<String>,
+    language: Option<String>,
     html: Vec<u8>,
     /// Image records in recindex order (image N is at index N-1).
     images: Vec<Vec<u8>>,
@@ -123,6 +130,13 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         authors: meta.authors,
         isbn: meta.isbn,
         description: meta.description,
+        publisher: meta.publisher,
+        subjects: meta.subjects,
+        publication_date: meta.publication_date,
+        contributors: meta.contributors,
+        rights: meta.rights,
+        source: meta.source,
+        language: meta.language,
         title: meta.title,
         html,
         images,
@@ -526,6 +540,33 @@ fn build_exth(src: &Source) -> Vec<u8> {
     if let Some(i) = &src.isbn {
         recs.push((104, i.clone().into_bytes()));
     }
+    if let Some(p) = &src.publisher {
+        recs.push((101, p.clone().into_bytes()));
+    }
+    for subject in &src.subjects {
+        recs.push((105, subject.clone().into_bytes()));
+    }
+    if let Some(date) = &src.publication_date {
+        recs.push((106, date.clone().into_bytes()));
+    }
+    for contributor in &src.contributors {
+        if !src.authors.contains(contributor)
+            && !recs
+                .iter()
+                .any(|(ty, data)| *ty == 108 && data == contributor.as_bytes())
+        {
+            recs.push((108, contributor.clone().into_bytes()));
+        }
+    }
+    if let Some(rights) = &src.rights {
+        recs.push((109, rights.clone().into_bytes()));
+    }
+    if let Some(source) = &src.source {
+        recs.push((112, source.clone().into_bytes()));
+    }
+    if let Some(language) = &src.language {
+        recs.push((524, language.clone().into_bytes()));
+    }
     if let Some(cover) = src.cover_recindex {
         recs.push((201, (cover as u32).to_be_bytes().to_vec())); // cover image offset
         recs.push((202, (cover as u32).to_be_bytes().to_vec())); // thumbnail offset
@@ -780,6 +821,13 @@ mod tests {
             authors: vec!["Author".into(), "T".into()],
             isbn: None,
             description: None,
+            publisher: None,
+            subjects: vec![],
+            publication_date: None,
+            contributors: vec![],
+            rights: None,
+            source: None,
+            language: None,
             html: vec![],
             images: vec![],
             cover_recindex: None,
@@ -815,6 +863,56 @@ mod tests {
         assert_eq!(chunks.iter().map(|c| c.len()).collect::<Vec<_>>(), [4095, 3]);
         assert!(chunks.iter().all(|c| std::str::from_utf8(c).is_ok()));
         assert_eq!(chunks.concat(), text.as_bytes());
+    }
+
+    #[test]
+    fn exth_preserves_source_metadata_and_repeats_multi_value_fields() {
+        let exth = build_exth(&Source {
+            title: "Book".into(),
+            authors: vec!["Author".into()],
+            isbn: None,
+            description: None,
+            publisher: Some("Publisher".into()),
+            subjects: vec!["One".into(), "Two".into()],
+            publication_date: Some("2024-01-02".into()),
+            contributors: vec![
+                "Author".into(),
+                "Editor".into(),
+                "Editor".into(),
+                "Translator".into(),
+            ],
+            rights: Some("Copyright".into()),
+            source: Some("Source edition".into()),
+            language: Some("de".into()),
+            html: vec![],
+            images: vec![],
+            cover_recindex: None,
+        });
+        let mut records = Vec::new();
+        let mut offset = 12;
+        for _ in 0..u32::from_be_bytes(exth[8..12].try_into().unwrap()) {
+            let ty = u32::from_be_bytes(exth[offset..offset + 4].try_into().unwrap());
+            let len = u32::from_be_bytes(exth[offset + 4..offset + 8].try_into().unwrap()) as usize;
+            records.push((
+                ty,
+                String::from_utf8_lossy(&exth[offset + 8..offset + len]).into_owned(),
+            ));
+            offset += len;
+        }
+        assert_eq!(records.iter().filter(|(ty, _)| *ty == 105).count(), 2);
+        assert_eq!(records.iter().filter(|(ty, _)| *ty == 108).count(), 2);
+        for expected in [
+            (101, "Publisher"),
+            (106, "2024-01-02"),
+            (109, "Copyright"),
+            (112, "Source edition"),
+            (524, "de"),
+        ] {
+            assert!(records
+                .iter()
+                .any(|(ty, value)| (*ty, value.as_str()) == expected));
+        }
+        assert!(!records.iter().any(|(ty, _)| matches!(ty, 113 | 501)));
     }
 }
 
