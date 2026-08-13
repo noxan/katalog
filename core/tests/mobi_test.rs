@@ -21,12 +21,10 @@ fn converts_epub_to_readable_mobi() {
     assert_eq!(m.author().as_deref(), Some("Ada Lovelace"));
     assert_eq!(m.isbn().as_deref(), Some("9781234567897"));
 
-    // The chapter text must survive into the (PalmDOC-compressed) first text
-    // record. We decompress it ourselves: the crate's content_as_string works
-    // but its range() drops the last record, emptying a single-record book.
+    // The chapter text must survive into the first uncompressed text record.
     let recs = m.raw_records();
     let record1 = recs.records()[1].content;
-    let text = String::from_utf8_lossy(&katalog::mobi::palmdoc_decompress(record1)).into_owned();
+    let text = String::from_utf8_lossy(record1).into_owned();
     assert!(text.contains("Hello"), "chapter body text present: {text:?}");
     assert!(text.contains("Chapter 1"), "chapter heading present");
 }
@@ -41,6 +39,7 @@ fn container_ids_and_content_range_are_valid() {
     let u32_at = |n| u32::from_be_bytes(data[n..n + 4].try_into().unwrap());
     let records = u16_at(76) as usize;
     let record0 = u32_at(78) as usize;
+    assert_eq!(u16_at(record0), 1, "text records are uncompressed");
     let max_id = (0..records)
         .map(|i| u32::from_be_bytes([0, data[83 + i * 8], data[84 + i * 8], data[85 + i * 8]]))
         .max().unwrap();
@@ -57,11 +56,10 @@ fn internal_links_become_correct_filepos() {
     let out = tmp.path().join("nav.mobi");
     katalog::mobi::epub_to_mobi(&epub.to_string_lossy(), &out.to_string_lossy()).unwrap();
 
-    // Reconstruct the uncompressed text (small fixture => single text record 1).
+    // Small fixture => single text record 1.
     let m = mobi::Mobi::from_path(&out).unwrap();
     let recs = m.raw_records();
-    let text = katalog::mobi::palmdoc_decompress(recs.records()[1].content);
-    let text = String::from_utf8_lossy(&text);
+    let text = String::from_utf8_lossy(recs.records()[1].content);
 
     // Every internal link resolved to a non-zero, in-bounds byte offset...
     let mut filepos = Vec::new();

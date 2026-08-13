@@ -430,14 +430,12 @@ fn body_inner(html: &str) -> &str {
 }
 
 fn build_mobi(src: &Source) -> Vec<u8> {
-    // text_len is the *uncompressed* total; records are PalmDOC-compressed
-    // independently (matches must not cross the 4096-byte record boundary).
     let text_len = src.html.len() as u32;
     let text_records: Vec<Vec<u8>> = if src.html.is_empty() {
         vec![Vec::new()]
     } else {
         utf8_chunks(&src.html, TEXT_RECORD_SIZE)
-            .map(palmdoc_compress)
+            .map(<[u8]>::to_vec)
             .collect()
     };
     let n_text = text_records.len();
@@ -549,7 +547,7 @@ fn utf8_chunks(mut data: &[u8], max: usize) -> impl Iterator<Item = &[u8]> {
 
 fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
     let mut h = [0u8; 16];
-    h[0..2].copy_from_slice(&2u16.to_be_bytes()); // compression: PalmDOC
+    h[0..2].copy_from_slice(&1u16.to_be_bytes()); // compression: none
                                                   // 2..4 unused
     h[4..8].copy_from_slice(&text_len.to_be_bytes());
     h[8..10].copy_from_slice(&(n_text as u16).to_be_bytes());
@@ -807,146 +805,6 @@ fn write_pdb(title: &str, records: &[Vec<u8>]) -> Vec<u8> {
     out
 }
 
-// ---------------------------------------------------------------------------
-// PalmDOC (LZ77) compression — MOBI compression type 2.
-//
-// Byte codes on the compressed stream:
-//   0x00        literal NUL
-//   0x01..=0x08 escape: the next N bytes are literal
-//   0x09..=0x7F literal ASCII byte
-//   0x80..=0xBF 2-byte back-reference: 10 dddddddddd dll  (dist 1..2047, len 3..10)
-//   0xC0..=0xFF space + (byte ^ 0x80)   — the "space char" optimization
-// ---------------------------------------------------------------------------
-
-/// Compress a byte slice with PalmDOC LZ77.
-///
-/// ponytail: 3-byte hash chain, depth-capped at 64 — good ratio, bounded time.
-/// A full match search would compress a hair smaller for far more CPU.
-fn palmdoc_compress(data: &[u8]) -> Vec<u8> {
-    use std::collections::HashMap;
-    const MAX_LEN: usize = 10;
-    const MAX_DIST: usize = 2047;
-    const MAX_CHAIN: usize = 64;
-
-    let n = data.len();
-    let mut out = Vec::with_capacity(n / 2 + 16);
-    let mut head: HashMap<[u8; 3], usize> = HashMap::new();
-    let mut prev = vec![usize::MAX; n.max(1)];
-
-    let mut i = 0;
-    while i < n {
-        let mut best_len = 0usize;
-        let mut best_dist = 0usize;
-
-        if i + 2 < n {
-            let key = [data[i], data[i + 1], data[i + 2]];
-            let max_len = MAX_LEN.min(n - i);
-            let min_pos = i.saturating_sub(MAX_DIST);
-
-            let mut cand = head.get(&key).copied().unwrap_or(usize::MAX);
-            let mut chain = 0;
-            while cand != usize::MAX && cand >= min_pos && chain < MAX_CHAIN {
-                let mut l = 0;
-                while l < max_len && data[cand + l] == data[i + l] {
-                    l += 1;
-                }
-                if l > best_len {
-                    best_len = l;
-                    best_dist = i - cand;
-                    if l == max_len {
-                        break;
-                    }
-                }
-                cand = prev[cand];
-                chain += 1;
-            }
-
-            // Index the current position for future matches.
-            prev[i] = head.get(&key).copied().unwrap_or(usize::MAX);
-            head.insert(key, i);
-        }
-
-        if best_len >= 3 {
-            let val = 0x8000u16 | ((best_dist as u16) << 3) | ((best_len - 3) as u16);
-            out.push((val >> 8) as u8);
-            out.push(val as u8);
-            i += best_len;
-            continue;
-        }
-
-        let c = data[i];
-        if c == 0x20 && i + 1 < n && (0x40..=0x7F).contains(&data[i + 1]) {
-            out.push(data[i + 1] ^ 0x80);
-            i += 2;
-        } else if c == 0x00 || (0x09..=0x7F).contains(&c) {
-            out.push(c);
-            i += 1;
-        } else {
-            // Escape run: 1..8 bytes that can't be emitted directly.
-            let start = i;
-            let mut count = 0;
-            while count < 8 && i < n {
-                let b = data[i];
-                if b == 0x00 || (0x09..=0x7F).contains(&b) {
-                    break;
-                }
-                count += 1;
-                i += 1;
-            }
-            out.push(count as u8);
-            out.extend_from_slice(&data[start..start + count]);
-        }
-    }
-    out
-}
-
-/// Decompress a PalmDOC LZ77 stream. Public so tests (and future readers) can
-/// verify our output round-trips.
-pub fn palmdoc_decompress(data: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(data.len() * 2);
-    let n = data.len();
-    let mut i = 0;
-    while i < n {
-        let b = data[i];
-        i += 1;
-        match b {
-            0x00 => out.push(0x00),
-            0x01..=0x08 => {
-                for _ in 0..b as usize {
-                    if i < n {
-                        out.push(data[i]);
-                        i += 1;
-                    }
-                }
-            }
-            0x09..=0x7F => out.push(b),
-            0x80..=0xBF => {
-                if i >= n {
-                    break;
-                }
-                let val = ((b as u16) << 8) | data[i] as u16;
-                i += 1;
-                let dist = ((val >> 3) & 0x07FF) as usize;
-                let len = ((val & 0x07) + 3) as usize;
-                if dist == 0 || dist > out.len() {
-                    break;
-                }
-                let mut pos = out.len() - dist;
-                for _ in 0..len {
-                    let byte = out[pos];
-                    out.push(byte);
-                    pos += 1;
-                }
-            }
-            0xC0..=0xFF => {
-                out.push(0x20);
-                out.push(b ^ 0x80);
-            }
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1079,35 +937,5 @@ mod tests {
                 .any(|(ty, value)| (*ty, value.as_str()) == expected));
         }
         assert!(!records.iter().any(|(ty, _)| matches!(ty, 113 | 501)));
-    }
-}
-
-#[cfg(test)]
-mod palmdoc_tests {
-    use super::{palmdoc_compress, palmdoc_decompress};
-
-    fn roundtrip(data: &[u8]) {
-        let c = palmdoc_compress(data);
-        assert_eq!(
-            palmdoc_decompress(&c),
-            data,
-            "roundtrip failed for {data:?}"
-        );
-    }
-
-    #[test]
-    fn roundtrips_and_compresses() {
-        roundtrip(b"");
-        roundtrip(b"a");
-        roundtrip(b"aaaaaaaaaaaaaaaaaaaa"); // runs -> back-references
-        roundtrip(b"the quick brown fox jumps over the quick brown fox");
-        roundtrip("accented: café — naïve “quotes”".as_bytes()); // multibyte escapes
-        roundtrip(&(0u8..=255).cycle().take(5000).collect::<Vec<_>>());
-
-        // A repetitive HTML-ish blob must actually shrink.
-        let html = "<p>Hello world.</p>".repeat(500);
-        let c = palmdoc_compress(html.as_bytes());
-        assert!(c.len() < html.len() / 2, "expected >2x compression");
-        assert_eq!(palmdoc_decompress(&c), html.as_bytes());
     }
 }
