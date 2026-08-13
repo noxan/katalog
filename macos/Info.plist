@@ -35,5 +35,7 @@
 	<string>26.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>Katalog needs access to your Kindle to send and remove books.</string>
 </dict>
 </plist>

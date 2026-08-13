@@ -254,10 +254,37 @@ final class KindleWatcher: NSObject, ObservableObject {
     }
 
     private func isKindle(_ vol: URL) -> Bool {
-        var isDir: ObjCBool = false
-        let docs = vol.appendingPathComponent("documents").path
-        let hasDocs = FileManager.default.fileExists(atPath: docs, isDirectory: &isDir) && isDir.boolValue
-        return hasDocs && vol.lastPathComponent.lowercased().contains("kindle")
+        vol.lastPathComponent.lowercased().contains("kindle")
+    }
+
+    @MainActor private func requestAccess(to device: Device) -> Device? {
+        let panel = NSOpenPanel()
+        panel.message = "Choose your Kindle to let Katalog send and remove books."
+        panel.prompt = "Allow Access"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.directoryURL = device.volume
+        guard panel.runModal() == .OK, let url = panel.url,
+              let bookmark = try? url.bookmarkData(options: .withSecurityScope,
+                                                   includingResourceValuesForKeys: nil,
+                                                   relativeTo: nil) else { return nil }
+        _ = url.startAccessingSecurityScopedResource()
+        UserDefaults.standard.set(bookmark, forKey: Self.volumeBookmarkKey)
+        authorizedVolume = url
+        rescan()
+        return Device(volume: url)
+    }
+
+    private func withAccess(to device: Device, _ operation: (Device) throws -> Void) async throws {
+        do { try operation(device) }
+        catch {
+            let e = error as NSError
+            let denied = (e.domain == NSCocoaErrorDomain &&
+                          [NSFileReadNoPermissionError, NSFileWriteNoPermissionError].contains(e.code)) ||
+                         (e.domain == NSPOSIXErrorDomain && [EACCES, EPERM].contains(Int32(e.code)))
+            guard denied, let authorized = await requestAccess(to: device) else { throw error }
+            try operation(authorized)
+        }
     }
 
     // MARK: - Owned operations
@@ -276,7 +303,9 @@ final class KindleWatcher: NSObject, ObservableObject {
                 let tmp = FileManager.default.temporaryDirectory
                     .appendingPathComponent(UUID().uuidString).appendingPathExtension("mobi")
                 try convertEpubToMobi(epubPath: epubPath, outPath: tmp.path)
-                try self?.performTransfer(book, from: tmp.path, to: device)
+                try await self?.withAccess(to: device) {
+                    try self?.performTransfer(book, from: tmp.path, to: $0)
+                }
                 try? FileManager.default.removeItem(at: tmp)
                 await self?.finish(job, error: nil)
             } catch { await self?.finish(job, error: error.localizedDescription) }
@@ -289,7 +318,10 @@ final class KindleWatcher: NSObject, ObservableObject {
         lastFailure = nil
         jobs.append(job)
         Task.detached { [weak self] in
-            do { try self?.performRemove(book, from: device); await self?.finish(job, error: nil) }
+            do {
+                try await self?.withAccess(to: device) { try self?.performRemove(book, from: $0) }
+                await self?.finish(job, error: nil)
+            }
             catch { await self?.finish(job, error: error.localizedDescription) }
         }
     }
