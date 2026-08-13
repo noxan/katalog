@@ -14,6 +14,8 @@ use std::path::Path;
 const TEXT_RECORD_SIZE: usize = 4096;
 const NONE: u32 = 0xFFFF_FFFF;
 const MOBI_HEADER_LEN: u32 = 232;
+const HTML_PREFIX: &str =
+    "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body>";
 
 /// Convert an epub file to a MOBI6 file on disk.
 pub fn epub_to_mobi(epub_path: &str, out_path: &str) -> Result<(), String> {
@@ -81,7 +83,6 @@ fn read_epub(path: &Path) -> Result<Source, String> {
     // internal <a href> → MOBI filepos (byte offset into the text). We track the
     // byte offset of every id anchor and doc start, emit fixed-width filepos
     // placeholders (so offsets stay stable), then patch in the resolved values.
-    const PREFIX: &str = "<html><head></head><body>";
     const SUFFIX: &str = "</body></html>";
     const PAGEBREAK: &str = "<mbp:pagebreak/>";
 
@@ -110,7 +111,7 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         first = false;
 
         // Byte offset where this document's content begins in the final html.
-        let base_off = PREFIX.len() + body.len();
+        let base_off = HTML_PREFIX.len() + body.len();
         doc_start.entry(href.clone()).or_insert(base_off);
 
         let (rewritten, mut doc_links, doc_ids) = rewrite_links(&inner, &href);
@@ -124,7 +125,7 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         body.push_str(&rewritten);
     }
 
-    let mut html = format!("{PREFIX}{body}{SUFFIX}").into_bytes();
+    let mut html = format!("{HTML_PREFIX}{body}{SUFFIX}").into_bytes();
 
     // Resolve each internal link to its target byte offset (id anchor if the
     // link had a #fragment, else the document start) and patch the placeholder.
@@ -1022,6 +1023,11 @@ mod tests {
         );
         assert!(chunks.iter().all(|c| std::str::from_utf8(c).is_ok()));
         assert_eq!(chunks.concat(), text.as_bytes());
+    }
+
+    #[test]
+    fn html_declares_utf8_for_kindle_renderers() {
+        assert!(HTML_PREFIX.contains("charset=utf-8"));
     }
 
     #[test]
