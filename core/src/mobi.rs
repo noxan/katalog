@@ -39,6 +39,8 @@ struct Source {
     images: Vec<Vec<u8>>,
     /// 0-based index into `images` of the cover, for EXTH 201.
     cover_recindex: Option<usize>,
+    /// Resolved TOC entries (label + byte offset) for the NCX index.
+    toc: Vec<crate::mobi_index::TocEntry>,
 }
 
 fn read_epub(path: &Path) -> Result<Source, String> {
@@ -58,8 +60,12 @@ fn read_epub(path: &Path) -> Result<Source, String> {
             .value()
             .map(str::to_string)
             .unwrap_or_default();
-        let Ok(bytes) = entry.read_bytes() else { continue };
-        recindex.entry(basename(&href).to_string()).or_insert(images.len() + 1);
+        let Ok(bytes) = entry.read_bytes() else {
+            continue;
+        };
+        recindex
+            .entry(basename(&href).to_string())
+            .or_insert(images.len() + 1);
         images.push(optimize_image(bytes));
     }
 
@@ -88,8 +94,14 @@ fn read_epub(path: &Path) -> Result<Source, String> {
     let mut reader = epub.reader();
     while let Some(next) = reader.read_next() {
         let data = next.map_err(|e| format!("read spine: {e}"))?;
-        let href = basename(data.manifest_entry().resource().key().value().unwrap_or_default())
-            .to_string();
+        let href = basename(
+            data.manifest_entry()
+                .resource()
+                .key()
+                .value()
+                .unwrap_or_default(),
+        )
+        .to_string();
         let inner = rewrite_images(body_inner(data.content()), &recindex);
 
         if !first {
@@ -126,6 +138,29 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         write_filepos(&mut html, link.digit_pos, offset);
     }
 
+    // Extract the TOC and resolve each entry to a byte offset, reusing the same
+    // anchor maps as the filepos links. Offsets are final: patching filepos above
+    // only overwrites fixed-width digits, never shifts bytes.
+    let mut toc = Vec::new();
+    if let Some(root) = epub.toc().contents() {
+        for entry in root.flatten() {
+            let label = entry.label().trim();
+            let Some(href) = entry.href() else {
+                continue;
+            };
+            if label.is_empty() {
+                continue;
+            }
+            if let Some(off) = resolve_offset(href.as_str(), &doc_start, &id_at) {
+                toc.push(crate::mobi_index::TocEntry {
+                    label: label.to_string(),
+                    offset: off as u32,
+                    depth: entry.depth().saturating_sub(1),
+                });
+            }
+        }
+    }
+
     Ok(Source {
         authors: meta.authors,
         isbn: meta.isbn,
@@ -141,7 +176,20 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         html,
         images,
         cover_recindex,
+        toc,
     })
+}
+
+/// Resolve a TOC/link href to its byte offset (id anchor if it has a #fragment,
+/// else the document start), reusing the flatten pass's anchor maps.
+fn resolve_offset(
+    href: &str,
+    doc_start: &HashMap<String, usize>,
+    id_at: &HashMap<(String, String), usize>,
+) -> Option<usize> {
+    let (target, frag) = internal_target(href, "")?;
+    frag.and_then(|f| id_at.get(&(target.clone(), f)).copied())
+        .or_else(|| doc_start.get(&target).copied())
 }
 
 /// A rewritten internal link awaiting its resolved filepos.
@@ -196,7 +244,11 @@ fn rewrite_links(inner: &str, base: &str) -> (String, Vec<Link>, Vec<(String, us
                 let digit_pos = out.len() + "filepos=\"".len();
                 out.push_str("filepos=\"0000000000\"");
                 out.push_str(&tag[hpos + hlen..]);
-                links.push(Link { digit_pos, target, frag });
+                links.push(Link {
+                    digit_pos,
+                    target,
+                    frag,
+                });
                 i = end;
                 continue;
             }
@@ -213,8 +265,11 @@ fn rewrite_links(inner: &str, base: &str) -> (String, Vec<Link>, Vec<(String, us
 /// links (http/mailto/etc.), which are left untouched.
 fn internal_target(href: &str, base: &str) -> Option<(String, Option<String>)> {
     let href = href.trim();
-    if href.is_empty() || href.contains("://") || href.starts_with("mailto:")
-        || href.starts_with("tel:") || href.starts_with("//")
+    if href.is_empty()
+        || href.contains("://")
+        || href.starts_with("mailto:")
+        || href.starts_with("tel:")
+        || href.starts_with("//")
     {
         return None;
     }
@@ -222,7 +277,11 @@ fn internal_target(href: &str, base: &str) -> Option<(String, Option<String>)> {
         Some((p, f)) => (p, Some(f.to_string())),
         None => (href, None),
     };
-    let target = if path.is_empty() { base.to_string() } else { basename(path).to_string() };
+    let target = if path.is_empty() {
+        base.to_string()
+    } else {
+        basename(path).to_string()
+    };
     Some((target, frag))
 }
 
@@ -302,7 +361,12 @@ fn optimize_image(bytes: Vec<u8>) -> Vec<u8> {
         use image::{ExtendedColorType, ImageEncoder};
         let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, quality);
         if enc
-            .write_image(rgb.as_raw(), rgb.width(), rgb.height(), ExtendedColorType::Rgb8)
+            .write_image(
+                rgb.as_raw(),
+                rgb.width(),
+                rgb.height(),
+                ExtendedColorType::Rgb8,
+            )
             .is_err()
         {
             break;
@@ -375,27 +439,49 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     };
     let n_text = text_records.len();
 
-    // Record numbering: 0 = header, 1..=n_text = text, then images, FLIS, FCIS, EOF.
+    // Record numbering: 0 = header, 1..=n_text = text, then the NCX index (INDX
+    // header, INDX entries, CNCX — must be contiguous, in that order), then
+    // images, FLIS, FCIS, EOF.
     let last_text = n_text; // 1-based record index of the last text record
     let n_images = src.images.len();
-    let first_image_record = last_text + 1; // record index of image #1 (recindex 1)
-    let flis_index = last_text + n_images + 1;
+
+    let index = crate::mobi_index::build_ncx(&src.toc, text_len);
+    let n_index = if index.is_some() { 3 } else { 0 };
+    let first_index_record = last_text + 1; // INDX header record
+    let first_image_record = last_text + n_index + 1; // image #1 (recindex 1)
+    let flis_index = last_text + n_index + n_images + 1;
     let fcis_index = flis_index + 1;
 
     let record0 = build_record0(
         src,
         text_len,
         n_text,
-        /* first_image_index */ if n_images > 0 { first_image_record as u32 } else { NONE },
+        /* first_index_record */
+        if index.is_some() {
+            first_index_record as u32
+        } else {
+            NONE
+        },
+        /* first_image_index */
+        if n_images > 0 {
+            first_image_record as u32
+        } else {
+            NONE
+        },
         /* first_non_book_index */ (last_text + 1) as u32,
         /* last_content_record */ (flis_index - 1) as u16,
         fcis_index as u32,
         flis_index as u32,
     );
 
-    let mut records: Vec<Vec<u8>> = Vec::with_capacity(n_text + n_images + 4);
+    let mut records: Vec<Vec<u8>> = Vec::with_capacity(n_text + n_index + n_images + 4);
     records.push(record0);
     records.extend(text_records);
+    if let Some(idx) = &index {
+        records.push(idx.header.clone());
+        records.push(idx.entries.clone());
+        records.push(idx.cncx.clone());
+    }
     records.extend(src.images.iter().cloned());
     records.push(flis_record());
     records.push(fcis_record(text_len));
@@ -404,10 +490,12 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     write_pdb(&src.title, &records)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_record0(
     src: &Source,
     text_len: u32,
     n_text: usize,
+    first_index_record: u32,
     first_image_index: u32,
     first_non_book_index: u32,
     last_content_record: u16,
@@ -423,6 +511,7 @@ fn build_record0(
     rec.extend_from_slice(&mobi_header(
         name_offset as u32,
         name.len() as u32,
+        first_index_record,
         first_image_index,
         first_non_book_index,
         last_content_record,
@@ -452,7 +541,7 @@ fn utf8_chunks(mut data: &[u8], max: usize) -> impl Iterator<Item = &[u8]> {
 fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
     let mut h = [0u8; 16];
     h[0..2].copy_from_slice(&2u16.to_be_bytes()); // compression: PalmDOC
-    // 2..4 unused
+                                                  // 2..4 unused
     h[4..8].copy_from_slice(&text_len.to_be_bytes());
     h[8..10].copy_from_slice(&(n_text as u16).to_be_bytes());
     h[10..12].copy_from_slice(&(TEXT_RECORD_SIZE as u16).to_be_bytes());
@@ -461,9 +550,11 @@ fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
 }
 
 /// The 232-byte MOBI header, fields in the exact order the `mobi` crate parses.
+#[allow(clippy::too_many_arguments)]
 fn mobi_header(
     name_offset: u32,
     name_length: u32,
+    first_index_record: u32,
     first_image_index: u32,
     first_non_book_index: u32,
     last_content_record: u16,
@@ -523,7 +614,7 @@ fn mobi_header(
     u32(&mut h, NONE); // data_section_count
     u32(&mut h, NONE); // unknown, conventional MOBI6 value
     u32(&mut h, 0); // extra_record_data_flags: no trailing bytes on text records
-    u32(&mut h, NONE); // first_index_record
+    u32(&mut h, first_index_record); // first INDX (NCX) record, or NONE
 
     debug_assert_eq!(h.len(), MOBI_HEADER_LEN as usize);
     h
@@ -831,6 +922,7 @@ mod tests {
             html: vec![],
             images: vec![],
             cover_recindex: None,
+            toc: Vec::new(),
         });
         assert_eq!(u32::from_be_bytes(exth[8..12].try_into().unwrap()), 2);
         assert_eq!(u32::from_be_bytes(exth[12..16].try_into().unwrap()), 100);
@@ -847,9 +939,12 @@ mod tests {
     fn record_layout_matches_mobi6_conventions() {
         let src = Source {
             title: "é".into(), authors: vec!["A".into()], isbn: None,
-            description: None, html: vec![], images: vec![], cover_recindex: None,
+            description: None, publisher: None, subjects: vec![], publication_date: None,
+            contributors: vec![], rights: None, source: None, language: None,
+            html: vec![], images: vec![], cover_recindex: None,
+            toc: Vec::new(),
         };
-        let rec = build_record0(&src, 0, 1, NONE, 2, 1, 3, 2);
+        let rec = build_record0(&src, 0, 1, NONE, NONE, 2, 1, 3, 2);
         let at = |n| u32::from_be_bytes(rec[n..n + 4].try_into().unwrap());
         let title = at(16 + 68) as usize;
         assert_eq!(&rec[title..], &[0xc3, 0xa9, 0, 0]);
@@ -887,6 +982,7 @@ mod tests {
             html: vec![],
             images: vec![],
             cover_recindex: None,
+            toc: Vec::new(),
         });
         let mut records = Vec::new();
         let mut offset = 12;
@@ -922,7 +1018,11 @@ mod palmdoc_tests {
 
     fn roundtrip(data: &[u8]) {
         let c = palmdoc_compress(data);
-        assert_eq!(palmdoc_decompress(&c), data, "roundtrip failed for {data:?}");
+        assert_eq!(
+            palmdoc_decompress(&c),
+            data,
+            "roundtrip failed for {data:?}"
+        );
     }
 
     #[test]
