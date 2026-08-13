@@ -113,12 +113,9 @@ final class KindleWatcher: NSObject, ObservableObject {
         let vols = fm.mountedVolumeURLs(
             includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]
         ) ?? []
-        devices = vols.filter(isKindle).map { mounted in
-            if let authorizedVolume, authorizedVolume.path == mounted.path {
-                return Device(volume: authorizedVolume)
-            }
-            return Device(volume: mounted)
-        }
+        // Bookmarks resolved before a reconnect can still reference the previous
+        // mount instance. Always discover and scan through the fresh mount URL.
+        devices = vols.filter(isKindle).map(Device.init(volume:))
         scanGeneration = UUID()
         let generation = scanGeneration
         Self.log.info("rescan: mounted=\(vols.count) kindles=\(self.devices.count)")
