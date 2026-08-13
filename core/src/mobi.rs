@@ -435,7 +435,9 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     let text_records: Vec<Vec<u8>> = if src.html.is_empty() {
         vec![Vec::new()]
     } else {
-        utf8_chunks(&src.html, TEXT_RECORD_SIZE).map(palmdoc_compress).collect()
+        utf8_chunks(&src.html, TEXT_RECORD_SIZE)
+            .map(palmdoc_compress)
+            .collect()
     };
     let n_text = text_records.len();
 
@@ -511,6 +513,8 @@ fn build_record0(
     rec.extend_from_slice(&mobi_header(
         name_offset as u32,
         name.len() as u32,
+        source_id(src),
+        mobi_locale(src.language.as_deref()),
         first_index_record,
         first_image_index,
         first_non_book_index,
@@ -529,9 +533,13 @@ fn build_record0(
 
 fn utf8_chunks(mut data: &[u8], max: usize) -> impl Iterator<Item = &[u8]> {
     std::iter::from_fn(move || {
-        if data.is_empty() { return None; }
+        if data.is_empty() {
+            return None;
+        }
         let mut end = data.len().min(max);
-        while std::str::from_utf8(&data[..end]).is_err() { end -= 1; }
+        while std::str::from_utf8(&data[..end]).is_err() {
+            end -= 1;
+        }
         let (chunk, rest) = data.split_at(end);
         data = rest;
         Some(chunk)
@@ -554,6 +562,8 @@ fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
 fn mobi_header(
     name_offset: u32,
     name_length: u32,
+    unique_id: u32,
+    locale: u32,
     first_index_record: u32,
     first_image_index: u32,
     first_non_book_index: u32,
@@ -569,7 +579,7 @@ fn mobi_header(
     u32(&mut h, MOBI_HEADER_LEN); // header_length
     u32(&mut h, 2); // mobi_type: book
     u32(&mut h, 65001); // text_encoding: UTF-8
-    u32(&mut h, 0); // id
+    u32(&mut h, unique_id); // stable book ID
     u32(&mut h, 6); // gen_version
     u32(&mut h, NONE); // ortho_index
     u32(&mut h, NONE); // inflect_index
@@ -581,9 +591,7 @@ fn mobi_header(
     u32(&mut h, first_non_book_index);
     u32(&mut h, name_offset);
     u32(&mut h, name_length);
-    u16(&mut h, 0); // unused
-    h.push(0); // locale
-    h.push(0); // language_code: Neutral
+    u32(&mut h, locale); // Windows-compatible language code
     u32(&mut h, 0); // input_language
     u32(&mut h, 0); // output_language
     u32(&mut h, 6); // format_version
@@ -622,6 +630,7 @@ fn mobi_header(
 
 fn build_exth(src: &Source) -> Vec<u8> {
     let mut recs: Vec<(u32, Vec<u8>)> = Vec::new();
+    recs.push((503, src.title.clone().into_bytes())); // updated title (Kindle discovery)
     for a in &src.authors {
         recs.push((100, a.clone().into_bytes()));
     }
@@ -680,6 +689,42 @@ fn build_exth(src: &Source) -> Vec<u8> {
     out.extend_from_slice(&body);
     out.resize(unpadded + pad, 0);
     out
+}
+
+fn source_id(src: &Source) -> u32 {
+    let mut hash = 0x811c_9dc5u32;
+    for byte in src
+        .title
+        .bytes()
+        .chain(src.authors.iter().flat_map(|a| a.bytes()))
+        .chain(src.isbn.iter().flat_map(|i| i.bytes()))
+    {
+        hash = (hash ^ byte as u32).wrapping_mul(0x0100_0193);
+    }
+    hash.max(1)
+}
+
+fn mobi_locale(language: Option<&str>) -> u32 {
+    match language
+        .unwrap_or_default()
+        .split(['-', '_'])
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "zh" => 4,
+        "de" => 7,
+        "en" => 9,
+        "es" => 10,
+        "fr" => 12,
+        "it" => 16,
+        "ja" => 17,
+        "nl" => 19,
+        "pt" => 22,
+        "ru" => 25,
+        _ => 0,
+    }
 }
 
 /// FLIS record — fixed structure marking end of the book's flow.
@@ -924,24 +969,38 @@ mod tests {
             cover_recindex: None,
             toc: Vec::new(),
         });
-        assert_eq!(u32::from_be_bytes(exth[8..12].try_into().unwrap()), 2);
-        assert_eq!(u32::from_be_bytes(exth[12..16].try_into().unwrap()), 100);
+        assert_eq!(u32::from_be_bytes(exth[8..12].try_into().unwrap()), 3);
+        assert_eq!(u32::from_be_bytes(exth[12..16].try_into().unwrap()), 503);
         let second = 12 + u32::from_be_bytes(exth[16..20].try_into().unwrap()) as usize;
         assert_eq!(
             u32::from_be_bytes(exth[second..second + 4].try_into().unwrap()),
             100
         );
-        assert_eq!(u32::from_be_bytes(exth[4..8].try_into().unwrap()), 35);
-        assert_eq!(exth.len(), 36);
+        let third =
+            second + u32::from_be_bytes(exth[second + 4..second + 8].try_into().unwrap()) as usize;
+        assert_eq!(
+            u32::from_be_bytes(exth[third..third + 4].try_into().unwrap()),
+            100
+        );
     }
 
     #[test]
     fn record_layout_matches_mobi6_conventions() {
         let src = Source {
-            title: "é".into(), authors: vec!["A".into()], isbn: None,
-            description: None, publisher: None, subjects: vec![], publication_date: None,
-            contributors: vec![], rights: None, source: None, language: None,
-            html: vec![], images: vec![], cover_recindex: None,
+            title: "é".into(),
+            authors: vec!["A".into()],
+            isbn: None,
+            description: None,
+            publisher: None,
+            subjects: vec![],
+            publication_date: None,
+            contributors: vec![],
+            rights: None,
+            source: None,
+            language: Some("en".into()),
+            html: vec![],
+            images: vec![],
+            cover_recindex: None,
             toc: Vec::new(),
         };
         let rec = build_record0(&src, 0, 1, NONE, NONE, 2, 1, 3, 2);
@@ -949,13 +1008,18 @@ mod tests {
         let title = at(16 + 68) as usize;
         assert_eq!(&rec[title..], &[0xc3, 0xa9, 0, 0]);
         assert_eq!((at(196), at(224), at(232), at(236)), (1, NONE, NONE, NONE));
+        assert_ne!(at(32), 0);
+        assert_eq!(at(92), 9);
     }
 
     #[test]
     fn text_chunks_do_not_split_utf8() {
         let text = format!("{}éx", "a".repeat(TEXT_RECORD_SIZE - 1));
         let chunks: Vec<&[u8]> = utf8_chunks(text.as_bytes(), TEXT_RECORD_SIZE).collect();
-        assert_eq!(chunks.iter().map(|c| c.len()).collect::<Vec<_>>(), [4095, 3]);
+        assert_eq!(
+            chunks.iter().map(|c| c.len()).collect::<Vec<_>>(),
+            [4095, 3]
+        );
         assert!(chunks.iter().all(|c| std::str::from_utf8(c).is_ok()));
         assert_eq!(chunks.concat(), text.as_bytes());
     }
