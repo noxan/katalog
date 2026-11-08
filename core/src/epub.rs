@@ -114,22 +114,25 @@ fn estimated_pages(epub: &rbook::Epub) -> i64 {
         .spine()
         .iter()
         .filter_map(|entry| entry.manifest_entry())
-        .filter_map(|entry| entry.read_str().ok())
+        .filter_map(|entry| entry.read_bytes().ok())
         .map(|html| word_count(&html))
         .sum::<usize>();
     ((words + 274) / 275).max(1) as i64
 }
 
 /// Count visible-ish words without parsing XHTML into a DOM just for an estimate.
-fn word_count(html: &str) -> usize {
+/// Byte-wise: tags/entities are ASCII-delimited, and any byte >= 0x80 is part of
+/// a multibyte word char (the `in_word` run keeps it one word, not one per byte).
+/// Avoids UTF-8 decoding + a String alloc per spine entry on every import.
+fn word_count(html: &[u8]) -> usize {
     let (mut words, mut in_tag, mut in_entity, mut in_word) = (0, false, false, false);
-    for c in html.chars() {
+    for &c in html {
         match c {
-            '<' => { in_tag = true; in_word = false; }
-            '>' => in_tag = false,
-            '&' if !in_tag => { in_entity = true; in_word = false; }
-            ';' if in_entity => in_entity = false,
-            c if !in_tag && !in_entity && c.is_alphanumeric() => {
+            b'<' => { in_tag = true; in_word = false; }
+            b'>' => in_tag = false,
+            b'&' if !in_tag => { in_entity = true; in_word = false; }
+            b';' if in_entity => in_entity = false,
+            c if !in_tag && !in_entity && (c.is_ascii_alphanumeric() || c >= 0x80) => {
                 if !in_word { words += 1; in_word = true; }
             }
             _ if !in_tag && !in_entity => in_word = false,
@@ -308,7 +311,8 @@ mod tests {
 
     #[test]
     fn counts_visible_words() {
-        assert_eq!(word_count("<p>Hello <em>world</em>&nbsp;again.</p>"), 3);
+        assert_eq!(word_count(b"<p>Hello <em>world</em>&nbsp;again.</p>"), 3);
+        assert_eq!(word_count("<p>café au lait</p>".as_bytes()), 3);
     }
 
     #[test]
