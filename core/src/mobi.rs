@@ -4,9 +4,8 @@
 //! our reader/oracle in tests. Byte layouts (PDB 78 B, PalmDOC 16 B, MOBI
 //! header 232 B, EXTH) match the standard the `mobi` crate parses.
 //!
-//! ponytail: MOBI6 only, uncompressed text, cover but no inline images, no TOC
-//! index. Produces a readable linear book on any Kindle. AZW3/KF8, PalmDOC
-//! compression, and NCX indexes are follow-ups.
+//! ponytail: MOBI6 only, uncompressed text, cover + inline images, flat NCX.
+//! AZW3/KF8 and PalmDOC compression are follow-ups.
 
 use std::collections::HashMap;
 use std::path::Path;
