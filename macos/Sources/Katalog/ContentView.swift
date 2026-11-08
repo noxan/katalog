@@ -179,9 +179,14 @@ struct ContentView: View {
     private var visibleBooks: [Book] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return ordered }
+        // Short-circuit per field: building a combined array per book ran on
+        // every render/keystroke.
         return ordered.filter { book in
-            ([book.title] + book.authors + [book.series, book.publisher, book.isbn].compactMap { $0 })
-                .contains { $0.localizedCaseInsensitiveContains(query) }
+            book.title.localizedCaseInsensitiveContains(query)
+                || book.authors.contains { $0.localizedCaseInsensitiveContains(query) }
+                || [book.series, book.publisher, book.isbn].contains {
+                    $0?.localizedCaseInsensitiveContains(query) == true
+                }
         }
     }
 
