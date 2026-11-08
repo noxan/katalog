@@ -14,8 +14,17 @@ use std::path::Path;
 const TEXT_RECORD_SIZE: usize = 4096;
 const NONE: u32 = 0xFFFF_FFFF;
 const MOBI_HEADER_LEN: u32 = 232;
-const HTML_PREFIX: &str =
-    "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body>";
+// Fixed-width filepos=0000000000 placeholders — patched after TOC offsets resolve.
+// Calibre's MOBI reader skips writing NCX without a <guide> toc reference.
+const HTML_PREFIX: &str = concat!(
+    "<html><head>",
+    "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">",
+    "<guide>",
+    "<reference type=\"toc\" title=\"Contents\" filepos=0000000000 />",
+    "<reference type=\"text\" title=\"Start\" filepos=0000000000 />",
+    "</guide>",
+    "</head><body>",
+);
 
 /// Convert an epub file to a MOBI6 file on disk.
 pub fn epub_to_mobi(epub_path: &str, out_path: &str) -> Result<(), String> {
@@ -162,6 +171,13 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         }
     }
 
+    // Point the HTML <guide> at the first TOC target (or body start).
+    let guide_pos = toc
+        .first()
+        .map(|e| e.offset as usize)
+        .unwrap_or(HTML_PREFIX.len());
+    patch_guide_filepos(&mut html, guide_pos);
+
     Ok(Source {
         authors: meta.authors,
         isbn: meta.isbn,
@@ -210,6 +226,23 @@ fn write_filepos(buf: &mut [u8], pos: usize, offset: usize) {
     let s = format!("{offset:0FILEPOS_WIDTH$}");
     let s = &s.as_bytes()[s.len().saturating_sub(FILEPOS_WIDTH)..];
     buf[pos..pos + FILEPOS_WIDTH].copy_from_slice(s);
+}
+
+/// Patch the two unquoted `filepos=` placeholders in the HTML `<guide>`.
+fn patch_guide_filepos(html: &mut [u8], offset: usize) {
+    let needle = b"filepos=";
+    let mut from = 0;
+    for _ in 0..2 {
+        let Some(rel) = html[from..]
+            .windows(needle.len())
+            .position(|w| w == needle)
+        else {
+            return;
+        };
+        let digits = from + rel + needle.len();
+        write_filepos(html, digits, offset);
+        from = digits + FILEPOS_WIDTH;
+    }
 }
 
 /// Rewrite internal `<a href>` to `<a filepos="0000000000">` (placeholder, later
