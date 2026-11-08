@@ -115,6 +115,10 @@ impl Library {
             fs::create_dir_all(parent)?;
         }
         let conn = Connection::open(&db_path)?;
+        // WAL + a larger page cache: list() scans the whole catalog on refresh.
+        conn.execute_batch(
+            "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8000;",
+        )?;
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS books (
                 id          INTEGER PRIMARY KEY,
@@ -131,7 +135,8 @@ impl Library {
                 description TEXT,
                 page_count  INTEGER,
                 added_at    TEXT NOT NULL DEFAULT (datetime('now'))
-            );",
+            );
+            CREATE INDEX IF NOT EXISTS idx_books_added ON books(added_at DESC, id DESC);",
         )?;
         // ponytail: migrate pre-existing DBs; the ADD fails once the column exists, ignore it.
         let _ = conn.execute("ALTER TABLE books ADD COLUMN series_index REAL", []);
