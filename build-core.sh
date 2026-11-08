@@ -8,6 +8,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
+# Match Package.swift/Info.plist (26.0): otherwise cc-built objects (SQLite)
+# inherit the host OS version and ld warns they're newer than the app target.
+# cc/libsqlite3-sys doesn't rerun on env change, so force its rebuild or the
+# stale host-version sqlite3.o survives in the cache.
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-26.0}"
+cargo clean -p libsqlite3-sys 2>/dev/null || true
+
 echo "==> cargo build --release"
 cargo build --release -p katalog-core
 
