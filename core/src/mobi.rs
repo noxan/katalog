@@ -431,10 +431,15 @@ fn body_inner(html: &str) -> &str {
 
 fn build_mobi(src: &Source) -> Vec<u8> {
     let text_len = src.html.len() as u32;
+    // Readers locate filepos/NCX offsets as record*4096 + rem — every text
+    // record except the last must be exactly 4096 bytes (Calibre/Kindle).
+    // shortcut: may split a UTF-8 char; add multibyte-overlap trailing data
+    // (extra_data_flags bit 0x1) if a device shows a replacement glyph there.
     let text_records: Vec<Vec<u8>> = if src.html.is_empty() {
         vec![Vec::new()]
     } else {
-        utf8_chunks(&src.html, TEXT_RECORD_SIZE)
+        src.html
+            .chunks(TEXT_RECORD_SIZE)
             .map(<[u8]>::to_vec)
             .collect()
     };
@@ -528,21 +533,6 @@ fn build_record0(
         rec.push(0);
     }
     rec
-}
-
-fn utf8_chunks(mut data: &[u8], max: usize) -> impl Iterator<Item = &[u8]> {
-    std::iter::from_fn(move || {
-        if data.is_empty() {
-            return None;
-        }
-        let mut end = data.len().min(max);
-        while std::str::from_utf8(&data[..end]).is_err() {
-            end -= 1;
-        }
-        let (chunk, rest) = data.split_at(end);
-        data = rest;
-        Some(chunk)
-    })
 }
 
 fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
@@ -872,14 +862,11 @@ mod tests {
     }
 
     #[test]
-    fn text_chunks_do_not_split_utf8() {
+    fn text_records_are_exact_4096_except_last() {
         let text = format!("{}éx", "a".repeat(TEXT_RECORD_SIZE - 1));
-        let chunks: Vec<&[u8]> = utf8_chunks(text.as_bytes(), TEXT_RECORD_SIZE).collect();
-        assert_eq!(
-            chunks.iter().map(|c| c.len()).collect::<Vec<_>>(),
-            [4095, 3]
-        );
-        assert!(chunks.iter().all(|c| std::str::from_utf8(c).is_ok()));
+        let chunks: Vec<&[u8]> = text.as_bytes().chunks(TEXT_RECORD_SIZE).collect();
+        assert_eq!(chunks[0].len(), TEXT_RECORD_SIZE);
+        assert!(chunks[1..].iter().all(|c| c.len() <= TEXT_RECORD_SIZE));
         assert_eq!(chunks.concat(), text.as_bytes());
     }
 
