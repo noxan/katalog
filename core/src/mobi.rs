@@ -372,11 +372,11 @@ fn optimize_image(bytes: Vec<u8>) -> Vec<u8> {
         {
             break;
         }
-        if buf.len() < best.len() {
-            best = buf.clone();
-        }
         if buf.len() <= MAX_BYTES {
             return buf;
+        }
+        if buf.len() < best.len() {
+            best = buf;
         }
     }
     best
