@@ -44,6 +44,8 @@ struct Source {
     rights: Option<String>,
     source: Option<String>,
     language: Option<String>,
+    series: Option<String>,
+    series_index: Option<f64>,
     html: Vec<u8>,
     /// Image records in recindex order (image N is at index N-1).
     images: Vec<Vec<u8>>,
@@ -188,6 +190,8 @@ fn read_epub(path: &Path) -> Result<Source, String> {
         rights: meta.rights,
         source: meta.source,
         language: meta.language,
+        series: meta.series,
+        series_index: meta.series_index,
         title: meta.title,
         html,
         images,
@@ -688,6 +692,12 @@ fn build_exth(src: &Source) -> Vec<u8> {
     if let Some(language) = &src.language {
         recs.push((524, language.clone().into_bytes()));
     }
+    if let Some(series) = &src.series {
+        recs.push((536, series.clone().into_bytes()));
+        if let Some(index) = src.series_index {
+            recs.push((537, index.to_string().into_bytes()));
+        }
+    }
     if let Some(cover) = src.cover_recindex {
         recs.push((201, (cover as u32).to_be_bytes().to_vec())); // cover image offset
         recs.push((202, (cover as u32).to_be_bytes().to_vec())); // thumbnail offset
@@ -845,6 +855,8 @@ mod tests {
             rights: None,
             source: None,
             language: None,
+            series: None,
+            series_index: None,
             html: vec![],
             images: vec![],
             cover_recindex: None,
@@ -879,6 +891,8 @@ mod tests {
             rights: None,
             source: None,
             language: Some("en".into()),
+            series: None,
+            series_index: None,
             html: vec![],
             images: vec![],
             cover_recindex: None,
@@ -926,6 +940,8 @@ mod tests {
             rights: Some("Copyright".into()),
             source: Some("Source edition".into()),
             language: Some("de".into()),
+            series: Some("Saga".into()),
+            series_index: Some(2.5),
             html: vec![],
             images: vec![],
             cover_recindex: None,
@@ -950,6 +966,8 @@ mod tests {
             (109, "Copyright"),
             (112, "Source edition"),
             (524, "de"),
+            (536, "Saga"),
+            (537, "2.5"),
         ] {
             assert!(records
                 .iter()
