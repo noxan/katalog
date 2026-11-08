@@ -37,7 +37,8 @@ fn assert_mimetype_first_stored(path: &Path) {
     let f = std::fs::File::open(path).unwrap();
     let mut zip = zip::ZipArchive::new(f).unwrap();
     let mut first = zip.by_index(0).unwrap();
-    assert_eq!(first.name(), "mimetype", "first entry must be mimetype");
+    // zip 9: name() is fallible (non-UTF8 names).
+    assert_eq!(&*first.name().unwrap(), "mimetype", "first entry must be mimetype");
     assert_eq!(
         first.compression(),
         zip::CompressionMethod::Stored,

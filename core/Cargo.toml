@@ -13,13 +13,13 @@ rbook = "0.7"
 mobi = "0.8"
 # Only the codecs we need — decode epub images, re-encode oversized ones as JPEG.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
 uniffi = { version = "0.32", features = ["cli"] }
 
 [dev-dependencies]
 tempfile = "3"
 # Tests inspect the raw OCF container (OPF bytes, mimetype-first/STORED invariant).
-zip = "8"
+zip = "9"
 
 [[bin]]
 # uniffi-bindgen CLI, invoked by build-core.sh to emit Swift bindings.
