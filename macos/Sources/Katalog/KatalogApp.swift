@@ -60,7 +60,9 @@ struct KatalogApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        // Single library window: a WindowGroup spawns a fresh window to
+        // deliver each Finder "Open With" (.onOpenURL), leaving a duplicate.
+        Window("Katalog", id: "main") {
             NavigationStack {
                 ContentView()
                     .environmentObject(store)
