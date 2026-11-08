@@ -1,3 +1,8 @@
 [workspace]
 resolver = "2"
 members = ["core"]
+
+# The core is a static lib linked into the app; optimize the single artifact.
+[profile.release]
+lto = "thin"
+codegen-units = 1
