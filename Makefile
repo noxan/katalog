@@ -15,9 +15,12 @@ app: core
 core:
 	./build-core.sh
 
-# Rebuild everything and launch the app.
+# Rebuild everything and launch the app. Launch the already-built binary
+# detached: `swift run` re-invokes SwiftPM (lock contention with the build
+# above) and then blocks the terminal for the app's whole lifetime.
 run: app
-	cd macos && swift run Katalog
+	-pkill -x Katalog 2>/dev/null; sleep 0.3
+	nohup macos/.build/$(CONFIG)/Katalog >/dev/null 2>&1 & echo "Launched Katalog (PID $$!)"
 
 # Sandbox entitlements, applied when bundling. Sandboxed is what ships, so it
 # is the default — but it redirects Application Support (and so the library

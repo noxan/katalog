@@ -57,6 +57,7 @@ struct KatalogApp: App {
     init() {
         // Needed so a SwiftPM-built executable shows a real window + menu bar.
         NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate()
     }
 
     var body: some Scene {
