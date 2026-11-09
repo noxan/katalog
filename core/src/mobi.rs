@@ -466,20 +466,27 @@ fn body_inner(html: &str) -> &str {
 }
 
 fn build_mobi(src: &Source) -> Vec<u8> {
-    let text_len = src.html.len() as u32;
-    // Readers locate filepos/NCX offsets as record*4096 + rem — every text
-    // record except the last must be exactly 4096 bytes (Calibre/Kindle).
-    // shortcut: may split a UTF-8 char; add multibyte-overlap trailing data
-    // (extra_data_flags bit 0x1) if a device shows a replacement glyph there.
-    let text_records: Vec<Vec<u8>> = if src.html.is_empty() {
+    // Exact 4096-byte records (filepos = record*4096+rem). Overlap trailing
+    // leaked a NUL into Kindle text at every seam (e.g. "in al\\0le"); instead
+    // pad so boundaries never split a UTF-8 char, then remap filepos/NCX.
+    let (mut html, pads) = pad_to_utf8_records(&src.html);
+    remap_filepos_values(&mut html, &pads);
+    let text_len = html.len() as u32;
+    let text_records: Vec<Vec<u8>> = if html.is_empty() {
         vec![Vec::new()]
     } else {
-        src.html
-            .chunks(TEXT_RECORD_SIZE)
-            .map(<[u8]>::to_vec)
-            .collect()
+        html.chunks(TEXT_RECORD_SIZE).map(<[u8]>::to_vec).collect()
     };
     let n_text = text_records.len();
+    let toc: Vec<_> = src
+        .toc
+        .iter()
+        .map(|e| crate::mobi_index::TocEntry {
+            label: e.label.clone(),
+            offset: remap_offset(e.offset as usize, &pads) as u32,
+            depth: e.depth,
+        })
+        .collect();
 
     // Record numbering: 0 = header, 1..=n_text = text, then the NCX index (INDX
     // header, INDX entries, CNCX — must be contiguous, in that order), then
@@ -487,7 +494,7 @@ fn build_mobi(src: &Source) -> Vec<u8> {
     let last_text = n_text; // 1-based record index of the last text record
     let n_images = src.images.len();
 
-    let index = crate::mobi_index::build_ncx(&src.toc, text_len);
+    let index = crate::mobi_index::build_ncx(&toc, text_len);
     let n_index = if index.is_some() { 3 } else { 0 };
     let first_index_record = last_text + 1; // INDX header record
     let first_image_record = last_text + n_index + 1; // image #1 (recindex 1)
@@ -569,6 +576,73 @@ fn build_record0(
         rec.push(0);
     }
     rec
+}
+
+/// Pad so every 4096-byte boundary lands on a UTF-8 character boundary.
+/// Returns (padded html, pads as (old_offset_where_next_content_starts, n_spaces)).
+fn pad_to_utf8_records(html: &[u8]) -> (Vec<u8>, Vec<(usize, usize)>) {
+    let mut out = Vec::with_capacity(html.len());
+    let mut pads = Vec::new();
+    let mut pos = 0;
+    while pos < html.len() {
+        let remaining = html.len() - pos;
+        if remaining <= TEXT_RECORD_SIZE {
+            out.extend_from_slice(&html[pos..]);
+            break;
+        }
+        let mut end = pos + TEXT_RECORD_SIZE;
+        while end > pos && !is_char_boundary(html, end) {
+            end -= 1;
+        }
+        // shortcut: if a whole record were invalid UTF-8 we'd loop forever; impossible for our HTML.
+        let take = end - pos;
+        out.extend_from_slice(&html[pos..end]);
+        if take < TEXT_RECORD_SIZE {
+            let n = TEXT_RECORD_SIZE - take;
+            out.extend(std::iter::repeat(b' ').take(n));
+            pads.push((end, n));
+        }
+        pos = end;
+    }
+    (out, pads)
+}
+
+fn is_char_boundary(buf: &[u8], i: usize) -> bool {
+    i >= buf.len() || buf[i] & 0xC0 != 0x80
+}
+
+fn remap_offset(old: usize, pads: &[(usize, usize)]) -> usize {
+    old + pads
+        .iter()
+        .filter(|(at, _)| old >= *at)
+        .map(|(_, n)| *n)
+        .sum::<usize>()
+}
+
+/// Rewrite embedded filepos digit values after padding shifted targets.
+fn remap_filepos_values(html: &mut [u8], pads: &[(usize, usize)]) {
+    if pads.is_empty() {
+        return;
+    }
+    let needle = b"filepos=";
+    let mut search = 0;
+    while let Some(rel) = html[search..].windows(needle.len()).position(|w| w == needle) {
+        let at = search + rel;
+        let mut digits = at + needle.len();
+        if html.get(digits) == Some(&b'"') {
+            digits += 1;
+        }
+        if digits + 10 <= html.len() && html[digits..digits + 10].iter().all(u8::is_ascii_digit) {
+            let old = std::str::from_utf8(&html[digits..digits + 10])
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+            write_filepos(html, digits, remap_offset(old, pads));
+            search = digits + 10;
+        } else {
+            search = at + needle.len();
+        }
+    }
 }
 
 fn palmdoc_header(text_len: u32, n_text: usize) -> [u8; 16] {
@@ -908,12 +982,18 @@ mod tests {
     }
 
     #[test]
-    fn text_records_are_exact_4096_except_last() {
+    fn text_records_pad_utf8_splits_to_exact_4096() {
+        // "é" is 2 bytes (c3 a9); placed so byte 4096 would split it.
         let text = format!("{}éx", "a".repeat(TEXT_RECORD_SIZE - 1));
-        let chunks: Vec<&[u8]> = text.as_bytes().chunks(TEXT_RECORD_SIZE).collect();
-        assert_eq!(chunks[0].len(), TEXT_RECORD_SIZE);
-        assert!(chunks[1..].iter().all(|c| c.len() <= TEXT_RECORD_SIZE));
-        assert_eq!(chunks.concat(), text.as_bytes());
+        let (padded, pads) = pad_to_utf8_records(text.as_bytes());
+        assert_eq!(pads, vec![(TEXT_RECORD_SIZE - 1, 1)]);
+        assert_eq!(padded.len() % TEXT_RECORD_SIZE, 3); // "éx" = 3 bytes in last rec
+        let recs: Vec<_> = padded.chunks(TEXT_RECORD_SIZE).collect();
+        assert_eq!(recs[0].len(), TEXT_RECORD_SIZE);
+        assert!(std::str::from_utf8(recs[0]).is_ok());
+        assert!(recs[0].ends_with(b" ")); // one pad space
+        assert_eq!(recs[1], b"\xc3\xa9x");
+        assert_eq!(remap_offset(TEXT_RECORD_SIZE - 1, &pads), TEXT_RECORD_SIZE);
     }
 
     #[test]
