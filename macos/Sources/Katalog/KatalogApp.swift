@@ -71,6 +71,7 @@ struct KatalogApp: App {
             }
             .frame(minWidth: 720, minHeight: 480)
         }
+        .defaultSize(width: 850, height: 650)
         .commands {
             CommandGroup(after: .newItem) {
                 Button { NotificationCenter.default.post(name: .importBooks, object: nil) } label: {
